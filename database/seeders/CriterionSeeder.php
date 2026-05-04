@@ -49,6 +49,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-pro',
                         'ai_prompt' => "You are an AI evaluator. Review the submitted YouTube links and descriptions. Determine the content type and assign points: 'videodars' (video lesson) = 1.5 points, 'videorolik' (video clip) = 1 point, 'taqdimot' (presentation) = 0.5 points. Ensure the links are valid. Return a JSON object strictly in this format: {\"status\": true/false, \"score\": calculated_total_score, \"reason\": \"explanation\"}."
                     ],
                     [
@@ -76,7 +77,24 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_prompt' => null,
+                        'ai_model' => 'gemini-2.5-pro',
+                        'ai_prompt' => "You are an AI evaluator. Review the uploaded document text/images for a published book.
+                            Tasks:
+                            1. Verify if the book is officially designated as a 'Darslik' (Textbook).
+                            2. Confirm the presence of a valid ISBN number.
+                            3. Confirm the presence of a publication permit from a ministry or university council.
+                            4. Extract the total number of authors (to calculate author share).
+                            5. Extract the volume of the book in 'bosma taboq' (printed sheets), usually found in the publishing details page.
+                            Return a JSON object strictly in this format:
+                            {
+                              \"status\": true/false,
+                              \"is_textbook\": true/false,
+                              \"isbn_found\": true/false,
+                              \"permit_found\": true/false,
+                              \"author_count\": number,
+                              \"printed_sheets\": number_or_float,
+                              \"reason\": \"explanation of extracted data\"
+                            }.",
                     ],
                     [
                         'name' => [
@@ -103,7 +121,24 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_prompt' => null,
+                        'ai_model' => 'gemini-2.5-pro',
+                        'ai_prompt' => "You are an AI evaluator. Review the uploaded document text/images for a published book.
+                            Tasks:
+                            1. Verify if the book is officially designated as an 'O'quv qo'llanma' (Study guide / Manual).
+                            2. Confirm the presence of a valid ISBN number.
+                            3. Confirm the presence of a publication permit from a ministry or university council.
+                            4. Extract the total number of authors (to calculate author share).
+                            5. Extract the volume of the book in 'bosma taboq' (printed sheets), usually found in the publishing details page.
+                            Return a JSON object strictly in this format:
+                            {
+                              \"status\": true/false,
+                              \"is_study_guide\": true/false,
+                              \"isbn_found\": true/false,
+                              \"permit_found\": true/false,
+                              \"author_count\": number,
+                              \"printed_sheets\": number_or_float,
+                              \"reason\": \"explanation of extracted data\"
+                            }.",
                     ],
                     [
                         'name' => [
@@ -130,6 +165,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Read the provided document details. Verify if it is an electronic textbook, manual, or a translation. Look for the presence of an ISBN number and a university publication permit. Return a JSON object strictly in this format: {\"status\": true/false, \"author_share\": number_if_mentioned_or_1, \"reason\": \"explanation of found ISBN and permits\"}.",
                     ],
                     [
@@ -157,6 +193,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-pro',
                         'ai_prompt' => null,
                     ],
                     [
@@ -184,6 +221,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => null,
                     ],
                     [
@@ -211,6 +249,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => null,
                     ],
                     [
@@ -236,11 +275,12 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-3-flash-preview',
                         'ai_prompt' => "You are an AI evaluator. Check the evidence to see if the professor created a new/virtual laboratory work (worth 1 point) or a methodological guide for laboratory/practical classes (worth 1 point). Return a JSON object strictly in this format: {\"status\": true/false, \"score\": total_points_up_to_2, \"reason\": \"explanation of what was created\"}.",
                     ],
                     [
                         'name' => [
-                            'uz' => 'Professor-o‘qituvchining bakalavriat ta’lim yo‘nalishlariga abituriyent-larni (qabul komissiyasiga) jalb etishda targ‘ibot va tashviqot jarayonlarida faol ishtirok etganligi jalb etilishi hamda bakalavr va magistrlarining bandligi va ishga joylashtirilishida ishtiroki',
+                            'uz' => 'Professor-o‘qituvchining bakalavriat ta’lim yo‘nalishlariga abituriyentlarni (qabul komissiyasiga) jalb etishda targ‘ibot va tashviqot jarayonlarida faol ishtirok etganligi jalb etilishi hamda bakalavr va magistrlarining bandligi va ishga joylashtirilishida ishtiroki',
                             'kaa' => 'Professor-oqıtıwshınıń bakalavriat tálim baǵdarlarına abiturientlerdi (qabıllaw komissiyasına) tartıwda úgit-násiyatlaw hám úgit-násiyatlaw processlerinde belsene qatnasqanlıǵı jáne bakalavr hám magistrlerdiń bántligi hám jumısqa jaylastırılıwında qatnasqanlıǵı;',
                             'ru' => 'Активное участие профессора-преподавателя в процессах пропаганды и агитации при привлечении абитуриентов (в приемную комиссию) на направления образования бакалавриата, а также участие в трудоустройстве и трудоустройстве бакалавров и магистров',
                             'en' => 'Active participation of the professor-teacher in the advocacy and propaganda processes for attracting applicants (to the admissions committee) to undergraduate educational programs, as well as their involvement in the employment and placement of bachelors and masters',
@@ -263,6 +303,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-3-flash-preview',
                         'ai_prompt' => "You are an AI evaluator. Review the submitted evidence. Check for the professor's involvement in: 1) attracting applicants to bachelor programs (1 pt), 2) employment of bachelors (1 pt), 3) employment of masters (1 pt). Return a JSON object strictly in this format: {\"status\": true/false, \"score\": total_points_up_to_3, \"reason\": \"explanation of which criteria were met\"}.",
                     ],
                     [
@@ -290,6 +331,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-pro',
                         'ai_prompt' => "You are an AI evaluator. Review the provided documents, lesson analyses, or video descriptions. Confirm if the professor conducted a master class at a professional education institution, academic lyceum, or school. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation of evidence found\"}."
                     ],
                 ],
@@ -330,6 +372,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Review the document. Look for an official order (buyruq) and a working plan (reja) proving the organization of a specialized club or a foreign language teaching course. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -356,6 +399,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Verify if the evidence shows the professor teaches their academic course in a foreign language. Note: This does not apply if they are from the Faculty of Foreign Languages. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -383,6 +427,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => '',
                         'ai_prompt' => null,
                     ],
                     [
@@ -408,6 +453,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-3.1-pro-preview',
                         'ai_prompt' => null,
                     ],
                     [
@@ -435,6 +481,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-pro',
                         'ai_prompt' => "You are an AI evaluator. Review the certificate/document. Identify the foreign host institution and estimate its QS, THE, or ARWU ranking tier. Assign points: Top-100 = 2 pts, Top-300 = 1.5 pts, Top-500 = 1 pt, Top-1000 = 0.5 pts. Return a JSON object strictly in this format: {\"status\": true/false, \"score\": calculated_points, \"reason\": \"explanation of institution and rank\"}.",
                     ],
                     [
@@ -462,6 +509,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-pro',
                         'ai_prompt' => "You are an AI evaluator. Review the provided contracts or invitation letters. Check if the professor taught at a Top-1000 foreign university, invited foreign experts, or attracted foreign students. Point logic: Top-100 = 3, Top-300 = 2.5, Top-500 = 2, Top-1000 = 1.5. Attracting foreign students = 3. Return a JSON object strictly in this format: {\"status\": true/false, \"score\": max_applicable_points, \"reason\": \"explanation\"}.",
                     ],
                 ],
@@ -502,6 +550,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-3.1-pro-preview',
                         'ai_prompt' => "You are an AI evaluator. Analyze the article details. Verify it is published in a journal recognized by the HAC (OAK) and is NOT in Scopus/Web of Science. Extract the number of co-authors to distribute points equally. Return a JSON object strictly in this format: {\"status\": true/false, \"author_count\": number, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -529,6 +578,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-3.1-pro-preview',
                         'ai_prompt' => "You are an AI evaluator. Verify the article is published in an Impact Factor journal (excluding Scopus/Web of Science). Extract the number of co-authors for point distribution. Return a JSON object strictly in this format: {\"status\": true/false, \"author_count\": number, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -556,6 +606,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 3,
+                        'ai_model' => 'gemini-3.1-pro-preview',
                         'ai_prompt' => "You are an AI evaluator. Analyze the publication. Identify its quartile in Scopus/Web of Science: Q1/Q2 (100% weight), Q3/Q4 (80% weight), or Conference proceeding (50% weight). Extract the total number of co-authors. Return a JSON object strictly in this format: {\"status\": true/false, \"weight\": percentage_as_decimal, \"author_count\": number, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -583,6 +634,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-pro',
                         'ai_prompt' => "You are an AI evaluator. Extract the author's h-index from the provided Scopus, Web of Science, or ResearchGate evidence. Calculate weight: h>=5 (1.0), h=4 (0.75), h=3 (0.50), h<=2 (0.25). Return a JSON object strictly in this format: {\"status\": true, \"weight\": calculated_weight, \"h_index\": number, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -610,6 +662,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-pro',
                         'ai_prompt' => "You are an AI evaluator. Check the evidence for a published monograph or dictionary. Verify the presence of an ISBN number and a university council approval decision. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -634,6 +687,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Verify the provided diploma or HAC (OAK) document proves the professor successfully supervised a Doctor of Science (DSc) candidate. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -659,6 +713,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Verify the provided diploma or HAC (OAK) document proves the professor successfully supervised a Doctor of Philosophy (PhD) candidate. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -686,6 +741,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 3,
+                        'ai_model' => 'gemini-3.1-pro-preview',
                         'ai_prompt' => "You are an AI evaluator. Review the patent document (invention, utility model, etc.). Ensure the university or professor is listed as the rights holder. Extract the total number of rights holders to distribute points. Return a JSON object strictly in this format: {\"status\": true/false, \"rights_holders_count\": number, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -713,6 +769,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.0-flash',
                         'ai_prompt' => "You are an AI evaluator. Verify the submitted certificate is for a software program or electronic database (DGU or copyright certificate). Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -740,6 +797,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Review the evidence (certificate, program). Confirm the professor participated with a lecture/presentation at an exhibition, seminar, or conference, or won a prize, representing the university. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -767,6 +825,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Check the student's diploma or certificate. Verify the student won a prize in a national/international competition or Olympiad, and confirm the professor was their direct supervisor (via official order). Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -794,6 +853,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Check the evidence for the professor's leadership of a student club. Look for an official order (buyruq) and a club plan (reja). Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -821,6 +881,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-pro',
                         'ai_prompt' => "You are an AI evaluator. Review the economic or innovative contract documents/bank statements. Verify that funds were successfully transferred to the university's account through the professor's research or leadership. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -848,6 +909,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Verify the professor's leadership or membership in a state grant research project. Confirm the project is affiliated with the university. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
@@ -873,6 +935,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => "You are an AI evaluator. Review the provided HAC (OAK) or Ministry decree. Confirm the professor serves as a chairman, secretary, or member of a specialized scientific council or national technical council. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                 ],
@@ -913,11 +976,12 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_prompt' => null,
+                        'ai_model' => 'gemini-2.5-pro',
+                        'ai_prompt' => "You are an AI evaluator. Review the provided video links or documents. Confirm if the professor made appearances in national or foreign media/social networks discussing university or state reforms. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
                         'name' => [
-                            'uz' => 'Davlat hokimiyati va boshqaruvi organlarining murojaatiga asosan ilmiy-amaliy takliflarni tayyor-lash va ishtirok etish',
+                            'uz' => 'Davlat hokimiyati va boshqaruvi organlarining murojaatiga asosan ilmiy-amaliy takliflarni tayyorlash va ishtirok etish',
                             'kaa' => 'Mámleketlik hákimiyat hám basqarıw uyımlarınıń múrájatına tiykarlanıp ilimiy-ámeliy usınıslardı tayarlaw hám qatnasıw',
                             'ru' => 'Подготовка и участие в научно-практических предложениях на основе обращений органов государственной власти и управления',
                             'en' => 'Preparation and participation in scientific and practical proposals based on appeals from state authorities and administration bodies',
@@ -940,7 +1004,8 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_prompt' => null,
+                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_prompt' => "You are an AI evaluator. Check if the evidence shows the professor prepared scientific-practical proposals specifically based on an official appeal from state authorities or administration bodies. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
                         'name' => [
@@ -967,7 +1032,8 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_prompt' => null,
+                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_prompt' => "You are an AI evaluator. Review the documents/announcements. Verify if the professor, on their own initiative, organized spiritual-educational events, literary meetings, intellectual games, or competitions. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
                         'name' => [
@@ -994,7 +1060,8 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_prompt' => null,
+                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_prompt' => "You are an AI evaluator. Check the evidence confirming the professor participated in educational work with students, such as sports clubs, cultural events, or activities in assigned mahallas. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
                         'name' => [
@@ -1021,7 +1088,8 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_prompt' => null,
+                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_prompt' => "You are an AI evaluator. Verify the document is a stamped and signed copy of a state award or a national-level letter of appreciation (tashakkurnoma). Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
                     ],
                     [
                         'name' => [
@@ -1038,7 +1106,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'observation' => 'current',
                         'report_id' => 1,
-                        'checking' => 'ai',
+                        'checking' => 'pointing',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1048,6 +1116,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
+                        'ai_model' => 'gemini-2.5-flash',
                         'ai_prompt' => null,
                     ],
                 ],
@@ -1068,6 +1137,7 @@ class CriterionSeeder extends Seeder
                     'observation' => $child['observation'],
                     'parent_id' => $c->id,
                     'ai_prompt' => $child['ai_prompt'],
+                    'ai_model' => $child['ai_model'],
                     'report_id' => $child['report_id'],
                     'checking' => $child['checking'],
                     'upload' => $child['upload'],

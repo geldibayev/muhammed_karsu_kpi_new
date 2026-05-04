@@ -20,6 +20,7 @@ return new class extends Migration {
             $table->string('integrate')->nullable();
             $table->string('checking')->default('manual');
             $table->text('ai_prompt')->nullable();
+            $table->string('ai_model')->default('gemini-2.5-flash');
             $table->enum('upload', ['0', '1'])->default('0');
             $table->enum('status', ['0', '1'])->default('0');
             $table->timestamps();
