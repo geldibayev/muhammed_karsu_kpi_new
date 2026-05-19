@@ -12,6 +12,8 @@ return new class extends Migration {
             $table->json('name');
             $table->json('desc')->nullable();
             $table->foreignId('parent_id')->nullable()->constrained('criteria')->cascadeOnDelete();
+            $table->enum('upload', ['0', '1'])->default('1');
+            $table->integer('file_limit')->default(0);
             // Amal qilishi
             $table->string('observation')->nullable();
             $table->foreign('observation')->references('code')->on('observances')->cascadeOnDelete();

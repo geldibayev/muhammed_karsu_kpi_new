@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Criterion extends Model
 {
@@ -14,4 +16,14 @@ class Criterion extends Model
         'name' => 'json',
         'desc' => 'json',
     ];
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Criterion::class, 'parent_id');
+    }
+
+    public function criterionEvaluation(): HasOne
+    {
+        return $this->hasOne(CriterionEvaluation::class, 'criterion_id');
+    }
 }
