@@ -12,7 +12,6 @@ return new class extends Migration {
             $table->foreignId('datum_id')->constrained('data')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->enum('status', ['0', '1', '2'])->default('0');
-            $table->double('point')->default(0);
             $table->timestamps();
         });
     }

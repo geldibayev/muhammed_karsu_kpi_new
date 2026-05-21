@@ -55,6 +55,7 @@ class DatumController extends Controller
         }
         //dd($materialData);
         Datum::create([
+            'user_id' => auth()->id(),
             'criterion_id' => $upload->id,
             'year_id' => $request->year,
             'material' => $materialData,

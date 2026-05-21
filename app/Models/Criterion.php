@@ -31,6 +31,6 @@ class Criterion extends Model
 
     public function files(): HasMany
     {
-        return $this->hasMany(Datum::class, 'criterion_id');
+        return $this->hasMany(Datum::class, 'criterion_id')->where('user_id', auth()->id());
     }
 }
