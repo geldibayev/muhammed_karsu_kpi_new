@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->text('name');
             $table->json('material')->nullable();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('criterion_id')->constrained('criteria')->cascadeOnDelete();
             $table->enum('status', ['received', 'checking', 'accepted', 'cancelled', 'deleted'])->default('received');
             $table->foreignId('year_id')->nullable()->constrained('years')->cascadeOnDelete();

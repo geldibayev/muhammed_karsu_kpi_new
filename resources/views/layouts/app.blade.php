@@ -37,7 +37,7 @@
                         Asosiy
                     </li>
                     <li class="nav-item">
-                        <a href="{{ url('/') }}" class="nav-link">
+                        <a href="{{ route('home') }}" class="nav-link @if(request()->routeIs('home')) active @endif">
                             <i class="nav-icon fas fa-home"></i>
                             <p>Asosiy sahifa</p>
                         </a>
@@ -134,5 +134,7 @@
 <script src="{{ asset('plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('dist/js/adminlte.min.js') }}"></script>
 <script src="{{ asset('dist/js/demo.js') }}"></script>
+
+@yield('script')
 </body>
 </html>

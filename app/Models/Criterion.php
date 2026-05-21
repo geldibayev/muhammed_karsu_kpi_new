@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Criterion extends Model
 {
     protected $fillable = [
-        'id', 'name', 'desc', 'parent_id', 'observation', 'report_id', 'formula_id', 'integrate', 'checking', 'ai_prompt', 'upload', 'status',
+        'id', 'name', 'desc', 'parent_id', 'template',
+        'upload', 'file_limit', 'observation', 'report_id',
+        'formula_id', 'integrate', 'checking', 'ai_prompt', 'status',
     ];
 
     protected $casts = [
@@ -25,5 +27,10 @@ class Criterion extends Model
     public function criterionEvaluation(): HasOne
     {
         return $this->hasOne(CriterionEvaluation::class, 'criterion_id');
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(Datum::class, 'criterion_id');
     }
 }

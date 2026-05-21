@@ -7,11 +7,11 @@
                 <table class="table table-hover">
                     <thead>
                     <tr>
-                        <th style="width: 5%;">#</th>
+                        <th class="text-center" style="width: 5%;">#</th>
                         <th>Mezon</th>
-                        <th style="width: 20%;">Masʼul</th>
-                        <th style="width: 5%;">Ball</th>
-                        <th style="width: 5%;"></th>
+                        <th class="text-center" style="width: 20%;">Masʼul</th>
+                        <th class="text-center" style="width: 5%;">Ball</th>
+                        <th class="text-center" style="width: 5%;"></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -39,7 +39,8 @@
                                     {{ $value->criterionEvaluation->score }}
                                 </td>
                                 <td class="align-middle text-center">
-                                    <a href="{{ url('/') }}" class="btn btn-outline-primary btn-sm">
+                                    <a href="{{ route('upload.show', $value->id) }}"
+                                       class="btn btn-outline-primary btn-sm">
                                         <i class="fa fa-plus"></i>
                                     </a>
                                 </td>

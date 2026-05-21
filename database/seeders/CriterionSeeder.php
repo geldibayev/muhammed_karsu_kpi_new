@@ -40,6 +40,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'foreign_lang' => 4,
@@ -68,6 +69,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 6,
@@ -112,6 +114,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 5,
@@ -156,6 +159,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 5,
@@ -184,6 +188,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'department',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -212,6 +217,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'hemis_integrate',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 8,
@@ -240,6 +246,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'vote_integrate',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -268,6 +275,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -294,6 +302,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -322,6 +331,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -363,6 +373,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 1,
@@ -391,6 +402,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -418,6 +430,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -446,6 +459,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'foreign_lang' => 4,
@@ -472,6 +486,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'last3years',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -500,6 +515,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -541,6 +557,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -569,6 +586,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -597,6 +615,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 5,
@@ -625,6 +644,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -653,6 +673,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -681,6 +702,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -706,6 +728,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -732,6 +755,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -760,6 +784,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 1,
@@ -788,6 +813,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -816,6 +842,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -844,6 +871,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -872,6 +900,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 5,
@@ -900,6 +929,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'project_finished',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 4,
@@ -928,6 +958,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'end_of_council',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -967,6 +998,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -995,6 +1027,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 1,
@@ -1023,6 +1056,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1051,6 +1085,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1079,6 +1114,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1107,6 +1143,7 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'pointing',
+                        'template' => '1',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1140,6 +1177,7 @@ class CriterionSeeder extends Seeder
                     'ai_model' => $child['ai_model'],
                     'report_id' => $child['report_id'],
                     'checking' => $child['checking'],
+                    'template' => '1',
                     'upload' => $child['upload'],
                     'status' => $child['status'],
                     'formula_id' => $child['formula_id'],

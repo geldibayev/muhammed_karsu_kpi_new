@@ -10,40 +10,31 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'email',
-        'password',
-    ];
+    public static function make_short_name($firstname, $surname, $patronymic)
+    {
+        $firstname = strtoupper(trim($firstname));
+        $surname = strtoupper(trim($surname));
+        $patronymic = strtoupper(trim($patronymic));
+        if (str_starts_with($firstname, 'SH') || str_starts_with($patronymic, 'SH')) {
+            $firstInitial = 'SH';
+        } else {
+            $firstInitial = substr($firstname, 0, 1);
+        }
+        $patronymicInitial = str_starts_with($patronymic, 'SH') ? 'SH' : substr($patronymic, 0, 1);
+        return "$surname $firstInitial.$patronymicInitial.";
+    }
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+    protected $fillable = ['id', 'name', 'hemis_id', 'image', 'pos', 'rol', 'status'];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
+    protected $hidden = ['remember_token',];
+
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'name' => 'json',
+            'rol' => 'json',
         ];
     }
 }
