@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->string('pos')->default('teacher');
             $table->json('rol')->default(json_encode(['teacher']));
             $table->enum('status', ['0', '1', '2', '3', '4'])->default('1');
+            $table->string('degree')->default('no_degrees');
             $table->rememberToken();
             $table->timestamps();
         });

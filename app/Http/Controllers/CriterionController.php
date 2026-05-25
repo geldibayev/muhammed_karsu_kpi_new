@@ -3,23 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Criterion;
+use App\Models\Department;
+use App\Models\Language;
+use App\Models\Year;
 use Illuminate\Http\Request;
 
 class CriterionController extends Controller
 {
-    public function index()
+    public function edit(Criterion $criterion)
     {
-        $rate = 'no_degrees';
+        return view('pages.admin.criteria.edit', compact(['criterion']));
+    }
 
-        $criteria = Criterion::whereNull('parent_id')
-            ->with(['children' => function ($query) use ($rate) {
-                $query->whereHas('criterionEvaluation', function ($q) use ($rate) {
-                    $q->where('evaluation', $rate);
-                })->with(['criterionEvaluation' => function ($q) use ($rate) {
-                    $q->where('evaluation', $rate)
-                        ->select('id', 'criterion_id', 'evaluation', 'score');
-                }]);
-            }])->get();
-        return view('welcome', compact('criteria'));
+    public function update(Request $request, Criterion $criterion)
+    {
+        $cr = Criterion::find($criterion->id);
+        //dd($cr);
+        $cr->ai_prompt = $request->ai_prompt;
+        $cr->save();
+        return redirect()->route('home');
     }
 }

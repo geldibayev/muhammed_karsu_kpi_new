@@ -24,13 +24,19 @@ class Criterion extends Model
         return $this->hasMany(Criterion::class, 'parent_id');
     }
 
-    public function criterionEvaluation(): HasOne
+    public function criterionEvaluation($criterion_id, $evaluation)
     {
-        return $this->hasOne(CriterionEvaluation::class, 'criterion_id');
+        return CriterionEvaluation::where('criterion_id', $criterion_id)->where('evaluation', $evaluation)->first();
+    }
+
+    public function criterionEvaluations(): HasMany
+    {
+        return $this->hasMany(CriterionEvaluation::class, 'criterion_id');
     }
 
     public function files(): HasMany
     {
-        return $this->hasMany(Datum::class, 'criterion_id')->where('user_id', auth()->id());
+        return $this->hasMany(Datum::class, 'criterion_id')
+            ->where('user_id', auth()->id())->orderBy('created_at', 'desc');
     }
 }

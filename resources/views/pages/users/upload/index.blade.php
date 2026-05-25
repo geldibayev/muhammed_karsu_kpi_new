@@ -40,7 +40,7 @@
                     </div>
                     <div class="text-danger font-weight-bold pt-2">
                         Maksimal ball:
-                        {{ $upload->criterionEvaluation->where('evaluation', 'no_degrees')->first()->score }} ball
+                        {{ $upload->criterionEvaluation($upload->id, auth()->user()->degree)->score }} ball
                     </div>
                     @if($upload->file_limit > 0)
                         <div class="text-dark">
@@ -134,8 +134,35 @@
                     @endif
                 </div>
                 @if($upload->files->count())
-                    <div class="card-footer border-top">
-                        Da
+                    <div class="card-footer border-top p-0">
+                        <table class="table table-hover small text-center">
+                            <thead>
+                            <tr>
+                                <th style="width: 5%;">#</th>
+                                <th class="text-left">Fayl</th>
+                                <th>AI taqriz</th>
+                                <th>Ball</th>
+                                <th>Vaqt</th>
+                                <th></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($upload->files as $file)
+                                <tr>
+                                    <td class="font-weight-bold align-middle">{{ $file->id }}</td>
+                                    <td class="font-weight-bold align-middle">{{ $file->name }}</td>
+                                    <td class="align-middle">{{ $file->reason }}</td>
+                                    <td class="align-middle">{{ number_format($file->point ?? 0, 2) }}</td>
+                                    <td class="align-middle">{{ $file->created_at->format('d.m.Y H:i') }}</td>
+                                    <td>
+                                        <a href="{{ route('upload.file.download', $file->id) }}"
+                                           class="btn btn-xs btn-outline-primary"><i
+                                                class="fas fa-download m-1"></i></a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 @endif
             </div>

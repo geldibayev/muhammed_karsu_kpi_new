@@ -11,34 +11,1385 @@ class DepartmentSeeder extends Seeder
 {
     public function run(): void
     {
-        for ($i = 10; $i <= 18; $i++) {
-            $page = 1;
-            do {
-                $response = Http::withToken(env('HEMIS_API_KEY'))->get('https://student.karsu.uz/rest/v1/data/department-list', [
-                    '_structure_type' => $i, 'limit' => 200, 'page' => $page
-                ]);
-                if ($response->failed()) break;
-                $resData = $response->json();
-                $items = $resData['data']['items'] ?? [];
-
-                foreach ($items as $department) {
-                    $parentId = $department['parent'] ?? null;
-                    Department::updateOrCreate(
-                        ['id' => $department['id']],
-                        [
-                            'name' => [
-                                'uz' => $department['name'],
-                                'ru' => $department['name'],
-                                'en' => $department['name'],
-                                'kaa' => $department['name'],
-                            ],
-                            'parent_id' => $parentId,
-                        ]
-                    );
-                }
-                $pageCount = $resData['data']['pagination']['pageCount'] ?? 1;
-                $page++;
-            } while ($page <= $pageCount);
+        $departments = [
+            [
+                'id' => 1,
+                'name' => [
+                    'uz' => "Chet tillari",
+                    'kaa' => "Chet tillari",
+                    'ru' => "Chet tillari",
+                    'en' => "Chet tillari",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 2,
+                'name' => [
+                    'uz' => "Fizika",
+                    'kaa' => "Fizika",
+                    'ru' => "Fizika",
+                    'en' => "Fizika",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 3,
+                'name' => [
+                    'uz' => "Qoraqalpoq filologiyasi va jurnalistika",
+                    'kaa' => "Qoraqalpoq filologiyasi va jurnalistika",
+                    'ru' => "Qoraqalpoq filologiyasi va jurnalistika",
+                    'en' => "Qoraqalpoq filologiyasi va jurnalistika",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 4,
+                'name' => [
+                    'uz' => "O'zbek filologiyasi",
+                    'kaa' => "O'zbek filologiyasi",
+                    'ru' => "O'zbek filologiyasi",
+                    'en' => "O'zbek filologiyasi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 5,
+                'name' => [
+                    'uz' => "Tarix",
+                    'kaa' => "Tarix",
+                    'ru' => "Tarix",
+                    'en' => "Tarix",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 6,
+                'name' => [
+                    'uz' => "Iqtisodiyot",
+                    'kaa' => "Iqtisodiyot",
+                    'ru' => "Iqtisodiyot",
+                    'en' => "Iqtisodiyot",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 7,
+                'name' => [
+                    'uz' => "Jismoniy madaniyat",
+                    'kaa' => "Jismoniy madaniyat",
+                    'ru' => "Jismoniy madaniyat",
+                    'en' => "Jismoniy madaniyat",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 8,
+                'name' => [
+                    'uz' => "Kimyo-texnologiya",
+                    'kaa' => "Kimyo-texnologiya",
+                    'ru' => "Kimyo-texnologiya",
+                    'en' => "Kimyo-texnologiya",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 9,
+                'name' => [
+                    'uz' => "Biologiya",
+                    'kaa' => "Biologiya",
+                    'ru' => "Biologiya",
+                    'en' => "Biologiya",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 10,
+                'name' => [
+                    'uz' => "Qurilish",
+                    'kaa' => "Qurilish",
+                    'ru' => "Qurilish",
+                    'en' => "Qurilish",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 11,
+                'name' => [
+                    'uz' => "Matematika",
+                    'kaa' => "Matematika",
+                    'ru' => "Matematika",
+                    'en' => "Matematika",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 12,
+                'name' => [
+                    'uz' => "Yuridika",
+                    'kaa' => "Yuridika",
+                    'ru' => "Yuridika",
+                    'en' => "Yuridika",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 13,
+                'name' => [
+                    'uz' => "Geografiya va tabiiy resurslar",
+                    'kaa' => "Geografiya va tabiiy resurslar",
+                    'ru' => "Geografiya va tabiiy resurslar",
+                    'en' => "Geografiya va tabiiy resurslar",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 14,
+                'name' => [
+                    'uz' => "Sanoat texnologiyasi",
+                    'kaa' => "Sanoat texnologiyasi",
+                    'ru' => "Sanoat texnologiyasi",
+                    'en' => "Sanoat texnologiyasi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 15,
+                'name' => [
+                    'uz' => "Arxitektura",
+                    'kaa' => "Arxitektura",
+                    'ru' => "Arxitektura",
+                    'en' => "Arxitektura",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 61,
+                'name' => [
+                    'uz' => "Kadrlar bo'limi",
+                    'kaa' => "Kadrlar bo'limi",
+                    'ru' => "Kadrlar bo'limi",
+                    'en' => "Kadrlar bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 67,
+                'name' => [
+                    'uz' => "San'atshunoslik",
+                    'kaa' => "San'atshunoslik",
+                    'ru' => "San'atshunoslik",
+                    'en' => "San'atshunoslik",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 70,
+                'name' => [
+                    'uz' => "O‘quv-uslubiy boshqarmasi",
+                    'kaa' => "O‘quv-uslubiy boshqarmasi",
+                    'ru' => "O‘quv-uslubiy boshqarmasi",
+                    'en' => "O‘quv-uslubiy boshqarmasi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 71,
+                'name' => [
+                    'uz' => "Marketing va talabalar amaliyoti bo'limi",
+                    'kaa' => "Marketing va talabalar amaliyoti bo'limi",
+                    'ru' => "Marketing va talabalar amaliyoti bo'limi",
+                    'en' => "Marketing va talabalar amaliyoti bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 72,
+                'name' => [
+                    'uz' => "Ilmiy-tadqiqotlar, innovatsiyalar va ilmiy-pedagogik kadrlar tayyorlash bo'limi ",
+                    'kaa' => "Ilmiy-tadqiqotlar, innovatsiyalar va ilmiy-pedagogik kadrlar tayyorlash bo'limi ",
+                    'ru' => "Ilmiy-tadqiqotlar, innovatsiyalar va ilmiy-pedagogik kadrlar tayyorlash bo'limi ",
+                    'en' => "Ilmiy-tadqiqotlar, innovatsiyalar va ilmiy-pedagogik kadrlar tayyorlash bo'limi ",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 73,
+                'name' => [
+                    'uz' => "Raqamli ta'lim texnologiyalari markazi",
+                    'kaa' => "Raqamli ta'lim texnologiyalari markazi",
+                    'ru' => "Raqamli ta'lim texnologiyalari markazi",
+                    'en' => "Raqamli ta'lim texnologiyalari markazi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 74,
+                'name' => [
+                    'uz' => "Ilmiy-uslubiy va axborot-ma'lumot (davriy nashrlar) bo'limi",
+                    'kaa' => "Ilmiy-uslubiy va axborot-ma'lumot (davriy nashrlar) bo'limi",
+                    'ru' => "Ilmiy-uslubiy va axborot-ma'lumot (davriy nashrlar) bo'limi",
+                    'en' => "Ilmiy-uslubiy va axborot-ma'lumot (davriy nashrlar) bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 75,
+                'name' => [
+                    'uz' => "Axborot-kutubxona resurslarini butlash, kataloglashtirish va tizimlashtirish bo'limi",
+                    'kaa' => "Axborot-kutubxona resurslarini butlash, kataloglashtirish va tizimlashtirish bo'limi",
+                    'ru' => "Axborot-kutubxona resurslarini butlash, kataloglashtirish va tizimlashtirish bo'limi",
+                    'en' => "Axborot-kutubxona resurslarini butlash, kataloglashtirish va tizimlashtirish bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 76,
+                'name' => [
+                    'uz' => "Axborot-kutubxona resurslari bilan xizmat ko'rsatish bo'lim",
+                    'kaa' => "Axborot-kutubxona resurslari bilan xizmat ko'rsatish bo'lim",
+                    'ru' => "Axborot-kutubxona resurslari bilan xizmat ko'rsatish bo'lim",
+                    'en' => "Axborot-kutubxona resurslari bilan xizmat ko'rsatish bo'lim",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 77,
+                'name' => [
+                    'uz' => "Elektron axborot resurslari bo'limi",
+                    'kaa' => "Elektron axborot resurslari bo'limi",
+                    'ru' => "Elektron axborot resurslari bo'limi",
+                    'en' => "Elektron axborot resurslari bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 78,
+                'name' => [
+                    'uz' => "Xorijiy axborot-kutubxona resurslari bilan ishlash bulimi",
+                    'kaa' => "Xorijiy axborot-kutubxona resurslari bilan ishlash bulimi",
+                    'ru' => "Xorijiy axborot-kutubxona resurslari bilan ishlash bulimi",
+                    'en' => "Xorijiy axborot-kutubxona resurslari bilan ishlash bulimi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 79,
+                'name' => [
+                    'uz' => "Tahririy-nashriyot bo'limi",
+                    'kaa' => "Tahririy-nashriyot bo'limi",
+                    'ru' => "Tahririy-nashriyot bo'limi",
+                    'en' => "Tahririy-nashriyot bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 80,
+                'name' => [
+                    'uz' => "Reja-moliya bo'limi",
+                    'kaa' => "Reja-moliya bo'limi",
+                    'ru' => "Reja-moliya bo'limi",
+                    'en' => "Reja-moliya bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 81,
+                'name' => [
+                    'uz' => "Buxgalteriya",
+                    'kaa' => "Buxgalteriya",
+                    'ru' => "Buxgalteriya",
+                    'en' => "Buxgalteriya",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 82,
+                'name' => [
+                    'uz' => "Birinchi bo'lim",
+                    'kaa' => "Birinchi bo'lim",
+                    'ru' => "Birinchi bo'lim",
+                    'en' => "Birinchi bo'lim",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 83,
+                'name' => [
+                    'uz' => "Devonxona va arxiv",
+                    'kaa' => "Devonxona va arxiv",
+                    'ru' => "Devonxona va arxiv",
+                    'en' => "Devonxona va arxiv",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 84,
+                'name' => [
+                    'uz' => "O'qitishning texnik vositalari bo'limi",
+                    'kaa' => "O'qitishning texnik vositalari bo'limi",
+                    'ru' => "O'qitishning texnik vositalari bo'limi",
+                    'en' => "O'qitishning texnik vositalari bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 85,
+                'name' => [
+                    'uz' => "Fuqaro va mehnat muhofazasi bo'limi",
+                    'kaa' => "Fuqaro va mehnat muhofazasi bo'limi",
+                    'ru' => "Fuqaro va mehnat muhofazasi bo'limi",
+                    'en' => "Fuqaro va mehnat muhofazasi bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 86,
+                'name' => [
+                    'uz' => "Texnik-foydalanish va xo'jalik bo'limi",
+                    'kaa' => "Texnik-foydalanish va xo'jalik bo'limi",
+                    'ru' => "Texnik-foydalanish va xo'jalik bo'limi",
+                    'en' => "Texnik-foydalanish va xo'jalik bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 88,
+                'name' => [
+                    'uz' => "Texnik qo'llab-quvvatlash bo'limi",
+                    'kaa' => "Texnik qo'llab-quvvatlash bo'limi",
+                    'ru' => "Texnik qo'llab-quvvatlash bo'limi",
+                    'en' => "Texnik qo'llab-quvvatlash bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 89,
+                'name' => [
+                    'uz' => "Axborot xavfsizligini ta'minlash bo'limi",
+                    'kaa' => "Axborot xavfsizligini ta'minlash bo'limi",
+                    'ru' => "Axborot xavfsizligini ta'minlash bo'limi",
+                    'en' => "Axborot xavfsizligini ta'minlash bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 90,
+                'name' => [
+                    'uz' => "Magistratura bo'limi",
+                    'kaa' => "Magistratura bo'limi",
+                    'ru' => "Magistratura bo'limi",
+                    'en' => "Magistratura bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 91,
+                'name' => [
+                    'uz' => "Ikkinchi bo'lim",
+                    'kaa' => "Ikkinchi bo'lim",
+                    'ru' => "Ikkinchi bo'lim",
+                    'en' => "Ikkinchi bo'lim",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 92,
+                'name' => [
+                    'uz' => "Ta'lim sifatini nazorat qilish bo'limi ",
+                    'kaa' => "Ta'lim sifatini nazorat qilish bo'limi ",
+                    'ru' => "Ta'lim sifatini nazorat qilish bo'limi ",
+                    'en' => "Ta'lim sifatini nazorat qilish bo'limi ",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 97,
+                'name' => [
+                    'uz' => "Sirtqi bo'lim",
+                    'kaa' => "Sirtqi bo'lim",
+                    'ru' => "Sirtqi bo'lim",
+                    'en' => "Sirtqi bo'lim",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 103,
+                'name' => [
+                    'uz' => "Korrupciyaga qarshi kurashish «Kompleans nazorat» tizimini boshqarish bo'limi",
+                    'kaa' => "Korrupciyaga qarshi kurashish «Kompleans nazorat» tizimini boshqarish bo'limi",
+                    'ru' => "Korrupciyaga qarshi kurashish «Kompleans nazorat» tizimini boshqarish bo'limi",
+                    'en' => "Korrupciyaga qarshi kurashish «Kompleans nazorat» tizimini boshqarish bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 104,
+                'name' => [
+                    'uz' => "Xalqaro hamkorlik bo'limi",
+                    'kaa' => "Xalqaro hamkorlik bo'limi",
+                    'ru' => "Xalqaro hamkorlik bo'limi",
+                    'en' => "Xalqaro hamkorlik bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 109,
+                'name' => [
+                    'uz' => "Rahbariyat",
+                    'kaa' => "Rahbariyat",
+                    'ru' => "Rahbariyat",
+                    'en' => "Rahbariyat",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 110,
+                'name' => [
+                    'uz' => "Chimboy",
+                    'kaa' => "Chimboy",
+                    'ru' => "Chimboy",
+                    'en' => "Chimboy",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 117,
+                'name' => [
+                    'uz' => "Iqtidorli talabalarning ilmiy tadqiqot faoliyatini tashkil etish bo'limi",
+                    'kaa' => "Iqtidorli talabalarning ilmiy tadqiqot faoliyatini tashkil etish bo'limi",
+                    'ru' => "Iqtidorli talabalarning ilmiy tadqiqot faoliyatini tashkil etish bo'limi",
+                    'en' => "Iqtidorli talabalarning ilmiy tadqiqot faoliyatini tashkil etish bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 119,
+                'name' => [
+                    'uz' => "Vestnik \"Xabarshi\" ilmiy jurnal redaksiyasi",
+                    'kaa' => "Vestnik \"Xabarshi\" ilmiy jurnal redaksiyasi",
+                    'ru' => "Vestnik \"Xabarshi\" ilmiy jurnal redaksiyasi",
+                    'en' => "Vestnik \"Xabarshi\" ilmiy jurnal redaksiyasi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 120,
+                'name' => [
+                    'uz' => "Til o'rganish markazi",
+                    'kaa' => "Til o'rganish markazi",
+                    'ru' => "Til o'rganish markazi",
+                    'en' => "Til o'rganish markazi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 121,
+                'name' => [
+                    'uz' => "Boshma redaksiya bo'limi",
+                    'kaa' => "Boshma redaksiya bo'limi",
+                    'ru' => "Boshma redaksiya bo'limi",
+                    'en' => "Boshma redaksiya bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 122,
+                'name' => [
+                    'uz' => "Qatag'on qurbonlarini xotirlash muzeyi",
+                    'kaa' => "Qatag'on qurbonlarini xotirlash muzeyi",
+                    'ru' => "Qatag'on qurbonlarini xotirlash muzeyi",
+                    'en' => "Qatag'on qurbonlarini xotirlash muzeyi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 123,
+                'name' => [
+                    'uz' => "To'lov shartnoma asosida o'qitish bo'yicha shartnomalarni rasmiylashtirish va hisobga olish guruhi ",
+                    'kaa' => "To'lov shartnoma asosida o'qitish bo'yicha shartnomalarni rasmiylashtirish va hisobga olish guruhi ",
+                    'ru' => "To'lov shartnoma asosida o'qitish bo'yicha shartnomalarni rasmiylashtirish va hisobga olish guruhi ",
+                    'en' => "To'lov shartnoma asosida o'qitish bo'yicha shartnomalarni rasmiylashtirish va hisobga olish guruhi ",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 125,
+                'name' => [
+                    'uz' => "Axborot-resurs markazi ",
+                    'kaa' => "Axborot-resurs markazi ",
+                    'ru' => "Axborot-resurs markazi ",
+                    'en' => "Axborot-resurs markazi ",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 126,
+                'name' => [
+                    'uz' => "Raqamli ta'lim texnologiyalarini joriy qilish bo'limi",
+                    'kaa' => "Raqamli ta'lim texnologiyalarini joriy qilish bo'limi",
+                    'ru' => "Raqamli ta'lim texnologiyalarini joriy qilish bo'limi",
+                    'en' => "Raqamli ta'lim texnologiyalarini joriy qilish bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 127,
+                'name' => [
+                    'uz' => "Tarmoqlarni boshqarish bo'limi",
+                    'kaa' => "Tarmoqlarni boshqarish bo'limi",
+                    'ru' => "Tarmoqlarni boshqarish bo'limi",
+                    'en' => "Tarmoqlarni boshqarish bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 128,
+                'name' => [
+                    'uz' => "Ilmiy innovatsion ishlanmalarni tijoratlashtirish bo'limi",
+                    'kaa' => "Ilmiy innovatsion ishlanmalarni tijoratlashtirish bo'limi",
+                    'ru' => "Ilmiy innovatsion ishlanmalarni tijoratlashtirish bo'limi",
+                    'en' => "Ilmiy innovatsion ishlanmalarni tijoratlashtirish bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 129,
+                'name' => [
+                    'uz' => "Akadem litsey va texnikumlarga metodik yordam berish sektori ",
+                    'kaa' => "Akadem litsey va texnikumlarga metodik yordam berish sektori ",
+                    'ru' => "Akadem litsey va texnikumlarga metodik yordam berish sektori ",
+                    'en' => "Akadem litsey va texnikumlarga metodik yordam berish sektori ",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 130,
+                'name' => [
+                    'uz' => "Ta'imning kredit tizimini boshqarish sektori ",
+                    'kaa' => "Ta'imning kredit tizimini boshqarish sektori ",
+                    'ru' => "Ta'imning kredit tizimini boshqarish sektori ",
+                    'en' => "Ta'imning kredit tizimini boshqarish sektori ",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 131,
+                'name' => [
+                    'uz' => "Jismoniy va yuridik shaxslarning múrájaatları bilan ishlash, nazorat va monitoring bo'limi",
+                    'kaa' => "Jismoniy va yuridik shaxslarning múrájaatları bilan ishlash, nazorat va monitoring bo'limi",
+                    'ru' => "Jismoniy va yuridik shaxslarning múrájaatları bilan ishlash, nazorat va monitoring bo'limi",
+                    'en' => "Jismoniy va yuridik shaxslarning múrájaatları bilan ishlash, nazorat va monitoring bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 132,
+                'name' => [
+                    'uz' => "Talabalarni boshpana bilan táminlashni muvofiqlashtirish bo'limi ",
+                    'kaa' => "Talabalarni boshpana bilan táminlashni muvofiqlashtirish bo'limi ",
+                    'ru' => "Talabalarni boshpana bilan táminlashni muvofiqlashtirish bo'limi ",
+                    'en' => "Talabalarni boshpana bilan táminlashni muvofiqlashtirish bo'limi ",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 133,
+                'name' => [
+                    'uz' => "Yoshlar bilan ishlashish, manaviy va marifat bo'limi",
+                    'kaa' => "Yoshlar bilan ishlashish, manaviy va marifat bo'limi",
+                    'ru' => "Yoshlar bilan ishlashish, manaviy va marifat bo'limi",
+                    'en' => "Yoshlar bilan ishlashish, manaviy va marifat bo'limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 137,
+                'name' => [
+                    'uz' => "Ichki audit va moliyaviy nazorat xizmati",
+                    'kaa' => "Ichki audit va moliyaviy nazorat xizmati",
+                    'ru' => "Ichki audit va moliyaviy nazorat xizmati",
+                    'en' => "Ichki audit va moliyaviy nazorat xizmati",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 138,
+                'name' => [
+                    'uz' => "Xalqaro reyting faoliyatini monitoring qilish bolimi",
+                    'kaa' => "Xalqaro reyting faoliyatini monitoring qilish bolimi",
+                    'ru' => "Xalqaro reyting faoliyatini monitoring qilish bolimi",
+                    'en' => "Xalqaro reyting faoliyatini monitoring qilish bolimi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 139,
+                'name' => [
+                    'uz' => "Registrator ofis",
+                    'kaa' => "Registrator ofis",
+                    'ru' => "Registrator ofis",
+                    'en' => "Registrator ofis",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 140,
+                'name' => [
+                    'uz' => "Qong'irot",
+                    'kaa' => "Qong'irot",
+                    'ru' => "Qong'irot",
+                    'en' => "Qong'irot",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 146,
+                'name' => [
+                    'uz' => "Doktorantura bo‘limi",
+                    'kaa' => "Doktorantura bo‘limi",
+                    'ru' => "Doktorantura bo‘limi",
+                    'en' => "Doktorantura bo‘limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 147,
+                'name' => [
+                    'uz' => "Karera markazi",
+                    'kaa' => "Karera markazi",
+                    'ru' => "Karera markazi",
+                    'en' => "Karera markazi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 149,
+                'name' => [
+                    'uz' => "Ta’lim jarayonini tashkil etish bo‘limi",
+                    'kaa' => "Ta’lim jarayonini tashkil etish bo‘limi",
+                    'ru' => "Ta’lim jarayonini tashkil etish bo‘limi",
+                    'en' => "Ta’lim jarayonini tashkil etish bo‘limi",
+                ],
+                'parent_id' => null,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 21,
+                'name' => [
+                    'uz' => "Ingliz tili va adabiyoti",
+                    'kaa' => "Ingliz tili va adabiyoti",
+                    'ru' => "Ingliz tili va adabiyoti",
+                    'en' => "Ingliz tili va adabiyoti",
+                ],
+                'parent_id' => 1,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 22,
+                'name' => [
+                    'uz' => "Nemis tili va adabiyoti",
+                    'kaa' => "Nemis tili va adabiyoti",
+                    'ru' => "Nemis tili va adabiyoti",
+                    'en' => "Nemis tili va adabiyoti",
+                ],
+                'parent_id' => 1,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 23,
+                'name' => [
+                    'uz' => "Rus tili va adabiyoti",
+                    'kaa' => "Rus tili va adabiyoti",
+                    'ru' => "Rus tili va adabiyoti",
+                    'en' => "Rus tili va adabiyoti",
+                ],
+                'parent_id' => 1,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 24,
+                'name' => [
+                    'uz' => "Tarjima nazariyasi va amaliyoti ",
+                    'kaa' => "Tarjima nazariyasi va amaliyoti ",
+                    'ru' => "Tarjima nazariyasi va amaliyoti ",
+                    'en' => "Tarjima nazariyasi va amaliyoti ",
+                ],
+                'parent_id' => 1,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 25,
+                'name' => [
+                    'uz' => "Fakul'tetlararo chet tillari",
+                    'kaa' => "Fakul'tetlararo chet tillari",
+                    'ru' => "Fakul'tetlararo chet tillari",
+                    'en' => "Fakul'tetlararo chet tillari",
+                ],
+                'parent_id' => 1,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 65,
+                'name' => [
+                    'uz' => "Inglis tilshunosligi",
+                    'kaa' => "Inglis tilshunosligi",
+                    'ru' => "Inglis tilshunosligi",
+                    'en' => "Inglis tilshunosligi",
+                ],
+                'parent_id' => 1,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 28,
+                'name' => [
+                    'uz' => "Energetika muhandisligi kafedrasi",
+                    'kaa' => "Energetika muhandisligi kafedrasi",
+                    'ru' => "Energetika muhandisligi kafedrasi",
+                    'en' => "Energetika muhandisligi kafedrasi",
+                ],
+                'parent_id' => 2,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 29,
+                'name' => [
+                    'uz' => "Fizika kafedrasi",
+                    'kaa' => "Fizika kafedrasi",
+                    'ru' => "Fizika kafedrasi",
+                    'en' => "Fizika kafedrasi",
+                ],
+                'parent_id' => 2,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 30,
+                'name' => [
+                    'uz' => "Yarim o'tkazgichlar fizikasi kafedrasi",
+                    'kaa' => "Yarim o'tkazgichlar fizikasi kafedrasi",
+                    'ru' => "Yarim o'tkazgichlar fizikasi kafedrasi",
+                    'en' => "Yarim o'tkazgichlar fizikasi kafedrasi",
+                ],
+                'parent_id' => 2,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 62,
+                'name' => [
+                    'uz' => "Elektr muhandisligi va metrologiya kafedrasi",
+                    'kaa' => "Elektr muhandisligi va metrologiya kafedrasi",
+                    'ru' => "Elektr muhandisligi va metrologiya kafedrasi",
+                    'en' => "Elektr muhandisligi va metrologiya kafedrasi",
+                ],
+                'parent_id' => 2,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 50,
+                'name' => [
+                    'uz' => "Qoraqalpoq tilshunosligi",
+                    'kaa' => "Qoraqalpoq tilshunosligi",
+                    'ru' => "Qoraqalpoq tilshunosligi",
+                    'en' => "Qoraqalpoq tilshunosligi",
+                ],
+                'parent_id' => 3,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 51,
+                'name' => [
+                    'uz' => "Qoraqalpoq adabiyoti",
+                    'kaa' => "Qoraqalpoq adabiyoti",
+                    'ru' => "Qoraqalpoq adabiyoti",
+                    'en' => "Qoraqalpoq adabiyoti",
+                ],
+                'parent_id' => 3,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 52,
+                'name' => [
+                    'uz' => "Mass-media va ommaviy kommunikatsiyalar",
+                    'kaa' => "Mass-media va ommaviy kommunikatsiyalar",
+                    'ru' => "Mass-media va ommaviy kommunikatsiyalar",
+                    'en' => "Mass-media va ommaviy kommunikatsiyalar",
+                ],
+                'parent_id' => 3,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 136,
+                'name' => [
+                    'uz' => "Amaliy filologiya",
+                    'kaa' => "Amaliy filologiya",
+                    'ru' => "Amaliy filologiya",
+                    'en' => "Amaliy filologiya",
+                ],
+                'parent_id' => 3,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 46,
+                'name' => [
+                    'uz' => "O'zbek tilshunosligi ",
+                    'kaa' => "O'zbek tilshunosligi ",
+                    'ru' => "O'zbek tilshunosligi ",
+                    'en' => "O'zbek tilshunosligi ",
+                ],
+                'parent_id' => 4,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 47,
+                'name' => [
+                    'uz' => "O'zbek tili va adabiyoti",
+                    'kaa' => "O'zbek tili va adabiyoti",
+                    'ru' => "O'zbek tili va adabiyoti",
+                    'en' => "O'zbek tili va adabiyoti",
+                ],
+                'parent_id' => 4,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 48,
+                'name' => [
+                    'uz' => "Turkman tili va adabiyoti ",
+                    'kaa' => "Turkman tili va adabiyoti ",
+                    'ru' => "Turkman tili va adabiyoti ",
+                    'en' => "Turkman tili va adabiyoti ",
+                ],
+                'parent_id' => 4,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 49,
+                'name' => [
+                    'uz' => "Qozoq tili va adabiyoti",
+                    'kaa' => "Qozoq tili va adabiyoti",
+                    'ru' => "Qozoq tili va adabiyoti",
+                    'en' => "Qozoq tili va adabiyoti",
+                ],
+                'parent_id' => 4,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 57,
+                'name' => [
+                    'uz' => "Arxeologiya",
+                    'kaa' => "Arxeologiya",
+                    'ru' => "Arxeologiya",
+                    'en' => "Arxeologiya",
+                ],
+                'parent_id' => 5,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 58,
+                'name' => [
+                    'uz' => "O'zbekiston va Qoraqalpog'iston tarixi",
+                    'kaa' => "O'zbekiston va Qoraqalpog'iston tarixi",
+                    'ru' => "O'zbekiston va Qoraqalpog'iston tarixi",
+                    'en' => "O'zbekiston va Qoraqalpog'iston tarixi",
+                ],
+                'parent_id' => 5,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 59,
+                'name' => [
+                    'uz' => "Ijtimoiy fanlar",
+                    'kaa' => "Ijtimoiy fanlar",
+                    'ru' => "Ijtimoiy fanlar",
+                    'en' => "Ijtimoiy fanlar",
+                ],
+                'parent_id' => 5,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 33,
+                'name' => [
+                    'uz' => "Moliyaviy texnologiyalar",
+                    'kaa' => "Moliyaviy texnologiyalar",
+                    'ru' => "Moliyaviy texnologiyalar",
+                    'en' => "Moliyaviy texnologiyalar",
+                ],
+                'parent_id' => 6,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 34,
+                'name' => [
+                    'uz' => "Iqtisodiyot, turizm va biznesni boshqarish",
+                    'kaa' => "Iqtisodiyot, turizm va biznesni boshqarish",
+                    'ru' => "Iqtisodiyot, turizm va biznesni boshqarish",
+                    'en' => "Iqtisodiyot, turizm va biznesni boshqarish",
+                ],
+                'parent_id' => 6,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 35,
+                'name' => [
+                    'uz' => "Buxgalteriya hisobi va audit",
+                    'kaa' => "Buxgalteriya hisobi va audit",
+                    'ru' => "Buxgalteriya hisobi va audit",
+                    'en' => "Buxgalteriya hisobi va audit",
+                ],
+                'parent_id' => 6,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 36,
+                'name' => [
+                    'uz' => "Menedjment va iqtisodiyot asoslari ",
+                    'kaa' => "Menedjment va iqtisodiyot asoslari ",
+                    'ru' => "Menedjment va iqtisodiyot asoslari ",
+                    'en' => "Menedjment va iqtisodiyot asoslari ",
+                ],
+                'parent_id' => 6,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 148,
+                'name' => [
+                    'uz' => "Moliya va moliyaviy texnologiyalar",
+                    'kaa' => "Moliya va moliyaviy texnologiyalar",
+                    'ru' => "Moliya va moliyaviy texnologiyalar",
+                    'en' => "Moliya va moliyaviy texnologiyalar",
+                ],
+                'parent_id' => 6,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 37,
+                'name' => [
+                    'uz' => "Jismoniy madaniyat nazariyasi va metodikasi",
+                    'kaa' => "Jismoniy madaniyat nazariyasi va metodikasi",
+                    'ru' => "Jismoniy madaniyat nazariyasi va metodikasi",
+                    'en' => "Jismoniy madaniyat nazariyasi va metodikasi",
+                ],
+                'parent_id' => 7,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 38,
+                'name' => [
+                    'uz' => "Fakultetlar aro jismoniy madaniyat",
+                    'kaa' => "Fakultetlar aro jismoniy madaniyat",
+                    'ru' => "Fakultetlar aro jismoniy madaniyat",
+                    'en' => "Fakultetlar aro jismoniy madaniyat",
+                ],
+                'parent_id' => 7,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 41,
+                'name' => [
+                    'uz' => "Kimyo muhandisligi",
+                    'kaa' => "Kimyo muhandisligi",
+                    'ru' => "Kimyo muhandisligi",
+                    'en' => "Kimyo muhandisligi",
+                ],
+                'parent_id' => 8,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 95,
+                'name' => [
+                    'uz' => "Organik va noorganik kimyo",
+                    'kaa' => "Organik va noorganik kimyo",
+                    'ru' => "Organik va noorganik kimyo",
+                    'en' => "Organik va noorganik kimyo",
+                ],
+                'parent_id' => 8,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 96,
+                'name' => [
+                    'uz' => "Fizikaviy va kolloid kimiyo",
+                    'kaa' => "Fizikaviy va kolloid kimiyo",
+                    'ru' => "Fizikaviy va kolloid kimiyo",
+                    'en' => "Fizikaviy va kolloid kimiyo",
+                ],
+                'parent_id' => 8,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 18,
+                'name' => [
+                    'uz' => "Umumiy biologiya",
+                    'kaa' => "Umumiy biologiya",
+                    'ru' => "Umumiy biologiya",
+                    'en' => "Umumiy biologiya",
+                ],
+                'parent_id' => 9,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 19,
+                'name' => [
+                    'uz' => "Ekologiya va tuproqshunoslik",
+                    'kaa' => "Ekologiya va tuproqshunoslik",
+                    'ru' => "Ekologiya va tuproqshunoslik",
+                    'en' => "Ekologiya va tuproqshunoslik",
+                ],
+                'parent_id' => 9,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 20,
+                'name' => [
+                    'uz' => "Dorivor o'simliklar agroekologiyasi va introduktsiyasi",
+                    'kaa' => "Dorivor o'simliklar agroekologiyasi va introduktsiyasi",
+                    'ru' => "Dorivor o'simliklar agroekologiyasi va introduktsiyasi",
+                    'en' => "Dorivor o'simliklar agroekologiyasi va introduktsiyasi",
+                ],
+                'parent_id' => 9,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 142,
+                'name' => [
+                    'uz' => "Odam va hayvonlar fizologiyasi",
+                    'kaa' => "Odam va hayvonlar fizologiyasi",
+                    'ru' => "Odam va hayvonlar fizologiyasi",
+                    'en' => "Odam va hayvonlar fizologiyasi",
+                ],
+                'parent_id' => 9,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 53,
+                'name' => [
+                    'uz' => "Bino va inshoatlar qurilishi kafedrasi",
+                    'kaa' => "Bino va inshoatlar qurilishi kafedrasi",
+                    'ru' => "Bino va inshoatlar qurilishi kafedrasi",
+                    'en' => "Bino va inshoatlar qurilishi kafedrasi",
+                ],
+                'parent_id' => 10,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 54,
+                'name' => [
+                    'uz' => "Muhandislik inshoatlari majmuasi qurilishi",
+                    'kaa' => "Muhandislik inshoatlari majmuasi qurilishi",
+                    'ru' => "Muhandislik inshoatlari majmuasi qurilishi",
+                    'en' => "Muhandislik inshoatlari majmuasi qurilishi",
+                ],
+                'parent_id' => 10,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 42,
+                'name' => [
+                    'uz' => "Algebra va funktsional tahlil kafedrasi",
+                    'kaa' => "Algebra va funktsional tahlil kafedrasi",
+                    'ru' => "Algebra va funktsional tahlil kafedrasi",
+                    'en' => "Algebra va funktsional tahlil kafedrasi",
+                ],
+                'parent_id' => 11,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 43,
+                'name' => [
+                    'uz' => "Matematik tahlil",
+                    'kaa' => "Matematik tahlil",
+                    'ru' => "Matematik tahlil",
+                    'en' => "Matematik tahlil",
+                ],
+                'parent_id' => 11,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 44,
+                'name' => [
+                    'uz' => "Amaliy matematika va informatika",
+                    'kaa' => "Amaliy matematika va informatika",
+                    'ru' => "Amaliy matematika va informatika",
+                    'en' => "Amaliy matematika va informatika",
+                ],
+                'parent_id' => 11,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 45,
+                'name' => [
+                    'uz' => "Differentsial tenglamalar",
+                    'kaa' => "Differentsial tenglamalar",
+                    'ru' => "Differentsial tenglamalar",
+                    'en' => "Differentsial tenglamalar",
+                ],
+                'parent_id' => 11,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 63,
+                'name' => [
+                    'uz' => "Axborot tizimlari va texnologiyalari kafedrasi",
+                    'kaa' => "Axborot tizimlari va texnologiyalari kafedrasi",
+                    'ru' => "Axborot tizimlari va texnologiyalari kafedrasi",
+                    'en' => "Axborot tizimlari va texnologiyalari kafedrasi",
+                ],
+                'parent_id' => 11,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 26,
+                'name' => [
+                    'uz' => "Jinoyat huquqi, protsessi va krimnalistika",
+                    'kaa' => "Jinoyat huquqi, protsessi va krimnalistika",
+                    'ru' => "Jinoyat huquqi, protsessi va krimnalistika",
+                    'en' => "Jinoyat huquqi, protsessi va krimnalistika",
+                ],
+                'parent_id' => 12,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 27,
+                'name' => [
+                    'uz' => "Siyosatshunoslik va ma’naviyat asoslari",
+                    'kaa' => "Siyosatshunoslik va ma’naviyat asoslari",
+                    'ru' => "Siyosatshunoslik va ma’naviyat asoslari",
+                    'en' => "Siyosatshunoslik va ma’naviyat asoslari",
+                ],
+                'parent_id' => 12,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 66,
+                'name' => [
+                    'uz' => "Inson huquqlari, davlat huquqi va boshqaruv",
+                    'kaa' => "Inson huquqlari, davlat huquqi va boshqaruv",
+                    'ru' => "Inson huquqlari, davlat huquqi va boshqaruv",
+                    'en' => "Inson huquqlari, davlat huquqi va boshqaruv",
+                ],
+                'parent_id' => 12,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 135,
+                'name' => [
+                    'uz' => "Fuqarolik va biznes huquqi",
+                    'kaa' => "Fuqarolik va biznes huquqi",
+                    'ru' => "Fuqarolik va biznes huquqi",
+                    'en' => "Fuqarolik va biznes huquqi",
+                ],
+                'parent_id' => 12,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 31,
+                'name' => [
+                    'uz' => "Tabiiy geografiya va gidrometeorologiya ",
+                    'kaa' => "Tabiiy geografiya va gidrometeorologiya ",
+                    'ru' => "Tabiiy geografiya va gidrometeorologiya ",
+                    'en' => "Tabiiy geografiya va gidrometeorologiya ",
+                ],
+                'parent_id' => 13,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 32,
+                'name' => [
+                    'uz' => "Geodeziya, kartografiya va tabiiy resurslar ",
+                    'kaa' => "Geodeziya, kartografiya va tabiiy resurslar ",
+                    'ru' => "Geodeziya, kartografiya va tabiiy resurslar ",
+                    'en' => "Geodeziya, kartografiya va tabiiy resurslar ",
+                ],
+                'parent_id' => 13,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 64,
+                'name' => [
+                    'uz' => "Iqtisodiy va ijtimoiy geografiya",
+                    'kaa' => "Iqtisodiy va ijtimoiy geografiya",
+                    'ru' => "Iqtisodiy va ijtimoiy geografiya",
+                    'en' => "Iqtisodiy va ijtimoiy geografiya",
+                ],
+                'parent_id' => 13,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 55,
+                'name' => [
+                    'uz' => "Neft va gaz texnologiyasi",
+                    'kaa' => "Neft va gaz texnologiyasi",
+                    'ru' => "Neft va gaz texnologiyasi",
+                    'en' => "Neft va gaz texnologiyasi",
+                ],
+                'parent_id' => 14,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 56,
+                'name' => [
+                    'uz' => "Sanoat texnologiyasi",
+                    'kaa' => "Sanoat texnologiyasi",
+                    'ru' => "Sanoat texnologiyasi",
+                    'en' => "Sanoat texnologiyasi",
+                ],
+                'parent_id' => 14,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 17,
+                'name' => [
+                    'uz' => "Shahar qurilishi va xoʻjaligi",
+                    'kaa' => "Shahar qurilishi va xoʻjaligi",
+                    'ru' => "Shahar qurilishi va xoʻjaligi",
+                    'en' => "Shahar qurilishi va xoʻjaligi",
+                ],
+                'parent_id' => 15,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 94,
+                'name' => [
+                    'uz' => "Arxitektura kafedrasi",
+                    'kaa' => "Arxitektura kafedrasi",
+                    'ru' => "Arxitektura kafedrasi",
+                    'en' => "Arxitektura kafedrasi",
+                ],
+                'parent_id' => 15,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 60,
+                'name' => [
+                    'uz' => "Pedagogika va psixologiya",
+                    'kaa' => "Pedagogika va psixologiya",
+                    'ru' => "Pedagogika va psixologiya",
+                    'en' => "Pedagogika va psixologiya",
+                ],
+                'parent_id' => 67,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 68,
+                'name' => [
+                    'uz' => "Vokal va cholg'u ijrochiligi kafedrasi",
+                    'kaa' => "Vokal va cholg'u ijrochiligi kafedrasi",
+                    'ru' => "Vokal va cholg'u ijrochiligi kafedrasi",
+                    'en' => "Vokal va cholg'u ijrochiligi kafedrasi",
+                ],
+                'parent_id' => 67,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 144,
+                'name' => [
+                    'uz' => "Rangtasvir va amaliy san'at ",
+                    'kaa' => "Rangtasvir va amaliy san'at ",
+                    'ru' => "Rangtasvir va amaliy san'at ",
+                    'en' => "Rangtasvir va amaliy san'at ",
+                ],
+                'parent_id' => 67,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 141,
+                'name' => [
+                    'uz' => "Tabiiy va aniq fanlar kafedrasi",
+                    'kaa' => "Tabiiy va aniq fanlar kafedrasi",
+                    'ru' => "Tabiiy va aniq fanlar kafedrasi",
+                    'en' => "Tabiiy va aniq fanlar kafedrasi",
+                ],
+                'parent_id' => 110,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 143,
+                'name' => [
+                    'uz' => "Ijtimoiy-gumanitar fanlar kafedrasi",
+                    'kaa' => "Ijtimoiy-gumanitar fanlar kafedrasi",
+                    'ru' => "Ijtimoiy-gumanitar fanlar kafedrasi",
+                    'en' => "Ijtimoiy-gumanitar fanlar kafedrasi",
+                ],
+                'parent_id' => 110,
+                'evaluation' => null,
+            ],
+            [
+                'id' => 39,
+                'name' => [
+                    'uz' => "Muhandislik fanlar kafedarsi",
+                    'kaa' => "Muhandislik fanlar kafedarsi",
+                    'ru' => "Muhandislik fanlar kafedarsi",
+                    'en' => "Muhandislik fanlar kafedarsi",
+                ],
+                'parent_id' => 140,
+                'evaluation' => null,
+            ],
+        ];
+        foreach ($departments as $department) {
+            Department::create($department);
         }
     }
 }

@@ -36,13 +36,19 @@
                                 </td>
                                 <td></td>
                                 <td class="align-middle text-center">
-                                    {{ $value->criterionEvaluation->score }}
+                                    {{ number_format($value->criterionEvaluation($value->id, auth()->user()->degree)->score ?? 0, 2) }}
                                 </td>
                                 <td class="align-middle text-center">
                                     <a href="{{ route('upload.show', $value->id) }}"
                                        class="btn btn-outline-primary btn-sm">
                                         <i class="fa fa-plus"></i>
                                     </a>
+                                    @if($value->checking == 'ai')
+                                        <a href="{{ route('criteria.edit', $value->id) }}"
+                                           class="btn btn-outline-danger btn-sm">
+                                            <i class="fa fa-pen"></i>
+                                        </a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

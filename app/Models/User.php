@@ -26,7 +26,7 @@ class User extends Authenticatable
         return "$surname $firstInitial.$patronymicInitial.";
     }
 
-    protected $fillable = ['id', 'name', 'hemis_id', 'image', 'pos', 'rol', 'status'];
+    protected $fillable = ['id', 'name', 'hemis_id', 'image', 'pos', 'rol', 'status', 'degree'];
 
     protected $hidden = ['remember_token',];
 

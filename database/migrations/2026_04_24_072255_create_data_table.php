@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->double('point')->default(0);
             $table->foreignId('criterion_id')->constrained('criteria')->cascadeOnDelete();
             $table->enum('status', ['received', 'checking', 'accepted', 'cancelled', 'deleted'])->default('received');
+            $table->text('reason')->nullable();
             $table->foreignId('year_id')->nullable()->constrained('years')->cascadeOnDelete();
             $table->foreignId('language_id')->nullable()->constrained('languages')->cascadeOnDelete();
             $table->timestamps();

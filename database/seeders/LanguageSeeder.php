@@ -23,34 +23,201 @@ class LanguageSeeder extends Seeder
             'status' => '1',
         ]);
 
-        $response = Http::withToken(env('HEMIS_API_KEY'))->get('https://student.karsu.uz/rest/v1/data/classifier-list', [
-            'classifier' => 'h_language'
-        ]);
-        $years = $response->json();
-        foreach ($years['data']['items'][0]['options'] as $year) {
-            Language::create([
-                'id' => $year['code'],
+        $languages = [
+            [
+                'id' => 11,
                 'name' => [
-                    'uz' => $year['name'],
-                    'kaa' => $year['name'],
-                    'ru' => $year['name'],
-                    'en' => $year['name'],
+                    'uz' => "O‘zbek",
+                    'kaa' => "O‘zbek",
+                    'ru' => "O‘zbek",
+                    'en' => "O‘zbek",
                 ],
                 'status' => '1',
-            ]);
+            ],
+            [
+                'id' => 12,
+                'name' => [
+                    'uz' => "Rus",
+                    'kaa' => "Rus",
+                    'ru' => "Rus",
+                    'en' => "Rus",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 13,
+                'name' => [
+                    'uz' => "Qoraqalpoq",
+                    'kaa' => "Qoraqalpoq",
+                    'ru' => "Qoraqalpoq",
+                    'en' => "Qoraqalpoq",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 14,
+                'name' => [
+                    'uz' => "Ingliz",
+                    'kaa' => "Ingliz",
+                    'ru' => "Ingliz",
+                    'en' => "Ingliz",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 15,
+                'name' => [
+                    'uz' => "Tojik",
+                    'kaa' => "Tojik",
+                    'ru' => "Tojik",
+                    'en' => "Tojik",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 16,
+                'name' => [
+                    'uz' => "Qozoq",
+                    'kaa' => "Qozoq",
+                    'ru' => "Qozoq",
+                    'en' => "Qozoq",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 17,
+                'name' => [
+                    'uz' => "Turkman",
+                    'kaa' => "Turkman",
+                    'ru' => "Turkman",
+                    'en' => "Turkman",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 18,
+                'name' => [
+                    'uz' => "Koreys",
+                    'kaa' => "Koreys",
+                    'ru' => "Koreys",
+                    'en' => "Koreys",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 19,
+                'name' => [
+                    'uz' => "Nemis",
+                    'kaa' => "Nemis",
+                    'ru' => "Nemis",
+                    'en' => "Nemis",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 20,
+                'name' => [
+                    'uz' => "Frantsuz",
+                    'kaa' => "Frantsuz",
+                    'ru' => "Frantsuz",
+                    'en' => "Frantsuz",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 21,
+                'name' => [
+                    'uz' => "Turk",
+                    'kaa' => "Turk",
+                    'ru' => "Turk",
+                    'en' => "Turk",
+                ],
+                'status' => '1',
+            ],
+            [
+                'id' => 22,
+                'name' => [
+                    'uz' => "Qirg'iz",
+                    'kaa' => "Qirg'iz",
+                    'ru' => "Qirg'iz",
+                    'en' => "Qirg'iz",
+                ],
+                'status' => '1',
+            ],
+        ];
+        foreach ($languages as $language) {
+            Language::create($language);
         }
 
-        $response = Http::withToken(env('HEMIS_API_KEY'))->get('https://student.karsu.uz/rest/v1/data/classifier-list', [
-            'classifier' => 'h_education_year'
-        ]);
-        $years = $response->json();
-        foreach ($years['data']['items'][0]['options'] as $year) {
-            if ($year['code'] < 2018) continue;
-            Year::create([
-                'id' => $year['code'],
-                'name' => $year['name'],
+        $years = [
+            [
+                'id' => 2018,
+                'name' => "2018-2019",
                 'status' => '1',
-            ]);
+            ],
+            [
+                'id' => 2019,
+                'name' => "2019-2020",
+                'status' => '1',
+            ],
+            [
+                'id' => 2020,
+                'name' => "2020-2021",
+                'status' => '1',
+            ],
+            [
+                'id' => 2021,
+                'name' => "2021-2022",
+                'status' => '1',
+            ],
+            [
+                'id' => 2022,
+                'name' => "2022-2023",
+                'status' => '1',
+            ],
+            [
+                'id' => 2023,
+                'name' => "2023-2024",
+                'status' => '1',
+            ],
+            [
+                'id' => 2024,
+                'name' => "2024-2025",
+                'status' => '1',
+            ],
+            [
+                'id' => 2025,
+                'name' => "2025-2026",
+                'status' => '1',
+            ],
+            [
+                'id' => 2026,
+                'name' => "2026-2027",
+                'status' => '1',
+            ],
+            [
+                'id' => 2027,
+                'name' => "2027-2028",
+                'status' => '1',
+            ],
+            [
+                'id' => 2028,
+                'name' => "2028-2029",
+                'status' => '1',
+            ],
+            [
+                'id' => 2029,
+                'name' => "2029-2030",
+                'status' => '1',
+            ],
+            [
+                'id' => 2030,
+                'name' => "2030-2031",
+                'status' => '1',
+            ],
+        ];
+        foreach ($years as $year) {
+            Year::create($year);
         }
     }
 }
