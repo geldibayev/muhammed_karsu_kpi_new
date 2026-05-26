@@ -10,6 +10,11 @@ use Illuminate\Http\Request;
 
 class CriterionController extends Controller
 {
+    public function index()
+    {
+        return redirect()->to('/login');
+    }
+
     public function edit(Criterion $criterion)
     {
         return view('pages.admin.criteria.edit', compact(['criterion']));
