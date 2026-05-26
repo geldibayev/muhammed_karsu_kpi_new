@@ -21,6 +21,7 @@ return new class extends Migration {
             $table->string('template')->nullable();
             $table->string('integrate')->nullable();
             $table->string('inserting')->default('all');
+            $table->enum('res_type', ['all', 'file', 'url'])->default('all');
             $table->string('checking')->default('manual');
             $table->text('ai_prompt')->nullable();
             $table->string('ai_model')->default('gemini-2.5-flash');

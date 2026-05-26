@@ -10,7 +10,7 @@ class Criterion extends Model
 {
     protected $fillable = [
         'id', 'name', 'desc', 'parent_id', 'template',
-        'upload', 'file_limit', 'observation', 'report_id',
+        'upload', 'file_limit', 'observation', 'report_id', 'res_type',
         'formula_id', 'integrate', 'checking', 'ai_prompt', 'status',
     ];
 

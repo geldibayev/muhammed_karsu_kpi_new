@@ -2,9 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicDegree;
+use App\Models\AcademicRank;
+use App\Models\EmployeeStatus;
+use App\Models\EmployeeType;
+use App\Models\EmploymentForm;
+use App\Models\EmploymentStaff;
+use App\Models\StaffPosition;
 use App\Models\User;
+use App\Models\Workplace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use League\OAuth2\Client\Provider\GenericProvider;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
@@ -69,7 +78,10 @@ class HemisController extends Controller
             ];
 
             $user = User::find($userArray['employee_id']);
-
+            $http = Http::withToken(env('HEMIS_API_KEY'))->get('https://student.karsu.uz/rest/v1/data/employee-list', [
+                'type' => 'all',
+                'search' => $userArray['employee_id_number'],
+            ]);
             if ($user) {
                 $user->update($userData);
             } else {
@@ -79,6 +91,56 @@ class HemisController extends Controller
                 $userData['rol'] = $isSuperAdmin ? ['super_admin', 'user'] : ['user'];
                 User::create($userData);
                 $user = User::find($userArray['employee_id']);
+            }
+            $httpGet = $http->json();
+            foreach ($httpGet['data']['items'] as $value) {
+                $academic_degree = AcademicDegree::firstOrCreate([
+                    'id' => $value['academicDegree']['code'],
+                ], [
+                    'name' => $value['academicDegree']['name'],
+                ]);
+                $academic_rank = AcademicRank::firstOrCreate([
+                    'id' => $value['academicRank']['code'],
+                ], [
+                    'name' => $value['academicRank']['name'],
+                ]);
+                $form = EmploymentForm::firstOrCreate([
+                    'id' => $value['employmentForm']['code'],
+                ], [
+                    'name' => $value['employmentForm']['name'],
+                ]);
+                $staffX = EmploymentStaff::firstOrCreate([
+                    'id' => $value['employmentStaff']['code'],
+                ], [
+                    'name' => $value['employmentStaff']['name'],
+                ]);
+                $staff_position = StaffPosition::firstOrCreate([
+                    'id' => $value['staffPosition']['code'],
+                ], [
+                    'name' => $value['staffPosition']['name'],
+                ]);
+                $type = EmployeeType::firstOrCreate([
+                    'id' => $value['employeeType']['code'],
+                ], [
+                    'name' => $value['employeeType']['name'],
+                ]);
+                $status = EmployeeStatus::firstOrCreate([
+                    'id' => $value['employeeStatus']['code'],
+                ], [
+                    'name' => $value['employeeStatus']['name'],
+                ]);
+                Workplace::firstOrCreate([
+                    'user_id' => $value['id'],
+                    'department_id' => $value['department']['id'],
+                    'academic_degree_id' => $academic_degree->id,
+                    'academic_rank_id' => $academic_rank->id,
+                    'form_id' => $form->id,
+                    'staff_id' => $staffX->id,
+                    'staff_position_id' => $staff_position->id,
+                    'status_id' => $status->id,
+                    'type_id' => $type->id,
+                ]);
+
             }
             Auth::login($user);
             $request->session()->regenerate();

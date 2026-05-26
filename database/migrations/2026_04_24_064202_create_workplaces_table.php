@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->foreignId('academic_degree_id')->constrained('academic_degrees')->cascadeOnDelete();
             $table->foreignId('academic_rank_id')->constrained('academic_ranks')->cascadeOnDelete();
             $table->foreignId('form_id')->constrained('employment_forms')->cascadeOnDelete();
-            $table->foreignId('staff_id')->constrained('staff_positions')->cascadeOnDelete();
+            $table->foreignId('staff_id')->constrained('employment_staff')->cascadeOnDelete();
             $table->foreignId('staff_position_id')->constrained('staff_positions')->cascadeOnDelete();
             $table->foreignId('status_id')->constrained('employee_statuses')->cascadeOnDelete();
             $table->foreignId('type_id')->constrained('employee_types')->cascadeOnDelete();

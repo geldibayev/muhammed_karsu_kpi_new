@@ -65,45 +65,63 @@
                                         @if($upload->template)
                                             @include('pages.users.upload.template.' . $upload->template)
                                         @endif
-                                        <div class="col-md-2 mb-3">
-                                            <label class="small mb-0">Resurs turi</label>
-                                            <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
-                                                <label class="btn btn-outline-primary active w-100">
-                                                    <input type="radio" name="uploadResourceType" value="file" checked>
-                                                    Fayl
-                                                </label>
-                                                <label class="btn btn-outline-primary w-100">
-                                                    <input type="radio" name="uploadResourceType" value="url">
-                                                    URL
-                                                </label>
+                                        @if($upload->res_type == 'all')
+                                            <div class="col-md-2 mb-3">
+                                                <label class="small mb-0">Resurs turi</label>
+                                                <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
+                                                    <label class="btn btn-outline-primary active w-100">
+                                                        <input type="radio" name="uploadResourceType" value="file"
+                                                               checked>
+                                                        Fayl
+                                                    </label>
+                                                    <label class="btn btn-outline-primary w-100">
+                                                        <input type="radio" name="uploadResourceType" value="url">
+                                                        URL
+                                                    </label>
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div class="col-md-8 mb-3">
-                                            <label class="small mb-0">Resurs manbai</label>
-                                            <div id="fileUploadBlock"
-                                                 style="border: 1px solid #ddd; padding: 6px; border-radius: 5px">
-                                                <label for="uploadResourceFile" class="drag-area mb-0" id="dragZone">
+                                            <div class="col-md-8 mb-3">
+                                                <label class="small mb-0">Resurs manbai</label>
+                                                <div id="fileUploadBlock"
+                                                     style="border: 1px solid #ddd; padding: 6px; border-radius: 5px">
+                                                    <label for="uploadResourceFile" class="drag-area mb-0"
+                                                           id="dragZone">
                                                 <span id="file-name" class="small text-muted">
                                                     Faylga yo‘l ko‘rsating...
                                                 </span>
-                                                </label>
-                                                <input type="file" id="uploadResourceFile" name="uploadResourceFile"
-                                                       class="d-none" accept=".pdf,.jpg,.png,.zip,.rar" required>
-                                            </div>
+                                                    </label>
+                                                    <input type="file" id="uploadResourceFile" name="uploadResourceFile"
+                                                           class="d-none" accept=".pdf,.jpg,.png,.zip,.rar" required>
+                                                </div>
 
-                                            <div id="urlUploadBlock" style="display: none;">
+                                                <div id="urlUploadBlock" style="display: none;">
+                                                    <input type="url" id="uploadResourceUrl" name="uploadResourceUrl"
+                                                           class="form-control"
+                                                           placeholder="Masalan: https://example.com/resurs.pdf">
+                                                </div>
+
+                                                <div class="text-danger small mt-1" id="limit_error"
+                                                     style="display: none;">
+                                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                    Fayl limiti 2 megabaytdan oshib ketdi.
+                                                </div>
+                                            </div>
+                                        @elseif($upload->res_type == 'url')
+                                            <div class="col-md-10 mb-3">
+                                                <label class="small mb-0">Resurs manbai</label>
                                                 <input type="url" id="uploadResourceUrl" name="uploadResourceUrl"
                                                        class="form-control"
-                                                       placeholder="Masalan: https://example.com/resurs.pdf">
+                                                       placeholder="Masalan: https://example.com/resurs.pdf" required>
                                             </div>
 
-                                            <div class="text-danger small mt-1" id="limit_error" style="display: none;">
-                                                <i class="fas fa-exclamation-triangle mr-1"></i>
-                                                Fayl limiti 2 megabaytdan oshib ketdi.
+                                        @elseif($upload->res_type == 'file')
+                                            <div class="col-md-10 mb-3">
+                                                <label class="small mb-0">Resurs manbai</label>
+                                                <input type="file" id="uploadResourceFile" name="uploadResourceFile"
+                                                       class="form-control" accept=".pdf,.jpg,.png,.zip,.rar" required>
                                             </div>
-                                        </div>
-
+                                        @endif
                                         <div class="col-md-2 mb-3">
                                             <label class="small mb-0" for="year_id">Resurs yili</label>
                                             <select name="year" id="year_id" class="form-control" required>
@@ -186,7 +204,7 @@
             var $fileName = $('#file-name');
             var $dragZone = $('#dragZone');
             var emptyText = "Faylga yo'l ko'rsatilmagan...";
-
+            @if($upload->res_type == 'all')
             // Radio almashinishi
             $('input[name="uploadResourceType"]').on('change', function () {
                 if ($(this).val() === 'file') {
@@ -264,7 +282,7 @@
             $('#fileForm').on('submit', function () {
                 $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Yuklanmoqda...');
             });
-
+            @endif
         });
     </script>
 @endsection

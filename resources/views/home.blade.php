@@ -34,19 +34,19 @@
                                         {!! $value->desc['uz'] !!}
                                     </div>
                                 </td>
-                                <td></td>
+                                <td class="text-center align-middle">
+                                    @if($value->checking == 'ai')
+                                        <i class="fa fa-robot"></i>
+                                    @endif
+                                </td>
                                 <td class="align-middle text-center">
                                     {{ number_format($value->criterionEvaluation($value->id, auth()->user()->degree)->score ?? 0, 2) }}
                                 </td>
                                 <td class="align-middle text-center">
-                                    <a href="{{ route('upload.show', $value->id) }}"
-                                       class="btn btn-outline-primary btn-sm">
-                                        <i class="fa fa-plus"></i>
-                                    </a>
-                                    @if($value->checking == 'ai')
-                                        <a href="{{ route('criteria.edit', $value->id) }}"
-                                           class="btn btn-outline-danger btn-sm">
-                                            <i class="fa fa-pen"></i>
+                                    @if($value->upload == '1')
+                                        <a href="{{ route('upload.show', $value->id) }}"
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fa fa-plus"></i>
                                         </a>
                                     @endif
                                 </td>

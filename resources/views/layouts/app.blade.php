@@ -9,6 +9,7 @@
           href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
     <link rel="stylesheet" href="{{ asset('plugins/fontawesome-free/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ asset('dist/css/adminlte.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('plugins/toastr/toastr.min.css') }}">
 </head>
 <body class="hold-transition sidebar-mini">
 <div class="wrapper">
@@ -52,25 +53,25 @@
                         </a>
                         <ul class="nav nav-treeview">
                             <li class="nav-item">
-                                <a href="{{ url('/') }}" class="nav-link">
+                                <a href="{{ route('files.show', 'received') }}" class="nav-link">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Yuborilgan</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="{{ url('/') }}" class="nav-link">
+                                <a href="{{ route('files.show', 'checking') }}" class="nav-link">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Tekshirilmoqda</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="{{ asset('/') }}" class="nav-link">
+                                <a href="{{ route('files.show', 'accepted') }}" class="nav-link">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Tasdiqlangan</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="{{ asset('/') }}" class="nav-link">
+                                <a href="{{ route('files.show', 'cancelled') }}" class="nav-link">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Qaytarilgan</p>
                                 </a>
@@ -104,6 +105,9 @@
     </aside>
 
     <div class="content-wrapper">
+        <marquee class="p-0 m-0 bg-danger">
+            Sayt hozirda TEST rejimida ishlamoqda!
+        </marquee>
         <section class="content-header">
             <div class="container-fluid">
                 <div class="row mb-2">
@@ -132,9 +136,38 @@
 </div>
 <script src="{{ asset('plugins/jquery/jquery.min.js') }}"></script>
 <script src="{{ asset('plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+<script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
 <script src="{{ asset('dist/js/adminlte.min.js') }}"></script>
 <script src="{{ asset('dist/js/demo.js') }}"></script>
+<script>
+    $(document).ready(function () {
+        // Toastr asosiy sozlamalari (Pastki o'ng burchak va 5 soniya)
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-bottom-right",
+            "timeOut": "5000",
+            "extendedTimeOut": "1000",
+        };
 
+        // Sessiyadan kelgan xabarlarni tutib olish
+        @if(Session::has('success'))
+        toastr.success("{{ Session::get('success') }}");
+        @endif
+
+        @if(Session::has('error'))
+        toastr.error("{{ Session::get('error') }}");
+        @endif
+
+        @if(Session::has('warning'))
+        toastr.warning("{{ Session::get('warning') }}");
+        @endif
+
+        @if(Session::has('info'))
+        toastr.info("{{ Session::get('info') }}");
+        @endif
+    });
+</script>
 @yield('script')
 </body>
 </html>

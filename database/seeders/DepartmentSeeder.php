@@ -747,7 +747,7 @@ class DepartmentSeeder extends Seeder
                     'en' => "Ingliz tili va adabiyoti",
                 ],
                 'parent_id' => 1,
-                'evaluation' => null,
+                'evaluation' => 'foreign_lang',
             ],
             [
                 'id' => 22,
@@ -758,7 +758,7 @@ class DepartmentSeeder extends Seeder
                     'en' => "Nemis tili va adabiyoti",
                 ],
                 'parent_id' => 1,
-                'evaluation' => null,
+                'evaluation' => 'foreign_lang',
             ],
             [
                 'id' => 23,
@@ -769,7 +769,7 @@ class DepartmentSeeder extends Seeder
                     'en' => "Rus tili va adabiyoti",
                 ],
                 'parent_id' => 1,
-                'evaluation' => null,
+                'evaluation' => 'foreign_lang',
             ],
             [
                 'id' => 24,
@@ -780,7 +780,7 @@ class DepartmentSeeder extends Seeder
                     'en' => "Tarjima nazariyasi va amaliyoti ",
                 ],
                 'parent_id' => 1,
-                'evaluation' => null,
+                'evaluation' => 'foreign_lang',
             ],
             [
                 'id' => 25,
@@ -791,7 +791,7 @@ class DepartmentSeeder extends Seeder
                     'en' => "Fakul'tetlararo chet tillari",
                 ],
                 'parent_id' => 1,
-                'evaluation' => null,
+                'evaluation' => 'foreign_lang',
             ],
             [
                 'id' => 65,
@@ -802,7 +802,7 @@ class DepartmentSeeder extends Seeder
                     'en' => "Inglis tilshunosligi",
                 ],
                 'parent_id' => 1,
-                'evaluation' => null,
+                'evaluation' => 'foreign_lang',
             ],
             [
                 'id' => 28,
@@ -1033,7 +1033,7 @@ class DepartmentSeeder extends Seeder
                     'en' => "Jismoniy madaniyat nazariyasi va metodikasi",
                 ],
                 'parent_id' => 7,
-                'evaluation' => null,
+                'evaluation' => 'physical',
             ],
             [
                 'id' => 38,
@@ -1044,7 +1044,7 @@ class DepartmentSeeder extends Seeder
                     'en' => "Fakultetlar aro jismoniy madaniyat",
                 ],
                 'parent_id' => 7,
-                'evaluation' => null,
+                'evaluation' => 'physical',
             ],
             [
                 'id' => 41,

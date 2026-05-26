@@ -17,6 +17,8 @@ class DatumController extends Controller
 {
     public function show(Criterion $upload)
     {
+        if ($upload->upload != '1') return redirect()->route('home')
+            ->with('error', 'Ruxsat etilmagan sahifa.');
         $years = Year::all();
         $languages = Language::all();
         return view('pages.users.upload.index', compact(['upload', 'years', 'languages']));

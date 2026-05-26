@@ -40,7 +40,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'url',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'foreign_lang' => 4,
@@ -82,6 +83,7 @@ class CriterionSeeder extends Seeder
                         'report_id' => 1,
                         'checking' => 'ai',
                         'template' => '1',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 6,
@@ -122,8 +124,9 @@ class CriterionSeeder extends Seeder
                         ],
                         'observation' => 'current',
                         'report_id' => 1,
-                        'checking' => 'manual',
+                        'checking' => 'ai',
                         'template' => '1',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 5,
@@ -164,7 +167,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 5,
@@ -207,7 +211,8 @@ class CriterionSeeder extends Seeder
                         'report_id' => 1,
                         'checking' => 'department',
                         'template' => '1',
-                        'upload' => '1', 'status' => '1',
+                        'res_type' => 'all',
+                        'upload' => '0', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
                             'no_degrees' => 3,
@@ -234,9 +239,10 @@ class CriterionSeeder extends Seeder
                         ],
                         'observation' => 'current',
                         'report_id' => 1,
-                        'checking' => 'hemis_integrate',
+                        'checking' => 'hemis:attendance',
                         'template' => '1',
-                        'upload' => '1', 'status' => '1',
+                        'res_type' => 'all',
+                        'upload' => '0', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 8,
                             'no_degrees' => 8,
@@ -263,9 +269,10 @@ class CriterionSeeder extends Seeder
                         ],
                         'observation' => 'current',
                         'report_id' => 1,
-                        'checking' => 'vote_integrate',
+                        'checking' => 'hemis:vote',
                         'template' => '1',
-                        'upload' => '1', 'status' => '1',
+                        'res_type' => 'all',
+                        'upload' => '0', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
                             'no_degrees' => 2,
@@ -293,7 +300,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -330,7 +338,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -371,7 +380,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -425,7 +435,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 1,
@@ -465,7 +476,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -504,7 +516,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'file',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -533,7 +546,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'file',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'foreign_lang' => 4,
@@ -546,8 +560,8 @@ class CriterionSeeder extends Seeder
                     ],
                     [
                         'name' => [
-                            'uz' => 'Pedagog xodimlarning(xorijda(onlayn, offlayn)) qayta tayyorlash, malaka oshirish va stajirovka kurslaridan o‘tganligi hamda almashinuv dasturlarida ishtirok etganligi',
-                            'kaa' => 'Pedagog xızmetkerlerdiń(sırt elde(onlayn, offlayn)) qayta tayarlaw, tájiriybe arttırıw hám stajirovka kurslarınan ótkenligi hám de almasıw baǵdarlamalarında qatnasqanlıǵı;',
+                            'uz' => 'Pedagog xodimlarning (xorijda(onlayn, offlayn)) qayta tayyorlash, malaka oshirish va stajirovka kurslaridan o‘tganligi hamda almashinuv dasturlarida ishtirok etganligi',
+                            'kaa' => 'Pedagog xızmetkerlerdiń (sırt elde(onlayn, offlayn)) qayta tayarlaw, tájiriybe arttırıw hám stajirovka kurslarınan ótkenligi hám de almasıw baǵdarlamalarında qatnasqanlıǵı;',
                             'ru' => 'Прохождение педагогическими работниками курсов переподготовки, повышения квалификации и стажировки(за рубежом(онлайн, оффлайн)) и участие в программах обмена',
                             'en' => 'The completion of retraining, professional development, and internship courses by teaching staff(abroad(online, offline)) and their participation in exchange programs',
                         ],
@@ -560,7 +574,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'last3years',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'file',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -590,8 +605,8 @@ class CriterionSeeder extends Seeder
                     ],
                     [
                         'name' => [
-                            'uz' => 'Professor - o‘qituvchilarni xorijiy((QS, THE, ARWU TOP - 1000 talik) OTMlarida dars mashg‘ulotlarini olib borganligi hamda professor - o‘qituvchilari tomonidan xorijlik olimlar(yekspert, mutaxassis)ni universitetda dars mashg‘ulotlarini olib borishga jalb qilganligi yoki universitetga xorijlik talabalarni jalb qilganligi va universitet bilan halqaro aloqalarni mustahkamlashda qo‘shgan xissasi',
-                            'kaa' => 'Professor - oqıtıwshılardıń sırt el(QS, THE, ARWU TOP - 1000 lıq) JOOlarında sabaq ótkenligi hám de professor - oqıtıwshıları tárepinen sırt elli ilimpazlardı(ekspert, qánige) universitette sabaq ótiwge tartqanlıǵı yamasa universitetke sırt elli studentlerdi tartqanlıǵı hám de universitet penen xalıqaralıq baylanıslardı bekkemlewde qosqan úlesi;',
+                            'uz' => 'Professor - o‘qituvchilarni xorijiy ((QS, THE, ARWU TOP - 1000 talik) OTMlarida dars mashg‘ulotlarini olib borganligi hamda professor - o‘qituvchilari tomonidan xorijlik olimlar(yekspert, mutaxassis)ni universitetda dars mashg‘ulotlarini olib borishga jalb qilganligi yoki universitetga xorijlik talabalarni jalb qilganligi va universitet bilan halqaro aloqalarni mustahkamlashda qo‘shgan xissasi',
+                            'kaa' => 'Professor - oqıtıwshılardıń sırt el (QS, THE, ARWU TOP - 1000 lıq) JOOlarında sabaq ótkenligi hám de professor - oqıtıwshıları tárepinen sırt elli ilimpazlardı(ekspert, qánige) universitette sabaq ótiwge tartqanlıǵı yamasa universitetke sırt elli studentlerdi tartqanlıǵı hám de universitet penen xalıqaralıq baylanıslardı bekkemlewde qosqan úlesi;',
                             'ru' => 'Вклад профессоров и преподавателей в проведение занятий в зарубежных вузах(входящих в ТОП - 1000 QS, THE, ARWU), а также привлечение профессорами и преподавателями зарубежных ученых(экспертов, специалистов) для проведения занятий в университете или привлечение иностранных студентов в университет и укрепление международных связей с университетом',
                             'en' => 'Contribution of professors and teachers to conducting classes in foreign(QS, THE, ARWU TOP - 1000) universities, as well as the involvement of foreign scientists(experts, specialists) by professors and teachers to conduct classes at the university, or the involvement of foreign students in the university, and the strengthening of international relations with the university',
                         ],
@@ -604,7 +619,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -659,6 +675,7 @@ class CriterionSeeder extends Seeder
                         'report_id' => 1,
                         'checking' => 'ai',
                         'template' => '3',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -700,6 +717,7 @@ class CriterionSeeder extends Seeder
                         'report_id' => 1,
                         'checking' => 'ai',
                         'template' => '3',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -739,6 +757,7 @@ class CriterionSeeder extends Seeder
                         'report_id' => 1,
                         'checking' => 'ai',
                         'template' => '3',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 5,
@@ -779,9 +798,10 @@ class CriterionSeeder extends Seeder
                         ],
                         'observation' => 'current',
                         'report_id' => 1,
-                        'checking' => 'ai',
+                        'checking' => 'site:profile:index',
                         'template' => '1',
-                        'upload' => '1', 'status' => '1',
+                        'res_type' => 'all',
+                        'upload' => '0', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
                             'no_degrees' => 2,
@@ -824,7 +844,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -865,7 +886,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -891,7 +913,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -918,7 +941,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -957,7 +981,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '4',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 1,
@@ -998,7 +1023,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1039,7 +1065,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -1079,7 +1106,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -1119,7 +1147,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 5,
@@ -1160,7 +1189,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'project_finished',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 4,
@@ -1200,8 +1230,9 @@ class CriterionSeeder extends Seeder
                         ],
                         'observation' => 'end_of_council',
                         'report_id' => 1,
-                        'checking' => 'manual',
-                        'template' => '1',
+                        'checking' => 'ai',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1210,7 +1241,18 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 2,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "You are an AI evaluator. Review the provided HAC (OAK) or Ministry decree. Confirm the professor serves as a chairman, secretary, or member of a specialized scientific council or national technical council. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
+                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (Oliy Attestatsiya Komissiyasi - OAK rayosati qarori yoki Vazirlik buyrug'ini) tahlil qiling.
+                        Baholash qoidalari jami %pointing% ballgacha:
+                        1. Hujjat OAK rayosati yoki Vazirlikning rasmiy qarori, tasdiqlangan ro'yxati yoki buyrug'i ekanligini tekshiring.
+                        2. Hujjatda professor-o'qituvchining Ixtisoslashgan ilmiy kengashda yoki Respublika ilmiy-texnik kengashida \"rais\", \"kotib\" yoki \"a'zo\" sifatida kiritilganligini aniqlang.
+
+                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
+                        - Agar hujjatning OAK yoki vazirlikka tegishli ekanligi va undagi professor-o'qituvchining lavozimi (rais/kotib/a'zo) aniq tasdiqlansa: \"accepted\" statusini bering. \"point\" qismiga 1 yozing.
+                            - Agar hujjat o'qib bo'lmaydigan darajada xira bo'lsa, rasmiy muhr/imzolar ko'rinmasa yoki hujjat faqat kafedra/fakultet darajasida bo'lib, kengashning OAK/Vazirlik darajasida ekanligi shubhali bo'lsa (administrator tekshiruvi zarur bo'lsa): \"checking\" statusini bering (\"point\": 0).
+                        - Agar taqdim etilgan hujjat shaxsiy tashakkurnoma bo'lsa, OAK yoki vazirlikka aloqasi bo'lmasa yoxud boshqa turdagi yig'ilish bayonnomasi bo'lsa: \"cancelled\" statusini bering (\"point\": 0).
+
+                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, masalan 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, qaysi organning qarori ekanligi va kengashdagi qanday lavozim (rais/kotib/a'zo) ekanligi haqida qisqacha izoh>\"}",
                     ],
                 ],
             ],
@@ -1241,7 +1283,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -1252,7 +1295,21 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 1,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "You are an AI evaluator. Review the provided video links or documents. Confirm if the professor made appearances in national or foreign media/social networks discussing university or state reforms. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
+                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (OAVdagi maqolalar, video havola, ijtimoiy tarmoqdagi rasmiy postlar yoki efir lavhalari) tahlil qiling.
+                        Baholash qoidalari jami %pointing% ballgacha:
+                        1. Chiqish mavzusi universitet yoki mamlakatdagi islohotlar (ta'lim, ijtimoiy, iqtisodiy va h.k.) targ'ibotiga oid bo'lishi shart.
+                        2. OAV darajasini aniqlang:
+                           - Xalqaro OAVlarda chiqish: 2.0 ball.
+                           - Respublika darajasidagi OAVlarda (TV, gazeta, rasmiy portal): 1.0 ball.
+                           - Ijtimoiy tarmoqlardagi nufuzli sahifalardagi rasmiy chiqishlar: 0.5 ball.
+
+                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
+                        - Agar chiqish islohotlar targ'ibotiga oidligi va OAV darajasi tasdiqlansa: \"accepted\" statusini bering va \"point\" qismiga mos ballni yozing.
+                        - Agar hujjat (video/maqola) xira bo'lsa, chiqish islohotlarga aloqadorligi yoki OAV darajasi aniq bo'lmasa, yoxud inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
+                        - Agar chiqish shaxsiy xarakterda bo'lsa, islohotlarga aloqasi bo'lmasa yoki OAV nufuzi past bo'lsa: \"cancelled\" statusini bering (\"point\": 0).
+
+                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam: 2.0, 1.0, 0.5 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, qaysi OAV ekanligi va islohotlarning qaysi yo'nalishi yoritilganligi haqida qisqacha izoh>\"}",
                     ],
                     [
                         'name' => [
@@ -1270,7 +1327,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 1,
@@ -1281,7 +1339,19 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 1,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "You are an AI evaluator. Check if the evidence shows the professor prepared scientific-practical proposals specifically based on an official appeal from state authorities or administration bodies. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
+                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (Davlat hokimiyati yoki boshqaruv organidan kelgan rasmiy xat, murojaat va professor-o'qituvchi tomonidan tayyorlangan ilmiy-amaliy taklif) tahlil qiling.
+                        Baholash qoidalari jami %pointing% ballgacha:
+                        1. Hujjatda murojaat qilgan tashkilot Davlat hokimiyati yoki boshqaruv organi (masalan, Vazirliklar, Hokimiyatlar, Agentliklar) ekanligini tekshiring.
+                        2. O'qituvchining ushbu murojaatga javoban ilmiy-amaliy taklif tayyorlaganligi yoki mazkur jarayonda ishtiroki tasdiqlanishi shart.
+                        3. Baholash: Ushbu mezon uchun belgilangan ball (odatda 1 ball) beriladi.
+
+                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
+                        - Agar davlat organining rasmiy murojaati va o'qituvchining unga javob sifatida ilmiy-amaliy ishlanmasi/taklifi tasdiqlansa: \"accepted\" statusini bering. \"point\" qismiga 1 yozing.
+                        - Agar hujjatlar xira bo'lsa, tashkilot nomi yoki murojaat mazmunini o'qib bo'lmasa, yoxud hujjat shubhali bo'lib administrator tekshiruvi zarur bo'lsa: \"checking\" statusini bering (\"point\": 0).
+                        - Agar hujjat davlat organi emas, balki xususiy firma tomonidan yuborilgan bo'lsa, yoki umuman murojaatga aloqasi bo'lmasa: \"cancelled\" statusini bering (\"point\": 0).
+
+                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, murojaat qilgan davlat organi nomi va taklifning mazmuni haqida qisqacha izoh>\"}",
                     ],
                     [
                         'name' => [
@@ -1299,7 +1369,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1310,7 +1381,19 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 1,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "You are an AI evaluator. Review the documents/announcements. Verify if the professor, on their own initiative, organized spiritual-educational events, literary meetings, intellectual games, or competitions. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
+                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (tashabbuskorlik bo'yicha buyruq/ruxsatnoma, tadbir bayonnomasi, e'lonlar, fotosuratlar yoki tadbir hisoboti) tahlil qiling.
+                        Baholash qoidalari jami %pointing% ballgacha:
+                        1. Hujjatda o'qituvchining tashabbusi bilan ma'naviy-ma'rifiy tadbir (uchrashuv, mushoira, intellektual o'yin yoki tanlov) tashkil etilganligi tasdiqlanishi shart.
+                        2. Hujjatlarda tadbirning o'tgan sanasi, o'tkazilish joyi va mavzusi aniq aks etishi kerak.
+                        3. Baholash: Har bir tashkil etilgan tadbir uchun 0.5 ball beriladi.
+
+                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
+                        - Agar tadbir tashkil etilganligi va o'qituvchining tashabbuskorligi hujjatlar (bayonnoma, buyruq, e'lon) bilan tasdiqlansa: \"accepted\" statusini bering va hisobot asosida mos ballni (0.5 ball) yozing.
+                        - Agar hujjatlar xira bo'lsa, tadbir nomi yoki o'qituvchining tashabbuskorligi aniq bo'lmasa, yoxud inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
+                        - Agar taqdim etilgan hujjatlar oddiy ishtirokchi sertifikati bo'lsa (o'zi tashkil etmagan bo'lsa) yoki hujjatlar soxta bo'lsa: \"cancelled\" statusini bering (\"point\": 0).
+
+                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, masalan 0.5 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, tadbir nomi va tashabbuskorlik dalili haqida izoh>\"}",
                     ],
                     [
                         'name' => [
@@ -1328,7 +1411,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1339,7 +1423,19 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 1,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "You are an AI evaluator. Check the evidence confirming the professor participated in educational work with students, such as sports clubs, cultural events, or activities in assigned mahallas. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
+                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (ma'naviy-ma'rifiy tadbir bayonnomalari, sport musobaqalari hisobotlari, mahalla bilan hamkorlik hujjatlari yoki tadbir fotosuratlari) tahlil qiling.
+                        Baholash qoidalari jami %pointing% ballgacha:
+                        1. Hujjatda o'qituvchining talabalar bilan birga ma'naviy-ma'rifiy, sport yoki madaniy tadbirlarda (yoki biriktirilgan mahallada) ishtirok etganligi tasdiqlanishi shart.
+                        2. Hujjatlarda tadbirning o'tkazilish sanasi, joyi va mazmuni aniq bo'lishi kerak.
+                        3. Baholash: Har bir ishtirok etilgan tadbir uchun 0.3 ball beriladi.
+
+                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
+                        - Agar hujjatlar o'qituvchining talabalar bilan tadbirlarda faol ishtirok etganligini tasdiqlasa: \"accepted\" statusini bering va hisobot asosida ballni (0.3 ball) yozing.
+                        - Agar hujjatlar xira bo'lsa, tadbir mazmuni tushunarsiz bo'lsa yoki o'qituvchining ishtiroki aniq bo'lmay, inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
+                        - Agar taqdim etilgan hujjatlar tarbiyaviy ishga aloqador bo'lmasa, yoki ular shunchaki shaxsiy xarakterga ega bo'lsa: \"cancelled\" statusini bering (\"point\": 0).
+
+                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, masalan 0.3 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, tadbir turi va o'qituvchining ishtiroki haqida qisqacha izoh>\"}",
                     ],
                     [
                         'name' => [
@@ -1357,7 +1453,8 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
-                        'template' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
@@ -1368,7 +1465,19 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 1,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "You are an AI evaluator. Verify the document is a stamped and signed copy of a state award or a national-level letter of appreciation (tashakkurnoma). Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
+                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (Davlat mukofoti guvohnomasi, orden/medal diplomi yoki respublika darajasidagi rasmiy tashakkurnoma) tahlil qiling.
+                        Baholash qoidalari jami %pointing% ballgacha:
+                        1. Hujjatda davlat mukofoti (orden, medal, faxriy unvon) yoki Vazirliklar/Oliy idoralar tomonidan berilgan respublika darajasidagi rasmiy tashakkurnoma ekanligini tekshiring.
+                        2. Hujjatda rasmiy muhr va mas'ul shaxs imzosi mavjudligini tasdiqlang.
+                        3. Baholash: Har bir davlat mukofoti yoki respublika darajasidagi tashakkurnoma uchun 1 ball beriladi.
+
+                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
+                        - Agar hujjat haqiqiy, respublika darajasida ekanligi va muhr/imzosi tasdiqlansa: \"accepted\" statusini bering va \"point\" qismiga 1 yozing.
+                        - Agar hujjatlar xira bo'lsa, mukofotning darajasini (respublika yoki mahalliy ekanligini) aniqlab bo'lmasa, yoxud hujjat shubhali bo'lib inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
+                        - Agar taqdim etilgan hujjatlar mahalliy (universitet yoki fakultet) darajadagi bo'lsa, yoki davlat mukofotiga aloqasi bo'lmasa: \"cancelled\" statusini bering (\"point\": 0).
+
+                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, mukofot yoki tashakkurnoma turi va darajasi haqida izoh>\"}",
                     ],
                     [
                         'name' => [
@@ -1386,8 +1495,9 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'pointing',
-                        'template' => '1',
-                        'upload' => '1', 'status' => '1',
+                        'template' => '0',
+                        'res_type' => 'all',
+                        'upload' => '0', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
                             'no_degrees' => 3,
@@ -1420,7 +1530,9 @@ class CriterionSeeder extends Seeder
                     'ai_model' => $child['ai_model'],
                     'report_id' => $child['report_id'],
                     'checking' => $child['checking'],
+                    'res_type' => $child['res_type'],
                     'template' => $child['template'] ?? '1',
+                    //'res_type' => 'all',
                     'upload' => $child['upload'],
                     'status' => $child['status'],
                     'formula_id' => $child['formula_id'],

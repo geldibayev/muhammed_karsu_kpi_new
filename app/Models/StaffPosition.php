@@ -7,4 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class StaffPosition extends Model
 {
     //
+    public $incrementing = false;
+    protected $fillable = [
+        'id',
+        'name',
+    ];
 }
