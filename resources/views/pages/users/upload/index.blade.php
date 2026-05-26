@@ -127,7 +127,7 @@
                                             <select name="year" id="year_id" class="form-control" required>
                                                 <option selected disabled value=""></option>
                                                 @foreach($years as $year)
-                                                    <option value="{{ $year->id }}">{{ $year->id }}</option>
+                                                    <option value="{{ $year->id }}">{{ $year->name }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
