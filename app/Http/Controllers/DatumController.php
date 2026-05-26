@@ -19,7 +19,7 @@ class DatumController extends Controller
     {
         if ($upload->upload != '1') return redirect()->route('home')
             ->with('error', 'Ruxsat etilmagan sahifa.');
-        $years = Year::all();
+        $years = Year::where('status', '1')->get();
         $languages = Language::all();
         return view('pages.users.upload.index', compact(['upload', 'years', 'languages']));
     }
