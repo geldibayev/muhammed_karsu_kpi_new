@@ -30,6 +30,16 @@ class User extends Authenticatable
 
     protected $hidden = ['remember_token',];
 
+    public function getShortAttribute()
+    {
+        return $this->name['short'] ?? '';
+    }
+
+    public function getFullAttribute()
+    {
+        return $this->name['full'] ?? '';
+    }
+
     protected function casts(): array
     {
         return [

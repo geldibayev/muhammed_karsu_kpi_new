@@ -20,6 +20,11 @@
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a href="{{ route('profile') }}" class="nav-link">
+                    <p>{{ auth()->user()->short }}</p>
+                </a>
+            </li>
         </ul>
     </nav>
 
@@ -99,6 +104,12 @@
                             <p>Sozlamalar</p>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route('auth.logout') }}" class="nav-link">
+                            <i class="nav-icon fa fa-power-off"></i>
+                            <p>Tizimdan chiqish</p>
+                        </a>
+                    </li>
                 </ul>
             </nav>
         </div>
@@ -113,8 +124,15 @@
                 <div class="row mb-2">
                     <div class="col-sm-12">
                         <ol class="breadcrumb float-sm-right small">
-                            <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item active">Blank Page</li>
+                            @foreach($breadcrumbs as $breadcrumb)
+                                @if($breadcrumb['url'] == '#')
+                                    <li class="breadcrumb-item active">{{ $breadcrumb['name'] }}</li>
+                                @else
+                                    <li class="breadcrumb-item">
+                                        <a href="{{ $breadcrumb['url'] }}">{{ $breadcrumb['name'] }}</a>
+                                    </li>
+                                @endif
+                            @endforeach
                         </ol>
                     </div>
                 </div>

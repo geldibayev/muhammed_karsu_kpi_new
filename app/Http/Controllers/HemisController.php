@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AcademicDegree;
 use App\Models\AcademicRank;
+use App\Models\Department;
 use App\Models\EmployeeStatus;
 use App\Models\EmployeeType;
 use App\Models\EmploymentForm;
@@ -33,25 +34,17 @@ class HemisController extends Controller
 
         if (!$request->has('code')) {
             $authorizationUrl = $employeeProvider->getAuthorizationUrl();
-
-            // 1. Eski state'ni tozalaymiz (xatoliklarni oldini olish uchun)
             $request->session()->forget('oauth2state');
-
-            // 2. Yangi state'ni yozamiz
             $request->session()->put('oauth2state', $employeeProvider->getState());
-
-            // 3. MUHIM: Boshqa sahifaga o'tib ketishdan oldin sessiyani majburiy saqlaymiz!
             $request->session()->save();
-
             return redirect()->away($authorizationUrl);
         }
 
         $state = $request->input('state');
         $sessionState = $request->session()->pull('oauth2state');
 
-        // Qolgan tekshiruvlar...
         if (empty($state) || $state !== $sessionState) {
-            return redirect(route('home'))->with('error', 'Yaroqsiz so\'rov holati (Invalid state). Iltimos qaytadan kiring.');
+            return redirect(route('home'))->with('error', 'Yaroqsiz so‘rov holati (Invalid state). Iltimos qaytadan kiring.');
         }
 
         try {
@@ -63,13 +56,13 @@ class HemisController extends Controller
 
             $userData = [
                 'hemis_id' => $userArray['employee_id_number'],
-                'name' => json_encode([
+                'name' => [
                     'full' => $userArray['name'] ?? '',
                     'first' => $userArray['firstname'] ?? '',
                     'last' => $userArray['surname'] ?? '',
                     'third' => $userArray['patronymic'] ?? '',
                     'short' => User::make_short_name($userArray['firstname'] ?? '', $userArray['surname'] ?? '', $userArray['patronymic'] ?? ''),
-                ]),
+                ],
                 'image' => json_encode([
                     'min' => $userArray['picture'] ?? null,
                     'max' => $userArray['picture_full'] ?? null,
@@ -93,6 +86,7 @@ class HemisController extends Controller
                 $user = User::find($userArray['employee_id']);
             }
             $httpGet = $http->json();
+            $typeDegree = 'no_degrees';
             foreach ($httpGet['data']['items'] as $value) {
                 $academic_degree = AcademicDegree::firstOrCreate([
                     'id' => $value['academicDegree']['code'],
@@ -129,6 +123,11 @@ class HemisController extends Controller
                 ], [
                     'name' => $value['employeeStatus']['name'],
                 ]);
+                if ($academic_degree->id > 10) $typeDegree = 'hold_degrees';
+                else {
+                    $dep = Department::find($value['department']['id']);
+                    if (!is_null($dep->evaluation)) $typeDegree = $dep->evaluation;
+                }
                 Workplace::firstOrCreate([
                     'user_id' => $value['id'],
                     'department_id' => $value['department']['id'],
@@ -142,13 +141,14 @@ class HemisController extends Controller
                 ]);
 
             }
+            $user->update(['degree' => $typeDegree]);
             Auth::login($user);
             $request->session()->regenerate();
             return redirect(route('home'))->with('success', 'Tizimga muvaffaqiyatli kirdingiz! Vaqt: ' . date('d.m.Y H:i:s'));
 
         } catch (IdentityProviderException $e) {
             Log::error('HEMIS OAuth Xatoligi: ' . $e->getMessage());
-            return redirect(route('home'))->with('error', 'HEMIS orqali kirishda xatolik yuz berdi. Keyinroq qayta urinib ko\'ring.');
+            return redirect(route('home'))->with('error', 'HEMIS orqali kirishda xatolik yuz berdi. Keyinroq qayta urinib ko‘ring.');
         }
     }
 }
