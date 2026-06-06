@@ -32,6 +32,11 @@ class HomeController extends Controller
         return view('home', compact(['criteria', 'breadcrumbs']));
     }
 
+    public function profile()
+    {
+        return redirect()->back()->with('error', 'Sahifa ishlab chiqilmoqda');
+    }
+
     public function logout()
     {
         auth()->logout();
