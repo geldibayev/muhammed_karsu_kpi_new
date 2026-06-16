@@ -32,7 +32,8 @@ class DatumController extends Controller
             ]
         ];
         $languages = Language::all();
-        return view('pages.users.upload.index', compact(['upload', 'years', 'languages', 'breadcrumbs']));
+        $files = Datum::where('user_id', auth()->id())->where('criterion_id', $upload->id)->count();
+        return view('pages.users.upload.index', compact(['upload', 'years', 'languages', 'breadcrumbs', 'files']));
     }
 
     public function update(Request $request, Criterion $upload)
