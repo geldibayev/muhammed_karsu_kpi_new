@@ -23,7 +23,7 @@ class DatumHistoryController extends Controller
                 'name' => $breadcrumb_text
             ]
         ];
-        $data = Datum::where('status', $status)->paginate(20);
+        $data = Datum::where('status', $status)->where('user_id', auth()->id())->paginate(20);
         return view('pages.users.data', compact(['data', 'breadcrumbs', 'status']));
     }
 }
