@@ -48,8 +48,8 @@
                             <p>Asosiy sahifa</p>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link">
+                    <li class="nav-item @if(request()->routeIs('files.show') || request()->is('home/files*')) menu-open @endif">
+                        <a href="#" class="nav-link @if(request()->routeIs('files.show') || request()->is('home/files*')) active @endif">
                             <i class="nav-icon fa fa-layer-group"></i>
                             <p>
                                 Resurslar
@@ -58,25 +58,29 @@
                         </a>
                         <ul class="nav nav-treeview">
                             <li class="nav-item">
-                                <a href="{{ route('files.show', 'received') }}" class="nav-link">
+                                <a href="{{ route('files.show', 'received') }}"
+                                   class="nav-link @if(request()->url() == route('files.show', 'received')) active @endif">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Yuborilgan</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="{{ route('files.show', 'checking') }}" class="nav-link">
+                                <a href="{{ route('files.show', 'checking') }}"
+                                   class="nav-link @if(request()->url() == route('files.show', 'checking')) active @endif">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Tekshirilmoqda</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="{{ route('files.show', 'accepted') }}" class="nav-link">
+                                <a href="{{ route('files.show', 'accepted') }}"
+                                   class="nav-link @if(request()->url() == route('files.show', 'accepted')) active @endif">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Tasdiqlangan</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="{{ route('files.show', 'cancelled') }}" class="nav-link">
+                                <a href="{{ route('files.show', 'cancelled') }}"
+                                   class="nav-link @if(request()->url() == route('files.show', 'cancelled')) active @endif">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Qaytarilgan</p>
                                 </a>

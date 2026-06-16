@@ -9,6 +9,7 @@
                     <tr>
                         <th class="text-center" style="width: 5%;">#</th>
                         <th>Resurs ma’lumotlari</th>
+                        <th class="text-center" style="width: 30%;">Mezoni</th>
                         <th class="text-center" style="width: 5%;">Holati</th>
                         @if ($status != 'received' && $status != 'checking')
                             <th class="text-center">Tekshiruvchi xulosasi</th>
@@ -19,17 +20,27 @@
                     </tr>
                     </thead>
                     <tbody>
-                    @foreach($data as $datum)
+                    @forelse($data as $datum)
                         <tr class="text-center">
-                            <td>#{{ $datum->id }}</td>
-                            <td class="text-left">
-                                @if($datum->material['type'] == 'url')
-                                    <a href="{{ $datum->material['link'] }}">{{ $datum->name }}</a>
-                                @else
-                                    {{ $datum->name }}
-                                @endif
+                            <td class="align-middle">#{{ $datum->id }}</td>
+                            <td class="text-left align-middle">
+                                <div class="font-weight-bold">
+                                    @if($datum->material['type'] == 'url')
+                                        <a href="{{ $datum->material['link'] }}" target="_blank">
+                                            {{ $datum->name }}
+                                        </a>
+                                    @else
+                                        {{ $datum->name }}
+                                    @endif
+                                </div>
                             </td>
-                            <td>
+                            <td style="text-align: justify">
+                                <div class="font-weight-bold">
+                                    {{ $datum->criterion->name['uz'] }}
+                                </div>
+                                {!! $datum->criterion->desc['uz'] !!}
+                            </td>
+                            <td class="align-middle">
                                 @if($datum->status == 'received')
                                     <div class="badge badge-primary">Yangi resurs</div>
                                 @elseif($datum->status == 'checking')
@@ -41,22 +52,28 @@
                                 @endif
                             </td>
                             @if ($status != 'received' && $status != 'checking')
-                                <td>
+                                <td class="align-middle">
                                     {!! $datum->reason ?? '' !!}
                                 </td>
-                                <td>
+                                <td class="align-middle">
                                     {{ number_format($datum->point ?? 0, 2) }}
                                 </td>
                             @endif
-                            <td>{{ $datum->created_at->format('d.m.Y H:i:s') }}</td>
-                            <td>
+                            <td class="align-middle">{{ $datum->created_at->format('d.m.Y H:i:s') }}</td>
+                            <td class="align-middle">
                                 <a href="#" class="btn btn-outline-primary btn-xs">
                                     <i class="fa fa-eye"></i>
                                     Ko‘rish
                                 </a>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr>
+                            <td colspan="8" class="text-center text-danger">
+                                Hech qanday ma’lumot topilmadi.
+                            </td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>

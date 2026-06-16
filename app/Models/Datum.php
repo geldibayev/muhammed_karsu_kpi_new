@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Datum extends Model
 {
@@ -15,4 +16,9 @@ class Datum extends Model
     protected $casts = [
         'material' => 'json',
     ];
+
+    public function criterion(): HasOne
+    {
+        return $this->hasOne(Criterion::class, 'id', 'criterion_id');
+    }
 }

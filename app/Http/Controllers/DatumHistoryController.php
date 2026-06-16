@@ -12,7 +12,7 @@ class DatumHistoryController extends Controller
         $breadcrumb_text = 'Yangi resurslar';
         if ($status == 'checking') $breadcrumb_text = 'Tekshirilmoqda';
         if ($status == 'accepted') $breadcrumb_text = 'Tasdiqlangan';
-        if ($status == 'checking') $breadcrumb_text = 'Bekor qilingan';
+        if ($status == 'cancelled') $breadcrumb_text = 'Bekor qilingan';
         $breadcrumbs = [
             [
                 'url' => route('home'),
