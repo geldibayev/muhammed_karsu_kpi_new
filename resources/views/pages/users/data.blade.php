@@ -9,7 +9,6 @@
                     <tr>
                         <th class="text-center" style="width: 5%;">#</th>
                         <th>Resurs ma’lumotlari</th>
-                        <th class="text-center" style="width: 30%;">Mezoni</th>
                         <th class="text-center" style="width: 5%;">Holati</th>
                         @if ($status != 'received' && $status != 'checking')
                             <th class="text-center">Tekshiruvchi xulosasi</th>
@@ -33,12 +32,9 @@
                                         {{ $datum->name }}
                                     @endif
                                 </div>
-                            </td>
-                            <td style="text-align: justify">
-                                <div class="font-weight-bold">
+                                <div>
                                     {{ $datum->criterion->name['uz'] }}
                                 </div>
-                                {!! $datum->criterion->desc['uz'] !!}
                             </td>
                             <td class="align-middle">
                                 @if($datum->status == 'received')
@@ -53,11 +49,31 @@
                             </td>
                             @if ($status != 'received' && $status != 'checking')
                                 <td class="align-middle">
-                                    {!! $datum->reason ?? '' !!}
+                                    <button type="button" class="badge badge-primary border-0 p-2" data-toggle="modal"
+                                            data-target="#reasonModal{{ $datum->id }}">
+                                        Xulosani ko‘rish
+                                    </button>
                                 </td>
                                 <td class="align-middle">
                                     {{ number_format($datum->point ?? 0, 2) }}
                                 </td>
+                                <div class="modal fade text-left" id="reasonModal{{ $datum->id }}" tabindex="-1"
+                                     role="dialog" aria-labelledby="reasonModalLabel{{ $datum->id }}"
+                                     aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-body text-wrap"
+                                                 style="white-space: pre-line; font-size: 14px;">
+                                                {!! $datum->reason !!}
+                                            </div>
+                                            <div class="modal-footer p-2">
+                                                <button type="button" class="btn btn-secondary btn-sm"
+                                                        data-dismiss="modal">Tushunarli
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             @endif
                             <td class="align-middle">{{ $datum->created_at->format('d.m.Y H:i:s') }}</td>
                             <td class="align-middle">
