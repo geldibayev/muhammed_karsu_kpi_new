@@ -73,14 +73,14 @@
                                 Fayl yuklash chegarasi: {{ $upload->file_limit }}
                             </div>
                             <div class="small d-inline-block text-primary">
-                                (Siz {{ $files->count() }}ta fayl yuklagansiz)
+                                (Siz {{ $files }}ta fayl yuklagansiz)
                             </div>
                         </div>
                     @endif
                 </div>
                 <div class="card-body p-0">
                     @if($upload->upload == '1')
-                        @if($upload->file_limit == 0 || $files->count() < $upload->file_limit)
+                        @if($upload->file_limit == 0 || $files < $upload->file_limit)
                             <form action="{{ route('upload.update', $upload->id) }}" method="post"
                                   enctype="multipart/form-data" id="fileForm">
                                 @csrf
