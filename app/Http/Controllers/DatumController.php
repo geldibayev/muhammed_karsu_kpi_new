@@ -164,4 +164,16 @@ class DatumController extends Controller
         }
         return back()->with('error', 'Fayl topilmadi!');
     }
+
+    public function destroy($file)
+    {
+        $file = Datum::findOrFail($file);
+        if ($file->user_id == auth()->id()) {
+            if ($file->status != 'accepted') {
+                $file->delete();
+                return redirect()->back()->with('success', 'Resurs muvaffaqiyatli o‘chirildi.');
+            }
+        }
+        abort(404);
+    }
 }

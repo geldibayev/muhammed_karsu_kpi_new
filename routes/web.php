@@ -16,7 +16,7 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/logout', [HomeController::class, 'logout'])->name('auth.logout');
     Route::get('/profile', [HomeController::class, 'profile'])->name('profile');
-    Route::resource('/upload', DatumController::class)->only(['show', 'update']);
+    Route::resource('/upload', DatumController::class)->only(['show', 'update', 'destroy']);
     Route::resource('/files', DatumHistoryController::class)->only(['show']);
     Route::get('/upload-files/{id}/download', [DatumController::class, 'download'])->name('upload.file.download');
     Route::resource('/criteria', CriterionController::class)->only(['edit', 'update']);
