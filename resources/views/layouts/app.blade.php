@@ -90,12 +90,12 @@
                     <li class="nav-header font-weight-bold" style="text-transform: uppercase">
                         Tizim
                     </li>
-                    <li class="nav-item">
+                    {{--<li class="nav-item">
                         <a href="{{ url('/') }}" class="nav-link">
                             <i class="nav-icon fas fa-sync"></i>
                             <p>HEMIS malumotlar</p>
                         </a>
-                    </li>
+                    </li>--}}
                     <li class="nav-item">
                         <a href="{{ url('/') }}" class="nav-link">
                             <i class="nav-icon fa fa-link"></i>

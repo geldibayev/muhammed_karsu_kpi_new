@@ -8,6 +8,7 @@ use App\Models\Language;
 use App\Models\Year;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Gemini\Laravel\Facades\Gemini;
 use Gemini\Data\Blob;
@@ -124,6 +125,13 @@ class DatumController extends Controller
                         $gemini_data = $parsedData;
                     }
                 } catch (\Exception $e) {
+                    Log::error('Gemini API xatoligi: ' . $e->getMessage(), [
+                        'file' => $e->getFile(),
+                        //'line' => $e->Line(),
+                        'upload_id' => $upload->id,
+                        'user_id' => auth()->id()
+                    ]);
+
                     $gemini_data['reason'] = 'AI tahlilida xatolik yuz berdi. Iltimos, administrator ko‘rib chiqsin.';
                 }
             }
