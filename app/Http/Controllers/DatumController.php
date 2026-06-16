@@ -95,7 +95,6 @@ class DatumController extends Controller
             if (isset($materialData['article']['doi'])) $cleanPrompt .= "DOI: «{$materialData['article']['doi']}»;\n";
             if (isset($materialData['article']['journal'])) $cleanPrompt .= "Nashriyot: «{$materialData['article']['journal']}»;\n";
             if (isset($materialData['article']['params'])) $cleanPrompt .= "Nashr parametrlari: «{$materialData['article']['params']}»;\n";
-
             if ($upload->ai_prompt && $upload->ai_model) {
                 $apiKey = env('GEMINI_API_KEY');
                 $modelName = $upload->ai_model;
