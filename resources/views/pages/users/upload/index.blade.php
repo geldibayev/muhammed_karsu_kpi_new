@@ -109,14 +109,15 @@
                                             </div>
                                         @elseif($upload->res_type == 'url')
                                             <div class="col-md-10 mb-3">
+                                                <input type="hidden" name="uploadResourceType" value="url">
                                                 <label class="small mb-0">Resurs manbai</label>
                                                 <input type="url" id="uploadResourceUrl" name="uploadResourceUrl"
                                                        class="form-control"
                                                        placeholder="Masalan: https://example.com/resurs.pdf" required>
                                             </div>
-
                                         @elseif($upload->res_type == 'file')
                                             <div class="col-md-10 mb-3">
+                                                <input type="hidden" name="uploadResourceType" value="file">
                                                 <label class="small mb-0">Resurs manbai</label>
                                                 <input type="file" id="uploadResourceFile" name="uploadResourceFile"
                                                        class="form-control" accept=".pdf,.jpg,.png,.zip,.rar" required>
@@ -158,7 +159,12 @@
                             <tr>
                                 <th style="width: 5%;">#</th>
                                 <th class="text-left">Fayl</th>
-                                <th>AI taqriz</th>
+                                @if($upload->checking == 'ai')
+                                    <th>AI taqriz</th>
+                                @else
+                                    <th>Tekshiruvchi xulosasi</th>
+                                @endif
+                                <th>Holati</th>
                                 <th>Ball</th>
                                 <th>Vaqt</th>
                                 <th></th>
@@ -168,8 +174,33 @@
                             @foreach($upload->files as $file)
                                 <tr>
                                     <td class="font-weight-bold align-middle">{{ $file->id }}</td>
-                                    <td class="font-weight-bold align-middle">{{ $file->name }}</td>
+                                    <td class="font-weight-bold align-middle text-left">
+                                        @if($file->material['type'] == 'url')
+                                            <a href="{{ $file->material['link'] }}">{{ $file->name }}</a>
+                                        @else
+                                            {{ $file->name }}
+                                        @endif
+                                    </td>
                                     <td class="align-middle">{{ $file->reason }}</td>
+                                    <td class="align-middle">
+                                        @if($file->status == 'received')
+                                            <div class="badge badge-primary">
+                                                Yangi resurs
+                                            </div>
+                                        @elseif($file->status == 'checking')
+                                            <div class="badge badge-warning">
+                                                Tekshirilmoqda
+                                            </div>
+                                        @elseif($file->status == 'accepted')
+                                            <div class="badge badge-success">
+                                                Qabul qilingan
+                                            </div>
+                                        @elseif($file->status == 'cancelled')
+                                            <div class="badge badge-dark">
+                                                Bekor qilingan
+                                            </div>
+                                        @endif
+                                    </td>
                                     <td class="align-middle">{{ number_format($file->point ?? 0, 2) }}</td>
                                     <td class="align-middle">{{ $file->created_at->format('d.m.Y H:i') }}</td>
                                     <td>

@@ -47,7 +47,6 @@ class DatumController extends Controller
             return back()->with('error', 'Fayl yuklash chegarasidan oshib ketdingiz!');
         }
         $materialData = [];
-        $filePath = null;
         $fileMimeType = null;
         $fileBase64 = null;
         if ($request->uploadResourceType === 'file') {
@@ -73,67 +72,68 @@ class DatumController extends Controller
         if ($request->has('article') && is_array($request->input('article'))) {
             $materialData['article'] = array_filter($request->input('article'));
         }
-        $gemini_data = [
-            'status' => 'checking',
-            'point' => 0,
-            'reason' => 'AI tomonidan to‘liq tahlil qilinmadi'
-        ];
-        $full_name = auth()->user()->full;
-        $me_point = $upload->criterionEvaluation($upload->id, auth()->user()->degree)->score;
-        $ai_prompt = $upload->ai_prompt;
-        $cleanPrompt = preg_replace('/[ \t]+/', ' ', $ai_prompt);
-        $cleanPrompt = trim($cleanPrompt);
-        $cleanPrompt = str_replace('%pointing%', $me_point, $cleanPrompt);
-        $cleanPrompt .= "\nResurs muallifi tizimga quyidagicha ma’lumotlarni taqdim etgan, mos kelishligini tekshiring, bunda resursning mualliflari ro‘yxatida resursni kiritgan personalning ism-familiyasi borligi tasdiqlanmasa, cancelled statusini qaytaring:\n\n";
-        $cleanPrompt .= "Muallifning to‘liq ismi: {$full_name};\n";
-        if (isset($materialData['article']['name'])) $cleanPrompt .= "Resurs nomi: «{$materialData['article']['name']}»;\n";
-        if (isset($materialData['article']['keywords'])) $cleanPrompt .= "Kalit so‘zlar: «{$materialData['article']['keywords']}»;\n";
-        if (isset($materialData['article']['authors_num'])) $cleanPrompt .= "Mualliflar soni: «{$materialData['article']['authors_num']}»;\n";
-        if (isset($materialData['article']['authors'])) $cleanPrompt .= "Mualliflar: «{$materialData['article']['authors']}»;\n";
-        if (isset($materialData['article']['lang'])) $cleanPrompt .= "Resurs tili: «{$materialData['article']['lang']}»;\n";
-        if (isset($materialData['article']['doi'])) $cleanPrompt .= "DOI: «{$materialData['article']['doi']}»;\n";
-        if (isset($materialData['article']['journal'])) $cleanPrompt .= "Nashriyot: «{$materialData['article']['journal']}»;\n";
-        if (isset($materialData['article']['params'])) $cleanPrompt .= "Nashr parametrlari: «{$materialData['article']['params']}»;\n";
-        //dd($cleanPrompt, $materialData);
-        if ($upload->ai_prompt && $upload->ai_model) {
-            $apiKey = env('GEMINI_API_KEY');
-            $modelName = $upload->ai_model;
-            $client = \Gemini::factory()->withApiKey($apiKey)->make();
-            $contentParts = [
-                $cleanPrompt,
+        if ($upload->checking == 'ai') {
+            $gemini_data = [
+                'status' => 'checking',
+                'point' => 0,
+                'reason' => 'AI tomonidan to‘liq tahlil qilinmadi'
             ];
-            if ($request->uploadResourceType === 'file' && $fileBase64 !== null) {
-                $mime = match ($fileMimeType) {
-                    'image/jpeg', 'image/jpg' => MimeType::IMAGE_JPEG,
-                    'image/png' => MimeType::IMAGE_PNG,
-                    default => MimeType::APPLICATION_PDF,
-                };
-                $contentParts[] = new Blob(mimeType: $mime, data: $fileBase64);
-            } elseif ($request->uploadResourceType === 'url' && $request->filled('uploadResourceUrl')) {
-                $contentParts[] = "Tahlil qilish uchun taqdim etilgan havola: " . $request->uploadResourceUrl;
-            }
-            try {
-                $result = $client->generativeModel($modelName)->generateContent($contentParts);
-                $responseText = $result->text();
-                $responseText = str_replace(['```json', '```'], '', $responseText);
-                $responseText = trim($responseText);
-                preg_match('/\{[\s\S]*\}/', $responseText, $matches);
-                $jsonString = $matches[0] ?? '{}';
-                $parsedData = json_decode($jsonString, true);
-                if (is_array($parsedData) && isset($parsedData['status'])) {
-                    $gemini_data = $parsedData;
+            $full_name = auth()->user()->full;
+            $me_point = $upload->criterionEvaluation($upload->id, auth()->user()->degree)->score;
+            $ai_prompt = $upload->ai_prompt;
+            $cleanPrompt = preg_replace('/[ \t]+/', ' ', $ai_prompt);
+            $cleanPrompt = trim($cleanPrompt);
+            $cleanPrompt = str_replace('%pointing%', $me_point, $cleanPrompt);
+            $cleanPrompt .= "\nResurs muallifi tizimga quyidagicha ma’lumotlarni taqdim etgan, mos kelishligini tekshiring, bunda resursning mualliflari ro‘yxatida resursni kiritgan personalning ism-familiyasi borligi tasdiqlanmasa, cancelled statusini qaytaring:\n\n";
+            $cleanPrompt .= "Muallifning to‘liq ismi: {$full_name};\n";
+            if (isset($materialData['article']['name'])) $cleanPrompt .= "Resurs nomi: «{$materialData['article']['name']}»;\n";
+            if (isset($materialData['article']['keywords'])) $cleanPrompt .= "Kalit so‘zlar: «{$materialData['article']['keywords']}»;\n";
+            if (isset($materialData['article']['authors_num'])) $cleanPrompt .= "Mualliflar soni: «{$materialData['article']['authors_num']}»;\n";
+            if (isset($materialData['article']['authors'])) $cleanPrompt .= "Mualliflar: «{$materialData['article']['authors']}»;\n";
+            if (isset($materialData['article']['lang'])) $cleanPrompt .= "Resurs tili: «{$materialData['article']['lang']}»;\n";
+            if (isset($materialData['article']['doi'])) $cleanPrompt .= "DOI: «{$materialData['article']['doi']}»;\n";
+            if (isset($materialData['article']['journal'])) $cleanPrompt .= "Nashriyot: «{$materialData['article']['journal']}»;\n";
+            if (isset($materialData['article']['params'])) $cleanPrompt .= "Nashr parametrlari: «{$materialData['article']['params']}»;\n";
+
+            if ($upload->ai_prompt && $upload->ai_model) {
+                $apiKey = env('GEMINI_API_KEY');
+                $modelName = $upload->ai_model;
+                $client = \Gemini::factory()->withApiKey($apiKey)->make();
+                $contentParts = [
+                    $cleanPrompt,
+                ];
+                if ($request->uploadResourceType === 'file' && $fileBase64 !== null) {
+                    $mime = match ($fileMimeType) {
+                        'image/jpeg', 'image/jpg' => MimeType::IMAGE_JPEG,
+                        'image/png' => MimeType::IMAGE_PNG,
+                        default => MimeType::APPLICATION_PDF,
+                    };
+                    $contentParts[] = new Blob(mimeType: $mime, data: $fileBase64);
+                } elseif ($request->uploadResourceType === 'url' && $request->filled('uploadResourceUrl')) {
+                    $contentParts[] = "Tahlil qilish uchun taqdim etilgan havola: " . $request->uploadResourceUrl;
                 }
-            } catch (\Exception $e) {
-                $gemini_data['reason'] = 'AI tahlilida xatolik yuz berdi. Iltimos, administrator ko‘rib chiqsin.';
+                try {
+                    $result = $client->generativeModel($modelName)->generateContent($contentParts);
+                    $responseText = $result->text();
+                    $responseText = str_replace(['```json', '```'], '', $responseText);
+                    $responseText = trim($responseText);
+                    preg_match('/\{[\s\S]*\}/', $responseText, $matches);
+                    $jsonString = $matches[0] ?? '{}';
+                    $parsedData = json_decode($jsonString, true);
+                    if (is_array($parsedData) && isset($parsedData['status'])) {
+                        $gemini_data = $parsedData;
+                    }
+                } catch (\Exception $e) {
+                    $gemini_data['reason'] = 'AI tahlilida xatolik yuz berdi. Iltimos, administrator ko‘rib chiqsin.';
+                }
             }
         }
-
         Datum::create([
             'user_id' => auth()->id(),
             'criterion_id' => $upload->id,
             'year_id' => $request->year,
             'material' => $materialData,
-            'status' => $gemini_data['status'] ?? 'checking',
+            'status' => $gemini_data['status'] ?? 'received',
             'point' => $gemini_data['point'] ?? 0,
             'reason' => $gemini_data['reason'] ?? '',
             'name' => $request->uploadResourceType === 'file' && $request->hasFile('uploadResourceFile')
