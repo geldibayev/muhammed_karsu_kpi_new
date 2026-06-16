@@ -21,3 +21,4 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/upload-files/{id}/download', [DatumController::class, 'download'])->name('upload.file.download');
     Route::resource('/criteria', CriterionController::class)->only(['edit', 'update']);
 });
+
