@@ -73,7 +73,7 @@
                                 Fayl yuklash chegarasi: {{ $upload->file_limit }}
                             </div>
                             <div class="small d-inline-block text-primary">
-                                (Siz {{ $files }}ta fayl yuklagansiz)
+                                (Siz {{ $files }}ta resurs yuklagansiz)
                             </div>
                         </div>
                     @endif
