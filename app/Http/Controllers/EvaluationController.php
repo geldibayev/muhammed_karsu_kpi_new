@@ -24,7 +24,7 @@ class EvaluationController extends Controller
         Klientlerge mulayım, qaraqalpaq tilinde anıq hám qısqa juwap beriwge háreket etiń. Húrmet retinde hár bir
         sózińiz «siz» kontakt sózi menen bolsın. Paydalanıwshı házirde tómendegi bólim boyınsha maǵlıwmat soramaqshı: " . $category;
         $apiKey = env('GEMINI_API_KEY');
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={$apiKey}";
         $response = Http::post($url, [
             'system_instruction' => [
                 'parts' => [['text' => $systemInstruction]]
