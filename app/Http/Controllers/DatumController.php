@@ -174,6 +174,7 @@ class DatumController extends Controller
                 return redirect()->back()->with('success', 'Resurs muvaffaqiyatli o‘chirildi.');
             }
         }
+
         abort(404);
     }
 }
