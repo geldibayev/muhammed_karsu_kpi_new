@@ -216,17 +216,15 @@
                                            class="btn btn-xs btn-outline-primary">
                                             <i class="fas fa-download m-1"></i>
                                         </a>
-                                        @if($file->status != 'accepted')
-                                            <form action="{{ route('upload.destroy', $file->id) }}" method="POST"
-                                                  class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-outline-dark btn-xs"
-                                                        onclick="return confirm('Resursni o‘chirishni xohlaysizmi?')">
-                                                    <i class="fa fa-trash m-1"></i>
-                                                </button>
-                                            </form>
-                                        @endif
+                                        <form action="{{ route('upload.destroy', $file->id) }}" method="POST"
+                                              class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-outline-dark btn-xs"
+                                                    onclick="return confirm('Resursni o‘chirishni xohlaysizmi?')">
+                                                <i class="fa fa-trash m-1"></i>
+                                            </button>
+                                        </form>
                                     </td>
                                 </tr>
                             @endforeach
