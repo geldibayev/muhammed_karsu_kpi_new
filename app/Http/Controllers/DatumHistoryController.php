@@ -2,13 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Datum;
 use Illuminate\Http\Request;
 
 class DatumHistoryController extends Controller
 {
     public function show($status)
     {
-        return redirect()->back()->with('error', 'Sahifa ishlab chiqilmoqda');
-        //dd($status);
+        $breadcrumb_text = 'Yangi resurslar';
+        if ($status == 'checking') $breadcrumb_text = 'Tekshirilmoqda';
+        if ($status == 'accepted') $breadcrumb_text = 'Tasdiqlangan';
+        if ($status == 'checking') $breadcrumb_text = 'Bekor qilingan';
+        $breadcrumbs = [
+            [
+                'url' => route('home'),
+                'name' => 'Asosiy sahifa'
+            ],
+            [
+                'url' => '#',
+                'name' => $breadcrumb_text
+            ]
+        ];
+        $data = Datum::where('status', $status)->paginate(20);
+        return view('pages.users.data', compact(['data', 'breadcrumbs', 'status']));
     }
 }

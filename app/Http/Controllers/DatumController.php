@@ -84,7 +84,7 @@ class DatumController extends Controller
             $cleanPrompt = preg_replace('/[ \t]+/', ' ', $ai_prompt);
             $cleanPrompt = trim($cleanPrompt);
             $cleanPrompt = str_replace('%pointing%', $me_point, $cleanPrompt);
-            $cleanPrompt .= "\nResurs muallifi tizimga quyidagicha ma’lumotlarni taqdim etgan, mos kelishligini tekshiring, bunda resursning mualliflari ro‘yxatida resursni kiritgan personalning ism-familiyasi borligi tasdiqlanmasa, cancelled statusini qaytaring:\n\n";
+            $cleanPrompt .= "\nResurs muallifi tizimga quyidagicha ma’lumotlarni taqdim etgan. Resursning mualliflari ro‘yxatida resursni kiritgan shaxsning ism-familiyasi bor-yo'qligini tekshiring. DIQQAT: Ism-familiyalarni solishtirishda qat'iy (harfma-harf) moslik talab qilmang. Kichik imlo xatolari, tutuq belgisi (‘, '), chiziqcha (-), bo'shliqlar, shuningdek, lotin/kirill transliteratsiyasi farqlari (masalan, I va Y, E va YE, O' va O) sababli ismlar biroz farq qilsa ham, ularni yagona shaxs deb qabul qiling. Faqatgina ism-familiya butunlay boshqa odamga tegishli ekanligi yaqqol tasdiqlansagina 'cancelled' statusini qaytaring:\n\n";
             $cleanPrompt .= "Muallifning to‘liq ismi: {$full_name};\n";
             if (isset($materialData['article']['name'])) $cleanPrompt .= "Resurs nomi: «{$materialData['article']['name']}»;\n";
             if (isset($materialData['article']['keywords'])) $cleanPrompt .= "Kalit so‘zlar: «{$materialData['article']['keywords']}»;\n";

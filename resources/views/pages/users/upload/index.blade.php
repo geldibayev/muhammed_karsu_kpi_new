@@ -24,6 +24,31 @@
             font-size: 24px;
             margin-bottom: 8px;
         }
+
+        #global-drag-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 123, 255, 0.9);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            border: 8px dashed rgba(255, 255, 255, 0.6);
+            box-sizing: border-box;
+        }
+
+        #global-drag-overlay.active {
+            display: flex;
+        }
+
+        #global-drag-overlay .overlay-content {
+            text-align: center;
+            pointer-events: none;
+        }
     </style>
 @endsection
 
@@ -65,65 +90,59 @@
                                         @if($upload->template)
                                             @include('pages.users.upload.template.' . $upload->template)
                                         @endif
+
                                         @if($upload->res_type == 'all')
-                                            <div class="col-md-2 mb-3">
+                                            <div class="col-md-2 mb-2">
                                                 <label class="small mb-0">Resurs turi</label>
                                                 <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
                                                     <label class="btn btn-outline-primary active w-100">
                                                         <input type="radio" name="uploadResourceType" value="file"
-                                                               checked>
-                                                        Fayl
+                                                               checked> Fayl
                                                     </label>
                                                     <label class="btn btn-outline-primary w-100">
-                                                        <input type="radio" name="uploadResourceType" value="url">
-                                                        URL
+                                                        <input type="radio" name="uploadResourceType" value="url"> URL
                                                     </label>
                                                 </div>
                                             </div>
+                                        @else
+                                            <input type="hidden" name="uploadResourceType"
+                                                   value="{{ $upload->res_type }}">
+                                        @endif
 
-                                            <div class="col-md-8 mb-3">
-                                                <label class="small mb-0">Resurs manbai</label>
+                                        <div class="{{ $upload->res_type == 'all' ? 'col-md-8' : 'col-md-10' }} mb-2">
+                                            <label class="small mb-0">Resurs manbai</label>
+
+                                            @if(in_array($upload->res_type, ['all', 'file']))
                                                 <div id="fileUploadBlock"
-                                                     style="border: 1px solid #ddd; padding: 6px; border-radius: 5px">
+                                                     style="border: 1px solid #ddd; padding: 6px; border-radius: 5px; display: {{ $upload->res_type == 'all' ? 'block' : 'block' }};">
                                                     <label for="uploadResourceFile" class="drag-area mb-0"
                                                            id="dragZone">
-                                                <span id="file-name" class="small text-muted">
-                                                    Faylga yo‘l ko‘rsating...
-                                                </span>
+                                                        <span id="file-name" class="small text-muted">
+                                                            Faylga yo‘l ko‘rsating...
+                                                        </span>
                                                     </label>
                                                     <input type="file" id="uploadResourceFile" name="uploadResourceFile"
-                                                           class="d-none" accept=".pdf,.jpg,.png,.zip,.rar" required>
+                                                           class="d-none"
+                                                           accept=".pdf,.jpg,.png,.zip,.rar" {{ $upload->res_type == 'file' ? 'required' : '' }}>
                                                 </div>
-
-                                                <div id="urlUploadBlock" style="display: none;">
-                                                    <input type="url" id="uploadResourceUrl" name="uploadResourceUrl"
-                                                           class="form-control"
-                                                           placeholder="Masalan: https://example.com/resurs.pdf">
-                                                </div>
-
                                                 <div class="text-danger small mt-1" id="limit_error"
                                                      style="display: none;">
-                                                    <i class="fas fa-exclamation-triangle mr-1"></i>
-                                                    Fayl limiti 2 megabaytdan oshib ketdi.
+                                                    <i class="fas fa-exclamation-triangle mr-1"></i> Fayl limiti 2
+                                                    megabaytdan oshib ketdi.
                                                 </div>
-                                            </div>
-                                        @elseif($upload->res_type == 'url')
-                                            <div class="col-md-10 mb-3">
-                                                <input type="hidden" name="uploadResourceType" value="url">
-                                                <label class="small mb-0">Resurs manbai</label>
-                                                <input type="url" id="uploadResourceUrl" name="uploadResourceUrl"
-                                                       class="form-control"
-                                                       placeholder="Masalan: https://example.com/resurs.pdf" required>
-                                            </div>
-                                        @elseif($upload->res_type == 'file')
-                                            <div class="col-md-10 mb-3">
-                                                <input type="hidden" name="uploadResourceType" value="file">
-                                                <label class="small mb-0">Resurs manbai</label>
-                                                <input type="file" id="uploadResourceFile" name="uploadResourceFile"
-                                                       class="form-control" accept=".pdf,.jpg,.png,.zip,.rar" required>
-                                            </div>
-                                        @endif
-                                        <div class="col-md-2 mb-3">
+                                            @endif
+
+                                            @if(in_array($upload->res_type, ['all', 'url']))
+                                                <div id="urlUploadBlock"
+                                                     style="display: {{ $upload->res_type == 'url' ? 'block' : 'none' }};">
+                                                    <input type="url" id="uploadResourceUrl" name="uploadResourceUrl"
+                                                           class="form-control"
+                                                           placeholder="Masalan: https://example.com/resurs.pdf" {{ $upload->res_type == 'url' ? 'required' : '' }}>
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        <div class="col-md-2 mb-2">
                                             <label class="small mb-0" for="year_id">Resurs yili</label>
                                             <select name="year" id="year_id" class="form-control" required>
                                                 <option selected disabled value=""></option>
@@ -152,6 +171,7 @@
                         </div>
                     @endif
                 </div>
+
                 @if($upload->files->count())
                     <div class="card-footer border-top p-0">
                         <table class="table table-hover small text-center">
@@ -159,11 +179,7 @@
                             <tr>
                                 <th style="width: 5%;">#</th>
                                 <th class="text-left">Fayl</th>
-                                @if($upload->checking == 'ai')
-                                    <th>AI taqriz</th>
-                                @else
-                                    <th>Tekshiruvchi xulosasi</th>
-                                @endif
+                                <th>{{ $upload->checking == 'ai' ? 'AI taqriz' : 'Tekshiruvchi xulosasi' }}</th>
                                 <th>Holati</th>
                                 <th>Ball</th>
                                 <th>Vaqt</th>
@@ -184,29 +200,22 @@
                                     <td class="align-middle">{{ $file->reason }}</td>
                                     <td class="align-middle">
                                         @if($file->status == 'received')
-                                            <div class="badge badge-primary">
-                                                Yangi resurs
-                                            </div>
+                                            <div class="badge badge-primary">Yangi resurs</div>
                                         @elseif($file->status == 'checking')
-                                            <div class="badge badge-warning">
-                                                Tekshirilmoqda
-                                            </div>
+                                            <div class="badge badge-warning">Tekshirilmoqda</div>
                                         @elseif($file->status == 'accepted')
-                                            <div class="badge badge-success">
-                                                Qabul qilingan
-                                            </div>
+                                            <div class="badge badge-success">Qabul qilingan</div>
                                         @elseif($file->status == 'cancelled')
-                                            <div class="badge badge-dark">
-                                                Bekor qilingan
-                                            </div>
+                                            <div class="badge badge-dark">Bekor qilingan</div>
                                         @endif
                                     </td>
                                     <td class="align-middle">{{ number_format($file->point ?? 0, 2) }}</td>
                                     <td class="align-middle">{{ $file->created_at->format('d.m.Y H:i') }}</td>
                                     <td>
                                         <a href="{{ route('upload.file.download', $file->id) }}"
-                                           class="btn btn-xs btn-outline-primary"><i
-                                                class="fas fa-download m-1"></i></a>
+                                           class="btn btn-xs btn-outline-primary">
+                                            <i class="fas fa-download m-1"></i>
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach
@@ -217,13 +226,19 @@
             </div>
         </div>
     </section>
+
+    <div id="global-drag-overlay" style="display: none;">
+        <div class="overlay-content">
+            <i class="fas fa-cloud-upload-alt fa-5x mb-3"></i>
+            <h2 class="font-weight-bold">Faylni shu yerga tashlang</h2>
+        </div>
+    </div>
 @endsection
 
 @section('script')
     <script src="{{ asset('/plugins/select2/js/select2.full.min.js') }}"></script>
     <script>
         $(document).ready(function () {
-
             $('.select2bs4').select2({theme: 'bootstrap4'});
 
             var $fileBlock = $('#fileUploadBlock');
@@ -234,59 +249,110 @@
             var $submitBtn = $('#btn_submit');
             var $fileName = $('#file-name');
             var $dragZone = $('#dragZone');
+            var $globalOverlay = $('#global-drag-overlay');
+            var dragTimer;
             var emptyText = "Faylga yo'l ko'rsatilmagan...";
-            @if($upload->res_type == 'all')
-            // Radio almashinishi
-            $('input[name="uploadResourceType"]').on('change', function () {
-                if ($(this).val() === 'file') {
-                    $fileBlock.show();
-                    $urlBlock.hide();
-                    $fileInput.prop('required', true);
-                    $urlInput.prop('required', false).val('');
-                } else {
-                    $urlBlock.show();
-                    $fileBlock.hide();
-                    $urlInput.prop('required', true);
-                    $fileInput.prop('required', false).val('');
-                    $limitError.hide();
-                    $submitBtn.prop('disabled', false);
-                }
-            });
 
-            if ($('input[name="uploadResourceType"]:checked').val() === 'url') {
-                $('input[name="uploadResourceType"][value="url"]').trigger('change');
+            // Tizim faqat URL, faqat Fayl yoki Ikkalasini so'rayotganini tekshiramiz
+            var hasRadios = $('input[name="uploadResourceType"][type="radio"]').length > 0;
+
+            function isFileModeActive() {
+                if (hasRadios) {
+                    return $('input[name="uploadResourceType"]:checked').val() === 'file';
+                }
+                return $('input[name="uploadResourceType"]').val() === 'file';
             }
 
-            // Drag & Drop hodisalari
-            $dragZone.on('dragover dragenter', function (e) {
+            // Radio Button almashuv logikasi
+            if (hasRadios) {
+                $('input[name="uploadResourceType"]').on('change', function () {
+                    if ($(this).val() === 'file') {
+                        $fileBlock.show();
+                        $urlBlock.hide();
+                        if ($fileInput.length) $fileInput.prop('required', true);
+                        if ($urlInput.length) $urlInput.prop('required', false).val('');
+                    } else {
+                        $urlBlock.show();
+                        $fileBlock.hide();
+                        if ($urlInput.length) $urlInput.prop('required', true);
+                        if ($fileInput.length) $fileInput.prop('required', false).val('');
+                        $limitError.hide();
+                        $submitBtn.prop('disabled', false);
+                    }
+                });
+
+                // Boshlang'ich holat uchun trigger
+                $('input[name="uploadResourceType"]:checked').trigger('change');
+            }
+
+            // --- 1. GLOBAL DRAG & DROP HODISALARI ---
+            $(document).on('dragover dragenter', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                $(this).addClass('active');
-            });
 
-            $dragZone.on('dragleave dragend drop', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                $(this).removeClass('active');
-            });
-
-            $dragZone.on('drop', function (e) {
-                var files = e.originalEvent.dataTransfer.files;
-                if (files.length > 0) {
-                    $fileInput[0].files = files;
-                    validateAndShowFile(files[0]);
+                if (isFileModeActive() && $fileInput.length > 0) {
+                    $globalOverlay.addClass('active');
+                    clearTimeout(dragTimer);
                 }
             });
 
-            // Input orqali tanlanganda
-            $fileInput.on('change', function () {
-                if (this.files.length > 0) {
-                    validateAndShowFile(this.files[0]);
-                } else {
-                    resetFile();
+            $(document).on('dragleave dragend', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                dragTimer = setTimeout(function () {
+                    $globalOverlay.removeClass('active');
+                }, 50);
+            });
+
+            $(document).on('drop', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $globalOverlay.removeClass('active');
+
+                if (isFileModeActive() && $fileInput.length > 0) {
+                    var files = e.originalEvent.dataTransfer.files;
+                    if (files.length > 0) {
+                        $fileInput[0].files = files;
+                        validateAndShowFile(files[0]);
+                    }
                 }
             });
 
+            // --- 2. LOCAL DRAG & DROP VA INPUT HODISALARI ---
+            if ($dragZone.length > 0) {
+                $dragZone.on('dragover dragenter', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    $(this).addClass('active');
+                });
+
+                $dragZone.on('dragleave dragend drop', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    $(this).removeClass('active');
+                });
+
+                $dragZone.on('drop', function (e) {
+                    var files = e.originalEvent.dataTransfer.files;
+                    if (files.length > 0) {
+                        $fileInput[0].files = files;
+                        validateAndShowFile(files[0]);
+                    }
+                });
+            }
+
+            if ($fileInput.length > 0) {
+                $fileInput.on('change', function () {
+                    if (this.files.length > 0) {
+                        validateAndShowFile(this.files[0]);
+                    } else {
+                        resetFile();
+                    }
+                });
+            }
+
+            // --- 3. FAYLNI TEKSHIRISH FUNKSIYALARI ---
             function validateAndShowFile(file) {
                 var maxSize = 2 * 1024 * 1024; // 2 MB
                 $fileName.html('<strong>' + file.name + '</strong>');
@@ -294,11 +360,11 @@
                 if (file.size > maxSize) {
                     $submitBtn.prop('disabled', true);
                     $limitError.show();
-                    $dragZone.css('border-color', '#dc3545'); // Xato rangi
+                    if ($dragZone.length) $dragZone.css('border-color', '#dc3545');
                 } else {
                     $submitBtn.prop('disabled', false);
                     $limitError.hide();
-                    $dragZone.css('border-color', '#28a745'); // Muvaffaqiyat rangi
+                    if ($dragZone.length) $dragZone.css('border-color', '#28a745');
                 }
             }
 
@@ -306,14 +372,13 @@
                 $fileName.text(emptyText);
                 $submitBtn.prop('disabled', false);
                 $limitError.hide();
-                $dragZone.css('border-color', '#ced4da');
+                if ($dragZone.length) $dragZone.css('border-color', '#ced4da');
             }
 
             // Yuklash animatsiyasi
             $('#fileForm').on('submit', function () {
                 $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Yuklanmoqda...');
             });
-            @endif
         });
     </script>
 @endsection
