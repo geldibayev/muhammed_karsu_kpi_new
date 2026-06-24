@@ -56,6 +56,12 @@ class User extends Authenticatable
         return $this->name['full'] ?? '';
     }
 
+    public function point($criterion_id)
+    {
+        $point = Point::where('user_id', auth()->id())->where('criterion_id', $criterion_id)->first();
+        return $point->point ?? 0;
+    }
+
     protected function casts(): array
     {
         return [

@@ -10,7 +10,7 @@
                         <th class="text-center" style="width: 5%;">#</th>
                         <th>Mezon</th>
                         <th class="text-center" style="width: 20%;">Masʼul</th>
-                        <th class="text-center" style="width: 5%;">Ball</th>
+                        <th class="text-center" style="width: 10%;">Ball</th>
                         <th class="text-center" style="width: 5%;"></th>
                     </tr>
                     </thead>
@@ -40,7 +40,13 @@
                                     @endif
                                 </td>
                                 <td class="align-middle text-center">
+                                    <span class="font-weight-bold text-success">
+                                        {{ number_format(auth()->user()->point($value->id), 2) }}
+                                    </span>
+                                    /
+                                    <span class="font-weight-bold text-primary">
                                     {{ number_format($value->criterionEvaluation($value->id, auth()->user()->degree)->score ?? 0, 2) }}
+                                    </span>
                                 </td>
                                 <td class="align-middle text-center">
                                     @if($value->upload == '1')

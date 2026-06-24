@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CriterionController;
+use App\Http\Controllers\CriterionPointController;
 use App\Http\Controllers\DatumController;
 use App\Http\Controllers\DatumHistoryController;
 use App\Http\Controllers\HemisController;
@@ -16,6 +17,8 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::get('/logout', [HomeController::class, 'logout'])->name('auth.logout');
     Route::get('/profile', [HomeController::class, 'profile'])->name('profile');
+    Route::get('/reload/pts', [CriterionPointController::class, 'reload']);
+    Route::get('/point/pts', [CriterionPointController::class, 'pointing']);
     Route::resource('/upload', DatumController::class)->only(['show', 'update', 'destroy']);
     Route::resource('/files', DatumHistoryController::class)->only(['show']);
     Route::get('/upload-files/{id}/download', [DatumController::class, 'download'])->name('upload.file.download');
