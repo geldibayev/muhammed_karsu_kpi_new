@@ -34,7 +34,14 @@ class HomeController extends Controller
 
     public function profile()
     {
-        return redirect()->back()->with('error', 'Sahifa ishlab chiqilmoqda');
+        $breadcrumbs = [
+            [
+                'url' => '#',
+                'name' => 'Asosiy sahifa'
+            ]
+        ];
+        return view('pages.users.profile', compact(['breadcrumbs']));
+        //return redirect()->back()->with('error', 'Sahifa ishlab chiqilmoqda');
     }
 
     public function logout()

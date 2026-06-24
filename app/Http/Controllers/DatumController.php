@@ -150,7 +150,7 @@ class DatumController extends Controller
                 : 'URL Havola',
         ]);
 
-        return redirect()->route('upload.show', $upload->id)->with('success', 'Resurs muvaffaqiyatli yuklandi va AI tekshiruvidan o‘tdi.');
+        return redirect()->route('upload.show', $upload->id)->with('success', 'Resurs muvaffaqiyatli yuklandi.');
     }
 
     public function download($id)

@@ -20,10 +20,45 @@
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
-            <li class="nav-item">
-                <a href="{{ route('profile') }}" class="nav-link">
-                    <p>{{ auth()->user()->short }}</p>
+            <li class="nav-item dropdown">
+                <a class="nav-link" data-toggle="dropdown" href="#" aria-expanded="false">
+                    {{ auth()->user()->short }}
                 </a>
+                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" style="left: inherit; right: 0;">
+                    @if(count(auth()->user()->rol) > 1)
+                        <span class="dropdown-item dropdown-header">Foydalanuvchi rollari</span>
+                        <div class="dropdown-divider"></div>
+                        @if(in_array('super_admin', auth()->user()->rol))
+                            <a href="#" class="dropdown-item small">
+                                Super admin
+                            </a>
+                        @endif
+                        @if(in_array('moder', auth()->user()->rol))
+                            <a href="#" class="dropdown-item small">
+                                Tekshiruvchi
+                            </a>
+                        @endif
+                        @if(in_array('dean', auth()->user()->rol))
+                            <a href="#" class="dropdown-item small">
+                                Dekan
+                            </a>
+                        @endif
+                        @if(in_array('department', auth()->user()->rol))
+                            <a href="#" class="dropdown-item small">
+                                Kafedra mudiri
+                            </a>
+                        @endif
+                        @if(in_array('teacher', auth()->user()->rol))
+                            <a href="#" class="dropdown-item small">
+                                O‘qituvchi
+                            </a>
+                        @endif
+                        <div class="dropdown-divider"></div>
+                    @endif
+                    <a href="{{ route('profile') }}" class="dropdown-item small">
+                        Mening profilim
+                    </a>
+                </div>
             </li>
         </ul>
     </nav>
@@ -49,7 +84,8 @@
                         </a>
                     </li>
                     <li class="nav-item @if(request()->routeIs('files.show') || request()->is('home/files*')) menu-open @endif">
-                        <a href="#" class="nav-link @if(request()->routeIs('files.show') || request()->is('home/files*')) active @endif">
+                        <a href="#"
+                           class="nav-link @if(request()->routeIs('files.show') || request()->is('home/files*')) active @endif">
                             <i class="nav-icon fa fa-layer-group"></i>
                             <p>
                                 Resurslar

@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -30,6 +31,21 @@ class User extends Authenticatable
 
     protected $hidden = ['remember_token',];
 
+    public function getFirstAttribute()
+    {
+        return $this->name['first'] ?? '';
+    }
+
+    public function getLastAttribute()
+    {
+        return $this->name['last'] ?? '';
+    }
+
+    public function getThirdAttribute()
+    {
+        return $this->name['third'] ?? '';
+    }
+
     public function getShortAttribute()
     {
         return $this->name['short'] ?? '';
@@ -46,5 +62,10 @@ class User extends Authenticatable
             'name' => 'json',
             'rol' => 'json',
         ];
+    }
+
+    public function workplaces(): HasMany
+    {
+        return $this->hasMany(Workplace::class, 'user_id');
     }
 }
