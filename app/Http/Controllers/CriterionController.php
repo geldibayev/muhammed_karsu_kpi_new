@@ -2,30 +2,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateCriterionRequest;
 use App\Models\Criterion;
-use App\Models\Department;
-use App\Models\Language;
-use App\Models\Year;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class CriterionController extends Controller
 {
-    public function index()
+    public function index(): RedirectResponse
     {
         return redirect()->to('/login');
     }
 
-    public function edit(Criterion $criterion)
+    public function edit(Criterion $criterion): View
     {
+        $this->authorize('update', $criterion);
+
         return view('pages.admin.criteria.edit', compact(['criterion']));
     }
 
-    public function update(Request $request, Criterion $criterion)
+    public function update(UpdateCriterionRequest $request, Criterion $criterion): RedirectResponse
     {
-        $cr = Criterion::find($criterion->id);
-        //dd($cr);
-        $cr->ai_prompt = $request->ai_prompt;
-        $cr->save();
+        $criterion->update($request->validated());
+
         return redirect()->route('home');
     }
 }

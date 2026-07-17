@@ -3,7 +3,6 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -24,12 +23,13 @@ class User extends Authenticatable
             $firstInitial = substr($firstname, 0, 1);
         }
         $patronymicInitial = str_starts_with($patronymic, 'SH') ? 'SH' : substr($patronymic, 0, 1);
+
         return "$surname $firstInitial.$patronymicInitial.";
     }
 
     protected $fillable = ['id', 'name', 'hemis_id', 'image', 'pos', 'rol', 'status', 'degree'];
 
-    protected $hidden = ['remember_token',];
+    protected $hidden = ['remember_token'];
 
     public function getFirstAttribute()
     {
@@ -59,6 +59,7 @@ class User extends Authenticatable
     public function point($criterion_id)
     {
         $point = Point::where('user_id', auth()->id())->where('criterion_id', $criterion_id)->first();
+
         return $point->point ?? 0;
     }
 
@@ -68,6 +69,23 @@ class User extends Authenticatable
             'name' => 'json',
             'rol' => 'json',
         ];
+    }
+
+    public const ASSIGNABLE_ROLES = [
+        'moder' => 'Tekshiruvchi',
+        'dean' => 'Dekan',
+        'department' => 'Kafedra mudiri',
+        'teacher' => 'O‘qituvchi',
+    ];
+
+    public function hasRole(string $role): bool
+    {
+        return in_array($role, $this->rol ?? [], true);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasRole('super_admin');
     }
 
     public function workplaces(): HasMany

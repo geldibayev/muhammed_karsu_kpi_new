@@ -143,6 +143,15 @@
                     <li class="nav-header font-weight-bold" style="text-transform: uppercase">
                         Tizim
                     </li>
+                    @if(auth()->user()->isSuperAdmin())
+                        <li class="nav-item">
+                            <a href="{{ route('users.roles.index') }}"
+                               class="nav-link @if(request()->routeIs('users.roles.*')) active @endif">
+                                <i class="nav-icon fas fa-user-shield"></i>
+                                <p>Foydalanuvchi rollari</p>
+                            </a>
+                        </li>
+                    @endif
                     {{--<li class="nav-item">
                         <a href="{{ url('/') }}" class="nav-link">
                             <i class="nav-icon fas fa-sync"></i>
@@ -162,10 +171,13 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('auth.logout') }}" class="nav-link">
-                            <i class="nav-icon fa fa-power-off"></i>
-                            <p>Tizimdan chiqish</p>
-                        </a>
+                        <form method="POST" action="{{ route('auth.logout') }}">
+                            @csrf
+                            <button type="submit" class="nav-link btn btn-link text-left w-100">
+                                <i class="nav-icon fa fa-power-off"></i>
+                                <p>Tizimdan chiqish</p>
+                            </button>
+                        </form>
                     </li>
                 </ul>
             </nav>

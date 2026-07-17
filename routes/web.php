@@ -6,6 +6,7 @@ use App\Http\Controllers\DatumController;
 use App\Http\Controllers\DatumHistoryController;
 use App\Http\Controllers\HemisController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
 Auth::routes();
@@ -15,13 +16,15 @@ Route::get('/login/d', [CriterionController::class, 'index']);
 
 Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
-    Route::get('/logout', [HomeController::class, 'logout'])->name('auth.logout');
+    Route::post('/logout', [HomeController::class, 'logout'])->name('auth.logout');
     Route::get('/profile', [HomeController::class, 'profile'])->name('profile');
-    Route::get('/reload/pts', [CriterionPointController::class, 'reload']);
-    Route::get('/point/pts', [CriterionPointController::class, 'pointing']);
+    Route::get('/users/roles', [UserRoleController::class, 'index'])->name('users.roles.index');
+    Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
+    Route::post('/reports/{report}/points/rebuild', [CriterionPointController::class, 'rebuild'])
+        ->middleware('can:rebuild-report-points')
+        ->name('reports.points.rebuild');
     Route::resource('/upload', DatumController::class)->only(['show', 'update', 'destroy']);
     Route::resource('/files', DatumHistoryController::class)->only(['show']);
-    Route::get('/upload-files/{id}/download', [DatumController::class, 'download'])->name('upload.file.download');
+    Route::get('/upload-files/{datum}/download', [DatumController::class, 'download'])->name('upload.file.download');
     Route::resource('/criteria', CriterionController::class)->only(['edit', 'update']);
 });
-

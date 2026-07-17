@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Datum extends Model
 {
@@ -17,8 +17,8 @@ class Datum extends Model
         'material' => 'json',
     ];
 
-    public function criterion(): HasOne
+    public function criterion(): BelongsTo
     {
-        return $this->hasOne(Criterion::class, 'id', 'criterion_id');
+        return $this->belongsTo(Criterion::class);
     }
 }
