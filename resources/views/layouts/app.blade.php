@@ -20,9 +20,26 @@
             </li>
         </ul>
         <ul class="navbar-nav ml-auto">
+            @php
+                $user = auth()->user();
+                $workplace = $user->workplaces()
+                    ->with(['academic_degree', 'academic_rank'])
+                    ->first();
+                $degreeName = optional(optional($workplace)->academic_degree)->name;
+                $rankName = optional(optional($workplace)->academic_rank)->name;
+            @endphp
             <li class="nav-item dropdown">
-                <a class="nav-link" data-toggle="dropdown" href="#" aria-expanded="false">
-                    {{ auth()->user()->short }}
+                <a class="nav-link d-flex align-items-center text-right py-1" data-toggle="dropdown" href="#"
+                   role="button" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-user-circle fa-2x text-secondary mr-2" aria-hidden="true"></i>
+                    <span class="d-flex flex-column align-items-end lh-sm">
+                        <span class="font-weight-bold">
+                            {{ trim(($degreeName ?? '') . '., ' . $user->short) ?: 'Foydalanuvchi' }}
+                        </span>
+                        <span class="small text-muted">
+                            {{ $rankName ?? 'Ilmiy unvon kiritilmagan' }}
+                        </span>
+                    </span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" style="left: inherit; right: 0;">
                     @if(count(auth()->user()->rol) > 1)
