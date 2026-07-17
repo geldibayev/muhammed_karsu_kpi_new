@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'hemis' => [
+        'client_id' => env('HEMIS_CLIENT_ID'),
+        'client_secret' => env('HEMIS_CLIENT_SECRET'),
+        'redirect_uri' => env('REDIRECT_URL'),
+        'url' => env('HEMIS_URL'),
+        'api_key' => env('HEMIS_API_KEY'),
+        'employee_api_url' => env('HEMIS_EMPLOYEE_API_URL', 'https://student.karsu.uz/rest/v1/data/employee-list'),
+    ],
+
 ];

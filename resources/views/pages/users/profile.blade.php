@@ -12,32 +12,28 @@
                         <table class="table">
                             <tbody>
                             <tr>
-                                <th class="align-middle" style="width: 20%">Rasm</th>
-                                @php $image = json_decode(auth()->user()->image)->max; @endphp
+                                <th class="align-middle" style="width: 30%">Rasm</th>
+                                @php $image = json_decode($user->image)->max; @endphp
                                 <td>
                                     <img src="{{ $image }}" alt="" style="width: 100px">
                                 </td>
                             </tr>
                             <tr>
                                 <th class="align-middle">ID raqami</th>
-                                <td>{{ auth()->user()->hemis_id }}</td>
+                                <td>{{ $user->hemis_id }}</td>
                             </tr>
                             <tr>
                                 <th class="align-middle">Ismi</th>
-                                <td>{{ auth()->user()->first }}</td>
+                                <td>{{ $user->first }}</td>
                             </tr>
                             <tr>
                                 <th class="align-middle">Familiya</th>
-                                <td>{{ auth()->user()->last }}</td>
+                                <td>{{ $user->last }}</td>
                             </tr>
                             <tr>
                                 <th class="align-middle">Otasining ismi</th>
-                                <td>{{ auth()->user()->third }}</td>
+                                <td>{{ $user->third }}</td>
                             </tr>
-                            @php
-                                $workpl = \App\Models\Workplace::where('user_id', auth()->id())
-                                ->where('form_id', 11)->where('status_id', 11)->first();
-                            @endphp
                             <tr>
                                 <th class="align-middle">Ilmiy unvon</th>
                                 <td>{{ $workpl->academic_rank->name }}</td>
@@ -48,11 +44,11 @@
                             </tr>
                             <tr>
                                 <th class="align-middle">Yaratilgan</th>
-                                <td>{{ auth()->user()->created_at->format('d.m.Y H:i:s') }}</td>
+                                <td>{{ $user->created_at->format('d.m.Y H:i:s') }}</td>
                             </tr>
                             <tr>
                                 <th class="align-middle">O‘zgartirilgan</th>
-                                <td>{{ auth()->user()->updated_at->format('d.m.Y H:i:s') }}</td>
+                                <td>{{ $user->updated_at->format('d.m.Y H:i:s') }}</td>
                             </tr>
                             </tbody>
                         </table>
@@ -78,7 +74,7 @@
                             </thead>
                             <tbody>
                             @php($i = 1)
-                            @foreach(auth()->user()->workplaces as $workplace)
+                            @foreach($user->workplaces as $workplace)
                                 <tr>
                                     <td>{{ $i++ }}</td>
                                     <td>{{ $workplace->department->name['uz'] }}</td>

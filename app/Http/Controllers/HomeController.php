@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Criterion;
+use App\Models\Workplace;
 use Illuminate\Http\Request;
 
 class HomeController extends Controller
@@ -40,8 +41,18 @@ class HomeController extends Controller
                 'name' => 'Asosiy sahifa'
             ]
         ];
-        return view('pages.users.profile', compact(['breadcrumbs']));
-        //return redirect()->back()->with('error', 'Sahifa ishlab chiqilmoqda');
+
+        $user = auth()->user()->load([
+            'workplaces.department',
+            'workplaces.staff',
+            'workplaces.form',
+            'workplaces.position',
+            'workplaces.status',
+        ]);
+
+        $workpl = Workplace::where('user_id', auth()->id())->first();
+
+        return view('pages.users.profile', compact(['breadcrumbs', 'workpl', 'user']));
     }
 
     public function logout()
