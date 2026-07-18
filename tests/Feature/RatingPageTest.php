@@ -190,6 +190,11 @@ class RatingPageTest extends TestCase
             'checking' => 'site:test',
             'parent_id' => $firstSection->getKey(),
         ]);
+        $aiWithoutAuditCriterion = $this->createCriterion($activeReport, 'Auditsiz AI kriteriya', [
+            'checking' => 'ai',
+            'ai_model' => 'gpt-fallback',
+            'parent_id' => $firstSection->getKey(),
+        ]);
         $pendingCriterion = $this->createCriterion($activeReport, 'Baholanishi kutilayotgan kriteriya', [
             'checking' => 'manual',
             'parent_id' => $firstSection->getKey(),
@@ -210,6 +215,7 @@ class RatingPageTest extends TestCase
         $this->createPoint($ratedUser, $manualCriterion, $activeReport, 4.25);
         $this->createPoint($ratedUser, $aiCriterion, $activeReport, 3.5);
         $this->createPoint($ratedUser, $systemCriterion, $activeReport, 2);
+        $this->createPoint($ratedUser, $aiWithoutAuditCriterion, $activeReport, 1.25);
         $this->createPoint($ratedUser, $oldCriterion, $oldReport, 99);
 
         $manualDatum = $this->createAcceptedDatum($ratedUser, $manualCriterion, 4.25);
@@ -251,9 +257,11 @@ class RatingPageTest extends TestCase
             ->assertSee('Mas’ul Baholovchi')
             ->assertSee('AI baholagan kriteriya')
             ->assertSee('3.50')
-            ->assertSee('Sun’iy intellekt (gpt-test)')
+            ->assertSee('Sun’iy intellekt tomonidan baholangan (gpt-test)')
             ->assertSee('Auditsiz kriteriya')
             ->assertSee('Auditda qayd etilmagan')
+            ->assertSee('Auditsiz AI kriteriya')
+            ->assertSee('Sun’iy intellekt tomonidan baholangan (gpt-fallback)')
             ->assertSee('Baholanishi kutilayotgan kriteriya')
             ->assertSee('Baholanmagan')
             ->assertSee('Baholash kutilmoqda')
@@ -267,7 +275,7 @@ class RatingPageTest extends TestCase
             ->assertSee('Yuklanmagan kriteriya')
             ->assertSee('Yuklanmagan')
             ->assertSee('Ma’lumot yuklanmagan')
-            ->assertSee('Jami: 9.75')
+            ->assertSee('Jami: 11.00')
             ->assertDontSee('Eski kriteriya')
             ->assertDontSee('Eski baholanmagan kriteriya')
             ->assertDontSee('99.00')

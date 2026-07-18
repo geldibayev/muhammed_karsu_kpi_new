@@ -262,9 +262,7 @@ class GetUserRatingDetails
     {
         $evaluators = $histories->map(function (DatumHistory $history) use ($criterion): array {
             if ($history->message_type === 'ai_evaluation') {
-                $model = $criterion->ai_model ? " ({$criterion->ai_model})" : '';
-
-                return ['type' => 'ai', 'name' => 'Sun’iy intellekt'.$model];
+                return $this->aiEvaluator($criterion);
             }
 
             return [
@@ -273,8 +271,25 @@ class GetUserRatingDetails
             ];
         })->unique(fn (array $evaluator): string => $evaluator['type'].'|'.$evaluator['name'])->values();
 
-        return $evaluators->isNotEmpty()
-            ? $evaluators
-            : collect([['type' => 'unknown', 'name' => 'Auditda qayd etilmagan']]);
+        if ($evaluators->isNotEmpty()) {
+            return $evaluators;
+        }
+
+        if ($criterion->checking === 'ai') {
+            return collect([$this->aiEvaluator($criterion)]);
+        }
+
+        return collect([['type' => 'unknown', 'name' => 'Auditda qayd etilmagan']]);
+    }
+
+    /** @return array{type: string, name: string} */
+    private function aiEvaluator(Criterion $criterion): array
+    {
+        $model = $criterion->ai_model ? " ({$criterion->ai_model})" : '';
+
+        return [
+            'type' => 'ai',
+            'name' => 'Sun’iy intellekt tomonidan baholangan'.$model,
+        ];
     }
 }
