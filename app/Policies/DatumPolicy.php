@@ -7,6 +7,13 @@ use App\Models\User;
 
 class DatumPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        return $user->isSuperAdmin()
+            || $user->hasRole('teacher')
+            || $user->hasRole('user');
+    }
+
     public function view(User $user, Datum $datum): bool
     {
         return $datum->status !== 'deleted' && $this->ownsDatumOrIsSuperAdmin($user, $datum);

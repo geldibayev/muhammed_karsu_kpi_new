@@ -100,9 +100,9 @@
                             <p>Asosiy sahifa</p>
                         </a>
                     </li>
-                    <li class="nav-item @if(request()->routeIs('files.show') || request()->is('home/files*')) menu-open @endif">
+                    <li class="nav-item @if(request()->routeIs('files.show', 'upload.details') || request()->is('home/files*')) menu-open @endif">
                         <a href="#"
-                           class="nav-link @if(request()->routeIs('files.show') || request()->is('home/files*')) active @endif">
+                           class="nav-link @if(request()->routeIs('files.show', 'upload.details') || request()->is('home/files*')) active @endif">
                             <i class="nav-icon fa fa-layer-group"></i>
                             <p>
                                 Resurslar
@@ -112,28 +112,28 @@
                         <ul class="nav nav-treeview">
                             <li class="nav-item">
                                 <a href="{{ route('files.show', 'received') }}"
-                                   class="nav-link @if(request()->url() == route('files.show', 'received')) active @endif">
+                                   class="nav-link @if(request()->url() == route('files.show', 'received') || (($status ?? null) === \App\Enums\DatumStatus::Received)) active @endif">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Yuborilgan</p>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a href="{{ route('files.show', 'checking') }}"
-                                   class="nav-link @if(request()->url() == route('files.show', 'checking')) active @endif">
+                                   class="nav-link @if(request()->url() == route('files.show', 'checking') || (($status ?? null) === \App\Enums\DatumStatus::Checking)) active @endif">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Tekshirilmoqda</p>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a href="{{ route('files.show', 'accepted') }}"
-                                   class="nav-link @if(request()->url() == route('files.show', 'accepted')) active @endif">
+                                   class="nav-link @if(request()->url() == route('files.show', 'accepted') || (($status ?? null) === \App\Enums\DatumStatus::Accepted)) active @endif">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Tasdiqlangan</p>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a href="{{ route('files.show', 'cancelled') }}"
-                                   class="nav-link @if(request()->url() == route('files.show', 'cancelled')) active @endif">
+                                   class="nav-link @if(request()->url() == route('files.show', 'cancelled') || (($status ?? null) === \App\Enums\DatumStatus::Cancelled)) active @endif">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Qaytarilgan</p>
                                 </a>

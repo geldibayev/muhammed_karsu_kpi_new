@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\CreateDatumSubmission;
+use App\Enums\DatumStatus;
 use App\Http\Requests\StoreDatumRequest;
 use App\Models\Criterion;
 use App\Models\Datum;
@@ -72,6 +73,34 @@ class DatumController extends Controller
         }
 
         return back()->with('error', 'Fayl topilmadi!');
+    }
+
+    public function details(Datum $datum): View
+    {
+        $this->authorize('view', $datum);
+
+        $datum->load([
+            'criterion:id,name',
+            'year:id,name',
+            'histories' => fn ($query) => $query->latest(),
+        ]);
+        $status = DatumStatus::from($datum->status);
+        $breadcrumbs = [
+            [
+                'url' => route('home'),
+                'name' => 'Asosiy sahifa',
+            ],
+            [
+                'url' => route('files.show', $status),
+                'name' => $status->label().' resurslar',
+            ],
+            [
+                'url' => '#',
+                'name' => 'Resurs #'.$datum->id,
+            ],
+        ];
+
+        return view('pages.users.submissions.show', compact('datum', 'status', 'breadcrumbs'));
     }
 
     public function destroy(Datum $datum): RedirectResponse

@@ -48,6 +48,37 @@ class Datum extends Model
         return data_get($this->material, 'type') === 'file' && is_string($path) ? $path : null;
     }
 
+    public function externalUrl(): ?string
+    {
+        $url = data_get($this->material, 'link');
+
+        if (data_get($this->material, 'type') !== 'url' || ! is_string($url)) {
+            return null;
+        }
+
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+
+        return filter_var($url, FILTER_VALIDATE_URL) !== false
+            && in_array($scheme, ['http', 'https'], true)
+                ? $url
+                : null;
+    }
+
+    /** @return array<string, int|float|string|bool> */
+    public function submissionMetadata(): array
+    {
+        $metadata = data_get($this->material, 'article', data_get($this->material, 'data', []));
+
+        if (! is_array($metadata)) {
+            return [];
+        }
+
+        return array_filter(
+            $metadata,
+            static fn (mixed $value): bool => is_scalar($value) && $value !== '',
+        );
+    }
+
     protected function casts(): array
     {
         return [

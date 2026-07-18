@@ -2,28 +2,39 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DatumStatus;
 use App\Models\Datum;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class DatumHistoryController extends Controller
 {
-    public function show($status)
+    public function index(Request $request, DatumStatus $status): View
     {
-        $breadcrumb_text = 'Yangi resurslar';
-        if ($status == 'checking') $breadcrumb_text = 'Tekshirilmoqda';
-        if ($status == 'accepted') $breadcrumb_text = 'Tasdiqlangan';
-        if ($status == 'cancelled') $breadcrumb_text = 'Bekor qilingan';
+        $this->authorize('viewAny', Datum::class);
+
         $breadcrumbs = [
             [
                 'url' => route('home'),
-                'name' => 'Asosiy sahifa'
+                'name' => 'Asosiy sahifa',
             ],
             [
                 'url' => '#',
-                'name' => $breadcrumb_text
-            ]
+                'name' => $status->label().' resurslar',
+            ],
         ];
-        $data = Datum::where('status', $status)->where('user_id', auth()->id())->paginate(20);
-        return view('pages.users.data', compact(['data', 'breadcrumbs', 'status']));
+
+        $data = Datum::query()
+            ->with([
+                'criterion:id,name',
+                'year:id,name',
+            ])
+            ->whereBelongsTo($request->user())
+            ->where('status', $status->value)
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('pages.users.data', compact('data', 'breadcrumbs', 'status'));
     }
 }

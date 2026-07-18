@@ -20,13 +20,12 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/profile', [HomeController::class, 'profile'])->name('profile');
     Route::get('/users/roles', [UserRoleController::class, 'index'])->name('users.roles.index');
     Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
-    Route::post('/reports/{report}/points/rebuild', [CriterionPointController::class, 'rebuild'])
-        ->middleware('can:rebuild-report-points')
-        ->name('reports.points.rebuild');
+    Route::post('/reports/{report}/points/rebuild', [CriterionPointController::class, 'rebuild'])->middleware('can:rebuild-report-points')->name('reports.points.rebuild');
     Route::get('/upload/{upload}', [DatumController::class, 'show'])->name('upload.show');
     Route::post('/upload/{upload}', [DatumController::class, 'store'])->name('upload.store');
+    Route::get('/submissions/{datum}', [DatumController::class, 'details'])->name('upload.details');
     Route::delete('/submissions/{datum}', [DatumController::class, 'destroy'])->name('upload.destroy');
-    Route::resource('/files', DatumHistoryController::class)->only(['show']);
+    Route::get('/files/{status}', [DatumHistoryController::class, 'index'])->name('files.show');
     Route::get('/submissions/{datum}/download', [DatumController::class, 'download'])->name('upload.file.download');
     Route::resource('/criteria', CriterionController::class)->only(['edit', 'update']);
 });
