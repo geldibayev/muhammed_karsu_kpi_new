@@ -159,15 +159,13 @@
                     <li class="nav-header font-weight-bold" style="text-transform: uppercase">
                         Tizim
                     </li>
-                    @if(auth()->user()->isSuperAdmin())
-                        <li class="nav-item">
-                            <a href="{{ route('reviewer-assignments.index') }}"
-                               class="nav-link @if(request()->routeIs('reviewer-assignments.*')) active @endif">
-                                <i class="nav-icon fas fa-user-shield"></i>
-                                <p>Ma’sullar</p>
-                            </a>
-                        </li>
-                    @endif
+                    <li class="nav-item">
+                        <a href="{{ route('reviewer-assignments.index') }}"
+                           class="nav-link @if(request()->routeIs('reviewer-assignments.*')) active @endif">
+                            <i class="nav-icon fas fa-user-shield"></i>
+                            <p>Ma’sullar</p>
+                        </a>
+                    </li>
                     {{--<li class="nav-item">
                         <a href="{{ url('/') }}" class="nav-link">
                             <i class="nav-icon fas fa-sync"></i>

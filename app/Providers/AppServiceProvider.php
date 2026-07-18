@@ -25,7 +25,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFour();
         Gate::define('rebuild-report-points', fn (User $user): bool => $user->isSuperAdmin());
-        Gate::define('manage-reviewer-assignments', fn (User $user): bool => $user->isSuperAdmin());
         Gate::define(
             'access-manual-reviews',
             fn (User $user): bool => $user->isSuperAdmin()

@@ -44,7 +44,7 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertNull(CriterionReviewerAssignment::query()->firstOrFail()->user);
     }
 
-    public function test_only_super_admin_can_open_responsible_people_page(): void
+    public function test_all_authenticated_users_can_open_responsible_people_page(): void
     {
         $criterion = $this->createCriterion();
         $criterion->update(['name' => ['uz' => 'Biriktirilgan mezon']]);
@@ -64,14 +64,14 @@ class ManualReviewWorkflowTest extends TestCase
         $teacher = User::factory()->create();
         $this->assign($superAdmin, $criterion, '1/'.$criterion->id);
 
-        $this->actingAs($teacher)
-            ->get(route('reviewer-assignments.index'))
-            ->assertForbidden();
+        $this->get(route('reviewer-assignments.index'))
+            ->assertRedirect(route('login'));
 
-        $this->actingAs($superAdmin)
+        $this->actingAs($teacher)
             ->get(route('reviewer-assignments.index'))
             ->assertOk()
             ->assertSee('Ma’sullar')
+            ->assertSee(route('reviewer-assignments.index'))
             ->assertSee('Mezon raqami')
             ->assertSee('Mezon nomi')
             ->assertSee('Ma’sul F.I.O.')

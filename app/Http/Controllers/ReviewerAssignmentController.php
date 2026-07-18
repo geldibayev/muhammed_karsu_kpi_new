@@ -3,15 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Criterion;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ReviewerAssignmentController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        abort_unless($request->user()?->can('manage-reviewer-assignments'), 403);
-
         $criteria = Criterion::query()
             ->whereNotNull('parent_id')
             ->where('checking', '!=', 'ai')

@@ -23,7 +23,6 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/users/roles', [UserRoleController::class, 'index'])->name('users.roles.index');
     Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
     Route::get('/reviewer-assignments', [ReviewerAssignmentController::class, 'index'])
-        ->middleware('can:manage-reviewer-assignments')
         ->name('reviewer-assignments.index');
     Route::get('/reviews', [ManualReviewController::class, 'index'])
         ->middleware('can:access-manual-reviews')
