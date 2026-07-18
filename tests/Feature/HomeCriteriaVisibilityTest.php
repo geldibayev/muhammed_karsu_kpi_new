@@ -7,20 +7,27 @@ use App\Models\CriterionEvaluation;
 use App\Models\Evaluation;
 use App\Models\Report;
 use App\Models\User;
+use App\Models\Year;
+use Database\Seeders\Criterion16EvaluationSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class HomeCriteriaVisibilityTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_all_criteria_are_visible_when_user_degree_has_no_evaluation(): void
+    public function test_criterion_16_is_visible_and_uploadable_for_every_degree(): void
     {
-        $user = User::factory()->create(['degree' => 'hold_degrees']);
-        Evaluation::query()->create([
-            'code' => 'hold_degrees',
-            'name' => ['uz' => 'Ilmiy darajali'],
-        ]);
+        Storage::fake('local');
+        $user = User::factory()->withRole('user')->create(['degree' => 'hold_degrees']);
+        foreach (['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'] as $evaluationCode) {
+            Evaluation::query()->create([
+                'code' => $evaluationCode,
+                'name' => ['uz' => $evaluationCode],
+            ]);
+        }
         $report = Report::query()->create([
             'name' => ['uz' => 'Test hisoboti'],
             'status' => '1',
@@ -48,6 +55,15 @@ class HomeCriteriaVisibilityTest extends TestCase
             'id' => 16,
             'parent_id' => $secondParent->id,
             'name' => ['uz' => 'Xalqaro loyihalarda ishtiroki'],
+            'res_type' => 'file',
+            'template' => '0',
+        ]);
+        $this->seed(Criterion16EvaluationSeeder::class);
+        $this->seed(Criterion16EvaluationSeeder::class);
+        $year = Year::query()->create([
+            'id' => 2026,
+            'name' => '2026',
+            'status' => '1',
         ]);
 
         $this->actingAs($user)
@@ -55,8 +71,37 @@ class HomeCriteriaVisibilityTest extends TestCase
             ->assertOk()
             ->assertSee('2/16')
             ->assertSee('Xalqaro loyihalarda ishtiroki')
+            ->assertSee('4.00')
             ->assertSee(route('upload.show', $applicableCriterion))
             ->assertSee(route('upload.show', $criterionWithoutEvaluation));
+
+        $this->actingAs($user)
+            ->get(route('upload.show', $criterionWithoutEvaluation))
+            ->assertOk();
+
+        $this->actingAs($user)
+            ->post(route('upload.store', $criterionWithoutEvaluation), [
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create('xalqaro-loyiha.pdf', 100, 'application/pdf'),
+                'year' => $year->id,
+            ])
+            ->assertRedirect(route('upload.show', $criterionWithoutEvaluation));
+
+        $this->assertDatabaseHas('data', [
+            'criterion_id' => 16,
+            'user_id' => $user->id,
+            'status' => 'received',
+        ]);
+        $this->assertDatabaseCount('criterion_evaluations', 5);
+
+        foreach (['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'] as $evaluationCode) {
+            $this->assertDatabaseHas('criterion_evaluations', [
+                'criterion_id' => 16,
+                'evaluation' => $evaluationCode,
+                'has' => '1',
+                'score' => 4,
+            ]);
+        }
     }
 
     /** @param array<string, mixed> $attributes */
@@ -64,6 +109,7 @@ class HomeCriteriaVisibilityTest extends TestCase
     {
         return Criterion::query()->create(array_merge([
             'name' => ['uz' => 'Test mezoni'],
+            'desc' => ['uz' => 'Test mezoni tavsifi'],
             'report_id' => $report->id,
             'upload' => '1',
             'status' => '1',

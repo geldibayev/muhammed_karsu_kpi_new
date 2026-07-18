@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\CriterionYear;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class CriterionSeeder extends Seeder
@@ -64,7 +63,7 @@ class CriterionSeeder extends Seeder
                         - Agar havola ishlamasa, ta'limga umuman aloqasi bo'lmasa yoki shartlarga zid bo'lsa: \"cancelled\" qiling.
 
                         Javobni hech qanday qo'shimcha matnlar va markdown belgilarsiz (```json...``` kabi emas), faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <faqat raqam, masalan 1.5>, \"reason\": \"<Qabul qilingan qarorning qisqacha sababi, nima uchun aynan shu ball yoki status berilganligi>\"}"
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": <faqat raqam, masalan 1.5>, \"reason\": \"<Qabul qilingan qarorning qisqacha sababi, nima uchun aynan shu ball yoki status berilganligi>\"}",
                     ],
                     [
                         'name' => [
@@ -404,7 +403,7 @@ class CriterionSeeder extends Seeder
                         - Agar taqdim etilgan dalillarning ushbu mezonga umuman aloqasi bo'lmasa (masalan, oddiy OTM darsi, universitet ichidagi yig'ilish) yoki umuman tasdiqlanmasa: \"cancelled\" statusini bering.
 
                         Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <faqat raqam, masalan 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, aniq qaysi shartlar bajarilganligi yoki nima sababdan rad/tekshiruvga yuborilganligi>\"}"
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": <faqat raqam, masalan 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, aniq qaysi shartlar bajarilganligi yoki nima sababdan rad/tekshiruvga yuborilganligi>\"}",
                     ],
                 ],
             ],
@@ -550,6 +549,8 @@ class CriterionSeeder extends Seeder
                         'res_type' => 'file',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
+                            'hold_degrees' => 4,
+                            'no_degrees' => 4,
                             'foreign_lang' => 4,
                             'physical' => 4,
                         ],
@@ -895,7 +896,7 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 1,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "You are an AI evaluator. Verify the provided diploma or HAC (OAK) document proves the professor successfully supervised a Doctor of Science (DSc) candidate. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
+                        'ai_prompt' => 'You are an AI evaluator. Verify the provided diploma or HAC (OAK) document proves the professor successfully supervised a Doctor of Science (DSc) candidate. Return a JSON object strictly in this format: {"status": true/false, "reason": "explanation"}.',
                     ],
                     [
                         'name' => [
@@ -923,7 +924,7 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 1,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "You are an AI evaluator. Verify the provided diploma or HAC (OAK) document proves the professor successfully supervised a Doctor of Philosophy (PhD) candidate. Return a JSON object strictly in this format: {\"status\": true/false, \"reason\": \"explanation\"}.",
+                        'ai_prompt' => 'You are an AI evaluator. Verify the provided diploma or HAC (OAK) document proves the professor successfully supervised a Doctor of Philosophy (PhD) candidate. Return a JSON object strictly in this format: {"status": true/false, "reason": "explanation"}.',
                     ],
                     [
                         'name' => [
@@ -1532,7 +1533,7 @@ class CriterionSeeder extends Seeder
                     'checking' => $child['checking'],
                     'res_type' => $child['res_type'],
                     'template' => $child['template'] ?? '1',
-                    //'res_type' => 'all',
+                    // 'res_type' => 'all',
                     'upload' => $child['upload'],
                     'status' => $child['status'],
                     'formula_id' => $child['formula_id'],
@@ -1545,7 +1546,7 @@ class CriterionSeeder extends Seeder
                     CriterionEvaluation::create([
                         'criterion_id' => $ch->id,
                         'evaluation' => $key,
-                        'score' => $eva
+                        'score' => $eva,
                     ]);
                 }
             }
