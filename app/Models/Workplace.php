@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Workplace extends Model
 {
@@ -19,38 +19,38 @@ class Workplace extends Model
         'type_id',
     ];
 
-    public function department(): HasOne
+    public function department(): BelongsTo
     {
-        return $this->hasOne(Department::class, 'id', 'department_id');
+        return $this->belongsTo(Department::class);
     }
 
-    public function staff(): HasOne
+    public function staff(): BelongsTo
     {
-        return $this->hasOne(EmploymentStaff::class, 'id', 'staff_id');
+        return $this->belongsTo(EmploymentStaff::class);
     }
 
-    public function form(): HasOne
+    public function form(): BelongsTo
     {
-        return $this->hasOne(EmploymentForm::class, 'id', 'form_id');
+        return $this->belongsTo(EmploymentForm::class);
     }
 
-    public function position(): HasOne
+    public function position(): BelongsTo
     {
-        return $this->hasOne(StaffPosition::class, 'id', 'staff_position_id');
+        return $this->belongsTo(StaffPosition::class, 'staff_position_id');
     }
 
-    public function status(): HasOne
+    public function status(): BelongsTo
     {
-        return $this->hasOne(EmployeeStatus::class, 'id', 'status_id');
+        return $this->belongsTo(EmployeeStatus::class, 'status_id');
     }
 
-    public function academic_degree(): HasOne
+    public function academic_degree(): BelongsTo
     {
-        return $this->hasOne(AcademicDegree::class, 'id', 'academic_degree_id');
+        return $this->belongsTo(AcademicDegree::class);
     }
 
-    public function academic_rank(): HasOne
+    public function academic_rank(): BelongsTo
     {
-        return $this->hasOne(AcademicRank::class, 'id', 'academic_rank_id');
+        return $this->belongsTo(AcademicRank::class);
     }
 }

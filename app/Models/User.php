@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -56,6 +57,21 @@ class User extends Authenticatable
         return $this->name['full'] ?? '';
     }
 
+    public function getImageUrlAttribute(): ?string
+    {
+        if (! is_string($this->image) || $this->image === '') {
+            return null;
+        }
+
+        $images = json_decode($this->image, true);
+
+        if (is_array($images)) {
+            return data_get($images, 'min') ?: data_get($images, 'max');
+        }
+
+        return filter_var($this->image, FILTER_VALIDATE_URL) ? $this->image : null;
+    }
+
     public function point($criterion_id)
     {
         $point = Point::where('user_id', auth()->id())->where('criterion_id', $criterion_id)->first();
@@ -91,6 +107,11 @@ class User extends Authenticatable
     public function workplaces(): HasMany
     {
         return $this->hasMany(Workplace::class, 'user_id');
+    }
+
+    public function primaryWorkplace(): HasOne
+    {
+        return $this->hasOne(Workplace::class)->oldestOfMany();
     }
 
     public function points(): HasMany
