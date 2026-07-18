@@ -40,7 +40,6 @@ class Criterion extends Model
 
     public function files(): HasMany
     {
-        return $this->hasMany(Datum::class, 'criterion_id')
-            ->where('user_id', auth()->id())->orderBy('created_at', 'desc');
+        return $this->hasMany(Datum::class, 'criterion_id');
     }
 }

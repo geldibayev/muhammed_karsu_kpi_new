@@ -68,7 +68,14 @@ class AuthorizationBoundariesTest extends TestCase
             ->delete(route('upload.destroy', $datum))
             ->assertRedirect();
 
-        $this->assertModelMissing($datum);
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'status' => 'deleted',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'message_type' => 'submission_deleted',
+        ]);
         Storage::disk('public')->assertMissing('uploads/proof.pdf');
     }
 

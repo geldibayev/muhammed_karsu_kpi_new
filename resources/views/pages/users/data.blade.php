@@ -25,7 +25,8 @@
                             <td class="text-left align-middle">
                                 <div class="font-weight-bold">
                                     @if($datum->material['type'] == 'url')
-                                        <a href="{{ $datum->material['link'] }}" target="_blank">
+                                        <a href="{{ $datum->material['link'] }}" target="_blank"
+                                           rel="noopener noreferrer">
                                             {{ $datum->name }}
                                         </a>
                                     @else
@@ -64,7 +65,7 @@
                                         <div class="modal-content">
                                             <div class="modal-body text-wrap"
                                                  style="white-space: pre-line; font-size: 14px;">
-                                                {!! $datum->reason !!}
+                                                {{ $datum->reason }}
                                             </div>
                                             <div class="modal-footer p-2">
                                                 <button type="button" class="btn btn-secondary btn-sm"

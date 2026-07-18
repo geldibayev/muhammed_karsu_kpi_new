@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CreateDatumSubmission;
+use App\Http\Requests\StoreDatumRequest;
 use App\Models\Criterion;
 use App\Models\Datum;
 use App\Models\Language;
 use App\Models\Year;
-use Gemini\Data\Blob;
-use Gemini\Enums\MimeType;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -21,7 +20,7 @@ class DatumController extends Controller
     {
         $this->authorize('submit', $upload);
 
-        $years = Year::where('status', '1')->get();
+        $years = Year::query()->where('status', '1')->get();
         $breadcrumbs = [
             [
                 'url' => route('home'),
@@ -32,175 +31,75 @@ class DatumController extends Controller
                 'name' => mb_substr($upload->name['uz'], 0, 30, 'UTF-8').'...',
             ],
         ];
-        $languages = Language::all();
-        $files = Datum::where('user_id', auth()->id())->where('criterion_id', $upload->id)->count();
+        $languages = Language::query()->get();
+        $submissions = $upload->files()
+            ->whereBelongsTo(auth()->user())
+            ->where('status', '!=', 'deleted')
+            ->latest()
+            ->get();
+        $files = $submissions->count();
 
-        return view('pages.users.upload.index', compact(['upload', 'years', 'languages', 'breadcrumbs', 'files']));
+        return view('pages.users.upload.index', compact(
+            'upload',
+            'years',
+            'languages',
+            'breadcrumbs',
+            'submissions',
+            'files',
+        ));
     }
 
-    public function update(Request $request, Criterion $upload): RedirectResponse
-    {
-        $this->authorize('submit', $upload);
+    public function store(
+        StoreDatumRequest $request,
+        Criterion $upload,
+        CreateDatumSubmission $action,
+    ): RedirectResponse {
+        $action->handle($request->user(), $upload, $request->validated());
 
-        $request->validate([
-            'uploadResourceType' => 'required|in:file,url',
-            'year' => 'required|exists:years,id',
-            'uploadResourceFile' => 'nullable|required_if:uploadResourceType,file|file|mimes:pdf,jpg,png|max:2048',
-            'uploadResourceUrl' => 'nullable|required_if:uploadResourceType,url|url|max:255',
-        ]);
-        $existingFilesCount = Datum::where('criterion_id', $upload->id)->where('user_id', auth()->id())->count();
-        if ($upload->file_limit > 0 && $existingFilesCount >= $upload->file_limit) {
-            return back()->with('error', 'Fayl yuklash chegarasidan oshib ketdingiz!');
-        }
-        $materialData = [];
-        $fileMimeType = null;
-        $fileBase64 = null;
-        if ($request->uploadResourceType === 'file') {
-            if ($request->hasFile('uploadResourceFile')) {
-                $file = $request->file('uploadResourceFile');
-                $folder = 'uploads/kpi_resources/'.date('Y/m');
-                $filePath = $file->store($folder, 'public');
-                $materialData = [
-                    'type' => 'file',
-                    'path' => $filePath,
-                    'original_name' => $file->getClientOriginalName(),
-                    'extension' => $file->getClientOriginalExtension(),
-                ];
-                $fileBase64 = base64_encode(file_get_contents($file->getRealPath()));
-                $fileMimeType = $file->getClientMimeType();
-            }
-        } else {
-            $materialData = [
-                'type' => 'url',
-                'link' => $request->uploadResourceUrl,
-            ];
-        }
-        if ($request->has('article') && is_array($request->input('article'))) {
-            $materialData['article'] = array_filter($request->input('article'));
-        }
-        if ($upload->checking == 'ai') {
-            $gemini_data = [
-                'status' => 'checking',
-                'point' => 0,
-                'reason' => 'AI tomonidan to‘liq tahlil qilinmadi',
-            ];
-            $full_name = auth()->user()->full;
-            $me_point = $upload->criterionEvaluation($upload->id, auth()->user()->degree)->score;
-            $ai_prompt = $upload->ai_prompt;
-            $cleanPrompt = preg_replace('/[ \t]+/', ' ', $ai_prompt);
-            $cleanPrompt = trim($cleanPrompt);
-            $cleanPrompt = str_replace('%pointing%', $me_point, $cleanPrompt);
-            $cleanPrompt .= "\nResurs muallifi tizimga quyidagicha ma’lumotlarni taqdim etgan. Resursning mualliflari ro‘yxatida resursni kiritgan shaxsning ism-familiyasi bor-yo'qligini tekshiring. DIQQAT: Ism-familiyalarni solishtirishda qat'iy (harfma-harf) moslik talab qilmang. Kichik imlo xatolari, tutuq belgisi (‘, '), chiziqcha (-), bo'shliqlar, shuningdek, lotin/kirill transliteratsiyasi farqlari (masalan, I va Y, E va YE, O' va O) sababli ismlar biroz farq qilsa ham, ularni yagona shaxs deb qabul qiling. Faqatgina ism-familiya butunlay boshqa odamga tegishli ekanligi yaqqol tasdiqlansagina 'cancelled' statusini qaytaring:\n\n";
-            $cleanPrompt .= "Muallifning to‘liq ismi: {$full_name};\n";
-            if (isset($materialData['article']['name'])) {
-                $cleanPrompt .= "Resurs nomi: «{$materialData['article']['name']}»;\n";
-            }
-            if (isset($materialData['article']['keywords'])) {
-                $cleanPrompt .= "Kalit so‘zlar: «{$materialData['article']['keywords']}»;\n";
-            }
-            if (isset($materialData['article']['authors_num'])) {
-                $cleanPrompt .= "Mualliflar soni: «{$materialData['article']['authors_num']}»;\n";
-            }
-            if (isset($materialData['article']['authors'])) {
-                $cleanPrompt .= "Mualliflar: «{$materialData['article']['authors']}»;\n";
-            }
-            if (isset($materialData['article']['lang'])) {
-                $cleanPrompt .= "Resurs tili: «{$materialData['article']['lang']}»;\n";
-            }
-            if (isset($materialData['article']['doi'])) {
-                $cleanPrompt .= "DOI: «{$materialData['article']['doi']}»;\n";
-            }
-            if (isset($materialData['article']['journal'])) {
-                $cleanPrompt .= "Nashriyot: «{$materialData['article']['journal']}»;\n";
-            }
-            if (isset($materialData['article']['params'])) {
-                $cleanPrompt .= "Nashr parametrlari: «{$materialData['article']['params']}»;\n";
-            }
-            // dd($cleanPrompt);
-            if ($upload->ai_prompt && $upload->ai_model) {
-                $apiKey = env('GEMINI_API_KEY');
-                $modelName = $upload->ai_model;
-                $client = \Gemini::factory()->withApiKey($apiKey)->make();
-                $contentParts = [
-                    $cleanPrompt,
-                ];
-                if ($request->uploadResourceType === 'file' && $fileBase64 !== null) {
-                    $mime = match ($fileMimeType) {
-                        'image/jpeg', 'image/jpg' => MimeType::IMAGE_JPEG,
-                        'image/png' => MimeType::IMAGE_PNG,
-                        default => MimeType::APPLICATION_PDF,
-                    };
-                    $contentParts[] = new Blob(mimeType: $mime, data: $fileBase64);
-                } elseif ($request->uploadResourceType === 'url' && $request->filled('uploadResourceUrl')) {
-                    $contentParts[] = 'Tahlil qilish uchun taqdim etilgan havola: '.$request->uploadResourceUrl;
-                }
-                try {
-                    $result = $client->generativeModel($modelName)->generateContent($contentParts);
-                    $responseText = $result->text();
-                    $responseText = str_replace(['```json', '```'], '', $responseText);
-                    $responseText = trim($responseText);
-                    preg_match('/\{[\s\S]*\}/', $responseText, $matches);
-                    $jsonString = $matches[0] ?? '{}';
-                    $parsedData = json_decode($jsonString, true);
-                    if (is_array($parsedData) && isset($parsedData['status'])) {
-                        $gemini_data = $parsedData;
-                    }
-                } catch (\Exception $e) {
-                    Log::error('Gemini API xatoligi: '.$e->getMessage(), [
-                        'file' => $e->getFile(),
-                        // 'line' => $e->Line(),
-                        'upload_id' => $upload->id,
-                        'user_id' => auth()->id(),
-                    ]);
-
-                    $gemini_data['reason'] = 'AI tahlilida xatolik yuz berdi. Iltimos, administrator ko‘rib chiqsin.';
-                }
-            }
-        }
-        Datum::create([
-            'user_id' => auth()->id(),
-            'criterion_id' => $upload->id,
-            'year_id' => $request->year,
-            'material' => $materialData,
-            'status' => $gemini_data['status'] ?? 'received',
-            'point' => $gemini_data['point'] ?? 0,
-            'reason' => $gemini_data['reason'] ?? '',
-            'name' => $request->uploadResourceType === 'file' && $request->hasFile('uploadResourceFile')
-                ? $request->file('uploadResourceFile')->getClientOriginalName()
-                : 'URL Havola',
-        ]);
-
-        return redirect()->route('upload.show', $upload->id)->with('success', 'Resurs muvaffaqiyatli yuklandi.');
+        return redirect()
+            ->route('upload.show', $upload)
+            ->with('success', 'Resurs muvaffaqiyatli yuklandi.');
     }
 
     public function download(Datum $datum): StreamedResponse|RedirectResponse
     {
         $this->authorize('download', $datum);
 
-        $path = data_get($datum->material, 'path');
+        $path = $datum->storagePath();
 
-        if (data_get($datum->material, 'type') === 'file'
-            && is_string($path)
-            && Storage::disk('public')->exists($path)) {
-            return Storage::disk('public')->download($path, $datum->name);
+        if ($path !== null && Storage::disk($datum->storageDisk())->exists($path)) {
+            return Storage::disk($datum->storageDisk())->download($path, $datum->name);
         }
 
         return back()->with('error', 'Fayl topilmadi!');
     }
 
-    public function destroy(Datum $upload): RedirectResponse
+    public function destroy(Datum $datum): RedirectResponse
     {
-        $this->authorize('delete', $upload);
+        $this->authorize('delete', $datum);
 
-        $path = data_get($upload->material, 'path');
-        $isStoredFile = data_get($upload->material, 'type') === 'file' && is_string($path);
+        $path = $datum->storagePath();
+        $disk = $datum->storageDisk();
 
-        $upload->delete();
+        DB::transaction(function () use ($datum): void {
+            $lockedDatum = Datum::query()->lockForUpdate()->findOrFail($datum->id);
+            $lockedDatum->update([
+                'status' => 'deleted',
+                'point' => 0,
+                'reason' => 'Resurs foydalanuvchi tomonidan o\'chirildi.',
+            ]);
+            $lockedDatum->histories()->create([
+                'user_id' => auth()->id(),
+                'type' => 'info',
+                'message' => 'Resurs foydalanuvchi tomonidan o\'chirildi.',
+                'message_type' => 'submission_deleted',
+            ]);
+        }, 3);
 
-        if ($isStoredFile) {
-            Storage::disk('public')->delete($path);
+        if ($path !== null) {
+            Storage::disk($disk)->delete($path);
         }
 
-        return back()->with('success', 'Resurs muvaffaqiyatli o‘chirildi.');
+        return back()->with('success', 'Resurs muvaffaqiyatli o\'chirildi.');
     }
 }

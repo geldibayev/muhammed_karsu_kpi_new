@@ -9,17 +9,17 @@ class DatumPolicy
 {
     public function view(User $user, Datum $datum): bool
     {
-        return $this->ownsDatumOrIsSuperAdmin($user, $datum);
+        return $datum->status !== 'deleted' && $this->ownsDatumOrIsSuperAdmin($user, $datum);
     }
 
     public function download(User $user, Datum $datum): bool
     {
-        return $this->ownsDatumOrIsSuperAdmin($user, $datum);
+        return $datum->status !== 'deleted' && $this->ownsDatumOrIsSuperAdmin($user, $datum);
     }
 
     public function delete(User $user, Datum $datum): bool
     {
-        return $this->ownsDatumOrIsSuperAdmin($user, $datum);
+        return $datum->status !== 'deleted' && $this->ownsDatumOrIsSuperAdmin($user, $datum);
     }
 
     private function ownsDatumOrIsSuperAdmin(User $user, Datum $datum): bool

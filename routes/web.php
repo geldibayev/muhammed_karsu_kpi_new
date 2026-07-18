@@ -23,8 +23,10 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::post('/reports/{report}/points/rebuild', [CriterionPointController::class, 'rebuild'])
         ->middleware('can:rebuild-report-points')
         ->name('reports.points.rebuild');
-    Route::resource('/upload', DatumController::class)->only(['show', 'update', 'destroy']);
+    Route::get('/upload/{upload}', [DatumController::class, 'show'])->name('upload.show');
+    Route::post('/upload/{upload}', [DatumController::class, 'store'])->name('upload.store');
+    Route::delete('/submissions/{datum}', [DatumController::class, 'destroy'])->name('upload.destroy');
     Route::resource('/files', DatumHistoryController::class)->only(['show']);
-    Route::get('/upload-files/{datum}/download', [DatumController::class, 'download'])->name('upload.file.download');
+    Route::get('/submissions/{datum}/download', [DatumController::class, 'download'])->name('upload.file.download');
     Route::resource('/criteria', CriterionController::class)->only(['edit', 'update']);
 });

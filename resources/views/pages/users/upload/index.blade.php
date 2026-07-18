@@ -65,7 +65,7 @@
                     </div>
                     <div class="text-danger font-weight-bold pt-2">
                         Maksimal ball:
-                        {{ $upload->criterionEvaluation($upload->id, auth()->user()->degree)->score }} ball
+                        {{ $upload->criterionEvaluation($upload->id, auth()->user()->degree)?->score ?? 0 }} ball
                     </div>
                     @if($upload->file_limit > 0)
                         <div class="text-dark">
@@ -81,10 +81,9 @@
                 <div class="card-body p-0">
                     @if($upload->upload == '1')
                         @if($upload->file_limit == 0 || $files < $upload->file_limit)
-                            <form action="{{ route('upload.update', $upload->id) }}" method="post"
+                            <form action="{{ route('upload.store', $upload) }}" method="post"
                                   enctype="multipart/form-data" id="fileForm">
                                 @csrf
-                                @method('PUT')
                                 <div class="card-footer">
                                     <div class="row">
                                         @if($upload->template)
@@ -123,7 +122,7 @@
                                                     </label>
                                                     <input type="file" id="uploadResourceFile" name="uploadResourceFile"
                                                            class="d-none"
-                                                           accept=".pdf,.jpg,.png,.zip,.rar" {{ $upload->res_type == 'file' ? 'required' : '' }}>
+                                                           accept=".pdf,.jpg,.jpeg,.png" {{ $upload->res_type == 'file' ? 'required' : '' }}>
                                                 </div>
                                                 <div class="text-danger small mt-1" id="limit_error"
                                                      style="display: none;">
@@ -172,7 +171,7 @@
                     @endif
                 </div>
 
-                @if($upload->files->count())
+                @if($submissions->isNotEmpty())
                     <div class="card-footer border-top p-0">
                         <table class="table table-hover small text-center">
                             <thead>
@@ -187,12 +186,13 @@
                             </tr>
                             </thead>
                             <tbody>
-                            @foreach($upload->files as $file)
+                            @foreach($submissions as $file)
                                 <tr>
                                     <td class="font-weight-bold align-middle">{{ $file->id }}</td>
                                     <td class="font-weight-bold align-middle text-left">
                                         @if($file->material['type'] == 'url')
-                                            <a href="{{ $file->material['link'] }}">{{ $file->name }}</a>
+                                            <a href="{{ $file->material['link'] }}" target="_blank"
+                                               rel="noopener noreferrer">{{ $file->name }}</a>
                                         @else
                                             {{ $file->name }}
                                         @endif
