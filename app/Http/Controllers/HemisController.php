@@ -100,7 +100,7 @@ class HemisController extends Controller
         $hemisId = data_get($hemisUser, 'employee_id_number');
 
         if (! is_numeric($userId) || ! is_numeric($hemisId)) {
-            throw new \UnexpectedValueException('HEMIS user response does not contain employee identifiers.');
+            throw new \UnexpectedValueException('HEMIS foydalanuvchi uchun identifikatorlar topilmadi.');
         }
 
         $firstName = (string) data_get($hemisUser, 'firstname', '');

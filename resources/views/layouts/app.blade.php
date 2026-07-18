@@ -27,6 +27,7 @@
                     ->first();
                 $degreeName = optional(optional($workplace)->academic_degree)->name;
                 $rankName = optional(optional($workplace)->academic_rank)->name;
+                $isCriterionReviewer = $user->criterionReviewerAssignments()->exists();
             @endphp
             <li class="nav-item dropdown">
                 <a class="nav-link d-flex align-items-center text-right py-1" data-toggle="dropdown" href="#"
@@ -75,6 +76,12 @@
                     <a href="{{ route('profile') }}" class="dropdown-item small">
                         Mening profilim
                     </a>
+                    @if($isCriterionReviewer)
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ route('reviews.index') }}" class="dropdown-item small font-weight-bold text-primary">
+                            <i class="fas fa-clipboard-check mr-2"></i> Admin
+                        </a>
+                    @endif
                 </div>
             </li>
         </ul>
@@ -140,15 +147,24 @@
                             </li>
                         </ul>
                     </li>
+                    @can('access-manual-reviews')
+                        <li class="nav-item">
+                            <a href="{{ route('reviews.index') }}"
+                               class="nav-link @if(request()->routeIs('reviews.*')) active @endif">
+                                <i class="nav-icon fas fa-clipboard-check"></i>
+                                <p>Baholash</p>
+                            </a>
+                        </li>
+                    @endcan
                     <li class="nav-header font-weight-bold" style="text-transform: uppercase">
                         Tizim
                     </li>
                     @if(auth()->user()->isSuperAdmin())
                         <li class="nav-item">
-                            <a href="{{ route('users.roles.index') }}"
-                               class="nav-link @if(request()->routeIs('users.roles.*')) active @endif">
+                            <a href="{{ route('reviewer-assignments.index') }}"
+                               class="nav-link @if(request()->routeIs('reviewer-assignments.*')) active @endif">
                                 <i class="nav-icon fas fa-user-shield"></i>
-                                <p>Foydalanuvchi rollari</p>
+                                <p>Ma’sullar</p>
                             </a>
                         </li>
                     @endif

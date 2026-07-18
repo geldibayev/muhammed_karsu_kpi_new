@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Criterion extends Model
 {
@@ -21,6 +23,11 @@ class Criterion extends Model
     public function children(): HasMany
     {
         return $this->hasMany(Criterion::class, 'parent_id');
+    }
+
+    public function report(): BelongsTo
+    {
+        return $this->belongsTo(Report::class);
     }
 
     public function criterionEvaluation($criterion_id, $evaluation)
@@ -41,5 +48,10 @@ class Criterion extends Model
     public function files(): HasMany
     {
         return $this->hasMany(Datum::class, 'criterion_id');
+    }
+
+    public function reviewerAssignment(): HasOne
+    {
+        return $this->hasOne(CriterionReviewerAssignment::class);
     }
 }

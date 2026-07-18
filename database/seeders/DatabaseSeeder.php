@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -17,6 +16,7 @@ class DatabaseSeeder extends Seeder
             OptionSeeder::class,
             LanguageSeeder::class,
             CriterionSeeder::class,
+            CriterionReviewerAssignmentSeeder::class,
             DepartmentSeeder::class,
         ]);
     }
