@@ -21,11 +21,8 @@ class ManualReviewController extends Controller
 
         $assignmentsQuery = CriterionReviewerAssignment::query()
             ->with('criterion:id,name,checking,status')
+            ->where('hemis_id', $user->hemis_id)
             ->orderBy('criterion_code');
-
-        if (! $user->isSuperAdmin()) {
-            $assignmentsQuery->where('hemis_id', $user->hemis_id);
-        }
 
         $assignments = $assignmentsQuery->get();
         $pendingSubmissions = Datum::query()

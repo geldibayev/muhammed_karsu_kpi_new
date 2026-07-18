@@ -27,8 +27,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('rebuild-report-points', fn (User $user): bool => $user->isSuperAdmin());
         Gate::define(
             'access-manual-reviews',
-            fn (User $user): bool => $user->isSuperAdmin()
-                || CriterionReviewerAssignment::query()->where('hemis_id', $user->hemis_id)->exists(),
+            fn (User $user): bool => CriterionReviewerAssignment::query()
+                ->where('hemis_id', $user->hemis_id)
+                ->exists(),
         );
     }
 }

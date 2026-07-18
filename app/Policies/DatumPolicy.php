@@ -35,7 +35,7 @@ class DatumPolicy
     public function review(User $user, Datum $datum): bool
     {
         return in_array($datum->status, ['received', 'checking'], true)
-            && ($user->isSuperAdmin() || $this->isAssignedReviewer($user, $datum));
+            && $this->isAssignedReviewer($user, $datum);
     }
 
     private function ownsDatumOrIsSuperAdmin(User $user, Datum $datum): bool
