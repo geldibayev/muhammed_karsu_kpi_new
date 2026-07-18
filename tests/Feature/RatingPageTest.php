@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\AcademicDegree;
 use App\Models\AcademicRank;
 use App\Models\Criterion;
+use App\Models\Datum;
+use App\Models\DatumHistory;
 use App\Models\Department;
 use App\Models\EmployeeStatus;
 use App\Models\EmployeeType;
@@ -27,13 +29,20 @@ class RatingPageTest extends TestCase
 
     public function test_guest_and_user_without_a_known_role_cannot_view_ratings(): void
     {
+        $ratedUser = User::factory()->create();
+
         $this->get(route('ratings.index'))
+            ->assertRedirect(route('login'));
+        $this->get(route('ratings.show', $ratedUser))
             ->assertRedirect(route('login'));
 
         $user = User::factory()->withRole('unknown')->create();
 
         $this->actingAs($user)
             ->get(route('ratings.index'))
+            ->assertForbidden();
+        $this->actingAs($user)
+            ->get(route('ratings.show', $ratedUser))
             ->assertForbidden();
     }
 
@@ -87,6 +96,7 @@ class RatingPageTest extends TestCase
             ->assertSee('https://hemis.example/first.jpg')
             ->assertSee('12.00')
             ->assertSee('5.00')
+            ->assertSee(route('ratings.show', $firstUser))
             ->assertDontSee('Darajasiz Ustoz')
             ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)
             ->assertDontSee('<script>alert(1)</script>', false)
@@ -152,6 +162,125 @@ class RatingPageTest extends TestCase
             ->assertSessionHasErrors('degree_group');
     }
 
+    public function test_rating_details_show_criterion_scores_and_attributed_evaluators(): void
+    {
+        $viewer = User::factory()->create();
+        $ratedUser = User::factory()->create([
+            'name' => $this->userName('Baholangan Ustoz'),
+            'degree' => 'hold_degrees',
+        ]);
+        $reviewer = User::factory()->create([
+            'name' => $this->userName('Mas’ul Baholovchi'),
+        ]);
+        $activeReport = $this->createReport('Faol hisobot', '1');
+        $oldReport = $this->createReport('Eski hisobot', '2');
+        $firstSection = $this->createCriterion($activeReport, 'Birinchi bo‘lim');
+        $secondSection = $this->createCriterion($activeReport, 'Ikkinchi bo‘lim');
+        $oldSection = $this->createCriterion($oldReport, 'Eski bo‘lim');
+        $manualCriterion = $this->createCriterion($activeReport, 'Qo‘lda baholangan kriteriya', [
+            'checking' => 'manual',
+            'parent_id' => $firstSection->getKey(),
+        ]);
+        $aiCriterion = $this->createCriterion($activeReport, 'AI baholagan kriteriya', [
+            'checking' => 'ai',
+            'ai_model' => 'gpt-test',
+            'parent_id' => $firstSection->getKey(),
+        ]);
+        $systemCriterion = $this->createCriterion($activeReport, 'Auditsiz kriteriya', [
+            'checking' => 'site:test',
+            'parent_id' => $firstSection->getKey(),
+        ]);
+        $pendingCriterion = $this->createCriterion($activeReport, 'Baholanishi kutilayotgan kriteriya', [
+            'checking' => 'manual',
+            'parent_id' => $firstSection->getKey(),
+        ]);
+        $cancelledCriterion = $this->createCriterion($activeReport, 'Qaytarilgan kriteriya', [
+            'parent_id' => $firstSection->getKey(),
+        ]);
+        $unuploadedCriterion = $this->createCriterion($activeReport, 'Yuklanmagan kriteriya', [
+            'parent_id' => $secondSection->getKey(),
+        ]);
+        $oldCriterion = $this->createCriterion($oldReport, 'Eski kriteriya', [
+            'parent_id' => $oldSection->getKey(),
+        ]);
+        $oldPendingCriterion = $this->createCriterion($oldReport, 'Eski baholanmagan kriteriya', [
+            'parent_id' => $oldSection->getKey(),
+        ]);
+
+        $this->createPoint($ratedUser, $manualCriterion, $activeReport, 4.25);
+        $this->createPoint($ratedUser, $aiCriterion, $activeReport, 3.5);
+        $this->createPoint($ratedUser, $systemCriterion, $activeReport, 2);
+        $this->createPoint($ratedUser, $oldCriterion, $oldReport, 99);
+
+        $manualDatum = $this->createAcceptedDatum($ratedUser, $manualCriterion, 4.25);
+        DatumHistory::query()->create([
+            'datum_id' => $manualDatum->getKey(),
+            'user_id' => $reviewer->getKey(),
+            'type' => 'success',
+            'message' => 'Mas’ul tasdiqladi.',
+            'message_type' => 'manual_review_approved',
+        ]);
+        $aiDatum = $this->createAcceptedDatum($ratedUser, $aiCriterion, 3.5);
+        DatumHistory::query()->create([
+            'datum_id' => $aiDatum->getKey(),
+            'user_id' => $ratedUser->getKey(),
+            'type' => 'success',
+            'message' => 'AI tasdiqladi.',
+            'message_type' => 'ai_evaluation',
+        ]);
+        $this->createPendingDatum($ratedUser, $pendingCriterion, 'received');
+        $this->createPendingDatum($ratedUser, $pendingCriterion, 'checking');
+        $this->createPendingDatum($ratedUser, $manualCriterion, 'checking');
+        $this->createPendingDatum($ratedUser, $oldPendingCriterion, 'checking');
+        $this->createPendingDatum($ratedUser, $cancelledCriterion, 'cancelled');
+
+        $response = $this->actingAs($viewer)->get(route('ratings.show', [
+            'user' => $ratedUser,
+            'degree_group' => 'with_degree',
+            'search' => 'Baholangan',
+        ]));
+
+        $response
+            ->assertOk()
+            ->assertSee('Baholangan Ustoz')
+            ->assertSee('Birinchi bo‘lim')
+            ->assertSee('#1')
+            ->assertSee("1/{$manualCriterion->getKey()}")
+            ->assertSee('Qo‘lda baholangan kriteriya')
+            ->assertSee('4.25')
+            ->assertSee('Mas’ul Baholovchi')
+            ->assertSee('AI baholagan kriteriya')
+            ->assertSee('3.50')
+            ->assertSee('Sun’iy intellekt (gpt-test)')
+            ->assertSee('Auditsiz kriteriya')
+            ->assertSee('Auditda qayd etilmagan')
+            ->assertSee('Baholanishi kutilayotgan kriteriya')
+            ->assertSee('Baholanmagan')
+            ->assertSee('Baholash kutilmoqda')
+            ->assertSee('2 ta baholanmagan yuklama')
+            ->assertSee('1 ta baholanmagan yuklama')
+            ->assertSee('Qaytarilgan kriteriya')
+            ->assertSee('Qaytarilgan')
+            ->assertSee('Ikkinchi bo‘lim')
+            ->assertSee('#2')
+            ->assertSee("2/{$unuploadedCriterion->getKey()}")
+            ->assertSee('Yuklanmagan kriteriya')
+            ->assertSee('Yuklanmagan')
+            ->assertSee('Ma’lumot yuklanmagan')
+            ->assertSee('Jami: 9.75')
+            ->assertDontSee('Eski kriteriya')
+            ->assertDontSee('Eski baholanmagan kriteriya')
+            ->assertDontSee('99.00')
+            ->assertSee(route('ratings.index', [
+                'search' => 'Baholangan',
+                'degree_group' => 'with_degree',
+            ]));
+
+        $this->assertSame(1, substr_count($response->getContent(), 'Baholanishi kutilayotgan kriteriya'));
+
+        $this->get(route('ratings.show', PHP_INT_MAX))->assertNotFound();
+    }
+
     public function test_ratings_page_handles_the_absence_of_an_active_report(): void
     {
         $viewer = User::factory()->create(['degree' => 'hold_degrees']);
@@ -161,6 +290,12 @@ class RatingPageTest extends TestCase
             ->assertOk()
             ->assertSee('Faol hisobot topilmadi')
             ->assertViewHas('report', null);
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.show', $viewer))
+            ->assertOk()
+            ->assertSee('Faol hisobot uchun kriteriyalar mavjud emas')
+            ->assertSee('Jami: 0.00');
     }
 
     /** @return array<string, string> */
@@ -215,12 +350,37 @@ class RatingPageTest extends TestCase
         ]);
     }
 
-    private function createCriterion(Report $report, string $name): Criterion
+    /** @param array<string, mixed> $attributes */
+    private function createCriterion(Report $report, string $name, array $attributes = []): Criterion
     {
-        return Criterion::query()->create([
+        return Criterion::query()->create(array_merge([
             'name' => ['uz' => $name],
             'report_id' => $report->getKey(),
             'status' => '1',
+        ], $attributes));
+    }
+
+    private function createAcceptedDatum(User $user, Criterion $criterion, float $point): Datum
+    {
+        return Datum::query()->create([
+            'name' => 'Tasdiqlangan resurs',
+            'material' => [],
+            'user_id' => $user->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'accepted',
+            'point' => $point,
+        ]);
+    }
+
+    private function createPendingDatum(User $user, Criterion $criterion, string $status): Datum
+    {
+        return Datum::query()->create([
+            'name' => 'Baholanmagan resurs',
+            'material' => [],
+            'user_id' => $user->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => $status,
+            'point' => 0,
         ]);
     }
 

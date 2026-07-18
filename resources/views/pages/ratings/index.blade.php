@@ -103,6 +103,7 @@
                                 <th>Kafedra</th>
                                 <th>Asosiy lavozimi</th>
                                 <th class="text-center">Jami ball</th>
+                                <th class="text-center">Amal</th>
                             </tr>
                             </thead>
                             <tbody>
@@ -144,10 +145,16 @@
                                             {{ number_format((float) ($user->total_points ?? 0), 2) }}
                                         </span>
                                     </td>
+                                    <td class="text-center align-middle">
+                                        <a href="{{ route('ratings.show', array_merge(['user' => $user], $filters)) }}"
+                                           class="btn btn-outline-primary btn-xs">
+                                            <i class="fas fa-eye mr-1"></i> Ko‘rish
+                                        </a>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-5">
+                                    <td colspan="7" class="text-center text-muted py-5">
                                         <i class="fas fa-users fa-2x d-block mb-2"></i>
                                         Tanlangan shartlar bo‘yicha foydalanuvchilar topilmadi.
                                     </td>

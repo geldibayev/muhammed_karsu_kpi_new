@@ -24,6 +24,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/ratings', [RatingController::class, 'index'])
         ->middleware('can:view-ratings')
         ->name('ratings.index');
+    Route::get('/ratings/{user}', [RatingController::class, 'show'])
+        ->middleware('can:view-ratings')
+        ->name('ratings.show');
     Route::get('/users/roles', [UserRoleController::class, 'index'])->name('users.roles.index');
     Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
     Route::get('/reviewer-assignments', [ReviewerAssignmentController::class, 'index'])

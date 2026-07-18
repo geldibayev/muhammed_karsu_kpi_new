@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\GetUserRatingDetails;
 use App\Actions\PaginateRatingUsers;
 use App\Http\Requests\RatingFilterRequest;
 use App\Models\Department;
 use App\Models\Report;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\View\View;
 
@@ -52,5 +54,20 @@ class RatingController extends Controller
             'report',
             'users',
         ));
+    }
+
+    public function show(
+        RatingFilterRequest $request,
+        User $user,
+        GetUserRatingDetails $getUserRatingDetails,
+    ): View {
+        $details = $getUserRatingDetails->handle($user);
+        $filters = $request->validated();
+        $breadcrumbs = [
+            ['url' => route('ratings.index', $filters), 'name' => 'Reyting'],
+            ['url' => '#', 'name' => $user->full ?: 'Foydalanuvchi'],
+        ];
+
+        return view('pages.ratings.show', [...$details, 'breadcrumbs' => $breadcrumbs, 'filters' => $filters]);
     }
 }
