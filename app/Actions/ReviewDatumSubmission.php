@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Models\CriterionEvaluation;
+use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -13,9 +14,9 @@ class ReviewDatumSubmission
 {
     public function __construct(private RecalculateReportPoints $recalculateReportPoints) {}
 
-    public function approve(User $reviewer, Datum $datum): Datum
+    public function approve(User $reviewer, Datum $datum, ?int $scoreOptionId = null): Datum
     {
-        $reviewedDatum = DB::transaction(function () use ($reviewer, $datum): Datum {
+        $reviewedDatum = DB::transaction(function () use ($reviewer, $datum, $scoreOptionId): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'user'])
                 ->lockForUpdate()
@@ -35,8 +36,13 @@ class ReviewDatumSubmission
                 ]);
             }
 
-            $point = max(0, (float) $evaluation->score);
-            $message = 'Mas’ul tomonidan tasdiqlandi. Avtomatik ball: '.number_format($point, 2, '.', '').'.';
+            ['point' => $point, 'rule' => $rule] = $this->approvedScore(
+                $lockedDatum,
+                $evaluation,
+                $scoreOptionId,
+            );
+            $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
+                .'. Avtomatik xom ball: '.number_format($point, 2, '.', '').'.';
 
             $lockedDatum->update([
                 'status' => 'accepted',
@@ -56,6 +62,48 @@ class ReviewDatumSubmission
         $this->recalculateReportPoints->handle($reviewedDatum->criterion->report);
 
         return $reviewedDatum->refresh();
+    }
+
+    /** @return array{point: float, rule: string} */
+    private function approvedScore(
+        Datum $datum,
+        CriterionEvaluation $evaluation,
+        ?int $scoreOptionId,
+    ): array {
+        $maximumPoint = max(0, (float) $evaluation->score);
+
+        if ($datum->criterion->checking !== 'manual') {
+            return [
+                'point' => $maximumPoint,
+                'rule' => 'daraja bo‘yicha maksimal ball',
+            ];
+        }
+
+        $option = CriterionManualScoreOption::query()
+            ->whereKey($scoreOptionId)
+            ->where('criterion_id', $datum->criterion_id)
+            ->where('active', true)
+            ->lockForUpdate()
+            ->first();
+
+        if ($option === null) {
+            throw ValidationException::withMessages([
+                'score_option_id' => 'Ushbu mezon uchun baholash variantini tanlang.',
+            ]);
+        }
+
+        $point = max(0, (float) $option->point);
+
+        if ($point > $maximumPoint) {
+            throw ValidationException::withMessages([
+                'score_option_id' => 'Tanlangan ball foydalanuvchi uchun belgilangan maksimal balldan oshadi.',
+            ]);
+        }
+
+        return [
+            'point' => $point,
+            'rule' => (string) data_get($option->label, 'uz', $option->code),
+        ];
     }
 
     public function reject(User $reviewer, Datum $datum, string $reason): Datum

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             LanguageSeeder::class,
             CriterionSeeder::class,
             CriterionReviewerAssignmentSeeder::class,
+            CriterionManualScoreOptionSeeder::class,
             DepartmentSeeder::class,
         ]);
     }

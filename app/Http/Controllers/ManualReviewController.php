@@ -49,18 +49,20 @@ class ManualReviewController extends Controller
 
         $datum->load([
             'user:id,name,hemis_id,degree',
-            'criterion:id,name',
+            'criterion:id,name,desc,checking',
+            'criterion.manualScoreOptions',
             'year:id,name',
             'histories' => fn ($query) => $query->with('user:id,name')->latest(),
         ]);
         $status = DatumStatus::from($datum->status);
+        $scoreOptions = $datum->criterion?->manualScoreOptions ?? collect();
         $breadcrumbs = [
             ['url' => route('home'), 'name' => 'Asosiy sahifa'],
             ['url' => route('reviews.index'), 'name' => 'Baholash'],
             ['url' => '#', 'name' => 'Resurs #'.$datum->id],
         ];
 
-        return view('pages.reviews.show', compact('datum', 'status', 'breadcrumbs'));
+        return view('pages.reviews.show', compact('datum', 'status', 'scoreOptions', 'breadcrumbs'));
     }
 
     public function approve(
@@ -68,7 +70,11 @@ class ManualReviewController extends Controller
         Datum $datum,
         ReviewDatumSubmission $action,
     ): RedirectResponse {
-        $action->approve($request->user(), $datum);
+        $action->approve(
+            $request->user(),
+            $datum,
+            $request->validated('score_option_id'),
+        );
 
         return redirect()->route('reviews.index')->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
     }

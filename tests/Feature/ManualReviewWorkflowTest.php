@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
+use App\Models\CriterionManualScoreOption;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\Evaluation;
@@ -11,6 +12,7 @@ use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
 use App\Models\User;
+use Database\Seeders\CriterionManualScoreOptionSeeder;
 use Database\Seeders\CriterionReviewerAssignmentSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +26,7 @@ class ManualReviewWorkflowTest extends TestCase
     {
         $report = $this->createReport();
 
-        foreach ([2, 6, 7, 8, 15, 23, 25, 26, 41] as $criterionId) {
+        foreach ([2, 6, 7, 8, 15, 16, 23, 25, 26, 41] as $criterionId) {
             Criterion::query()->create([
                 'id' => $criterionId,
                 'name' => ['uz' => 'Mezon '.$criterionId],
@@ -34,6 +36,8 @@ class ManualReviewWorkflowTest extends TestCase
 
         $this->seed(CriterionReviewerAssignmentSeeder::class);
         $this->seed(CriterionReviewerAssignmentSeeder::class);
+        $this->seed(CriterionManualScoreOptionSeeder::class);
+        $this->seed(CriterionManualScoreOptionSeeder::class);
 
         $this->assertDatabaseCount('criterion_reviewer_assignments', 9);
         $this->assertDatabaseHas('criterion_reviewer_assignments', [
@@ -42,6 +46,30 @@ class ManualReviewWorkflowTest extends TestCase
             'criterion_code' => '1/2',
         ]);
         $this->assertNull(CriterionReviewerAssignment::query()->firstOrFail()->user);
+        $this->assertDatabaseCount('criterion_manual_score_options', 12);
+
+        $expectedScoreOptions = [
+            [2, 'video_lesson', 1.5],
+            [2, 'video_clip', 1],
+            [2, 'presentation', 0.5],
+            [15, 'a1', 0.5],
+            [15, 'a2', 0.5],
+            [15, 'b1', 0.75],
+            [15, 'b2', 1],
+            [15, 'c1', 1.5],
+            [15, 'c2', 2],
+            [16, 'rector_order', 1],
+            [25, 'dsc_diploma', 1],
+            [26, 'phd_diploma', 1],
+        ];
+
+        foreach ($expectedScoreOptions as [$criterionId, $code, $point]) {
+            $this->assertDatabaseHas('criterion_manual_score_options', [
+                'criterion_id' => $criterionId,
+                'code' => $code,
+                'point' => $point,
+            ]);
+        }
     }
 
     public function test_all_authenticated_users_can_open_responsible_people_page(): void
@@ -150,21 +178,37 @@ class ManualReviewWorkflowTest extends TestCase
             'has' => '1',
             'score' => 6,
         ]);
+        $scoreOption = $this->createScoreOption($criterion, 'video_lesson', 'Videodars', 1.5);
+        $this->createScoreOption($criterion, 'video_clip', 'Videorolik', 1);
+        $this->createScoreOption($criterion, 'presentation', 'Taqdimot', 0.5);
         $datum = $this->createDatum($owner, $criterion);
 
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $datum))
+            ->get(route('reviews.show', $datum))
+            ->assertOk()
+            ->assertSee('Videodars')
+            ->assertSee('Videorolik')
+            ->assertSee('Taqdimot');
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $datum), [
+                'score_option_id' => $scoreOption->id,
+            ])
             ->assertRedirect(route('reviews.index'));
 
         $this->assertDatabaseHas('data', [
             'id' => $datum->id,
             'status' => 'accepted',
-            'point' => 6,
+            'point' => 1.5,
         ]);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
             'user_id' => $reviewer->id,
             'message_type' => 'manual_review_approved',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'message' => 'Mas’ul tomonidan tasdiqlandi. Qoida: Videodars. Avtomatik xom ball: 1.50.',
         ]);
         $this->assertSame(6.0, (float) Point::query()
             ->where('user_id', $owner->id)
@@ -178,11 +222,14 @@ class ManualReviewWorkflowTest extends TestCase
         $owner = User::factory()->create(['degree' => 'no_degrees']);
         $criterion = $this->createCriterion();
         $this->assign($reviewer, $criterion, '1/'.$criterion->id);
+        $scoreOption = $this->createScoreOption($criterion, 'video_lesson', 'Videodars', 1.5);
         $datum = $this->createDatum($owner, $criterion);
 
         $this->actingAs($reviewer)
             ->from(route('reviews.show', $datum))
-            ->patch(route('reviews.approve', $datum))
+            ->patch(route('reviews.approve', $datum), [
+                'score_option_id' => $scoreOption->id,
+            ])
             ->assertRedirect(route('reviews.show', $datum))
             ->assertSessionHasErrors('datum');
 
@@ -194,6 +241,119 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertDatabaseMissing('datum_histories', [
             'datum_id' => $datum->id,
             'message_type' => 'manual_review_approved',
+        ]);
+    }
+
+    public function test_manual_approval_rejects_missing_or_other_criterion_score_option(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $criterion = $this->createCriterion();
+        $otherCriterion = $this->createCriterion();
+        $this->assign($reviewer, $criterion, '1/'.$criterion->id);
+        Evaluation::query()->create([
+            'code' => 'no_degrees',
+            'name' => ['uz' => 'Darajasiz'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 6,
+        ]);
+        $otherOption = $this->createScoreOption($otherCriterion, 'other', 'Boshqa mezon varianti', 1);
+        $datum = $this->createDatum($owner, $criterion);
+
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $datum))
+            ->patch(route('reviews.approve', $datum))
+            ->assertSessionHasErrors('score_option_id');
+
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $datum))
+            ->patch(route('reviews.approve', $datum), ['score_option_id' => $otherOption->id])
+            ->assertSessionHasErrors('score_option_id');
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'status' => 'received',
+            'point' => 0,
+        ]);
+    }
+
+    public function test_fixed_manual_rule_awards_one_raw_point_without_manual_point_input(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'hold_degrees']);
+        $criterion = $this->createCriterion();
+        $criterion->update(['desc' => ['uz' => 'OAK diplomi asosida baholanadi.']]);
+        $this->assign($reviewer, $criterion, '3/25');
+        Evaluation::query()->create([
+            'code' => 'hold_degrees',
+            'name' => ['uz' => 'Ilmiy darajali'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'hold_degrees',
+            'has' => '1',
+            'score' => 3,
+        ]);
+        $scoreOption = $this->createScoreOption(
+            $criterion,
+            'dsc_diploma',
+            'OAK tasdiqlagan DSc diplomi',
+            1,
+        );
+        $datum = $this->createDatum($owner, $criterion);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $datum))
+            ->assertOk()
+            ->assertSee('OAK diplomi asosida baholanadi.')
+            ->assertSee('name="score_option_id"', false)
+            ->assertSee('value="'.$scoreOption->id.'"', false);
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $datum), ['score_option_id' => $scoreOption->id])
+            ->assertRedirect(route('reviews.index'));
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'status' => 'accepted',
+            'point' => 1,
+        ]);
+    }
+
+    public function test_assigned_non_manual_criterion_keeps_automatic_maximum_score_flow(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $criterion = $this->createCriterion();
+        $criterion->update(['checking' => 'department']);
+        $this->assign($reviewer, $criterion, '1/6');
+        Evaluation::query()->create([
+            'code' => 'no_degrees',
+            'name' => ['uz' => 'Darajasiz'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 3,
+        ]);
+        $datum = $this->createDatum($owner, $criterion);
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $datum))
+            ->assertRedirect(route('reviews.index'));
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'status' => 'accepted',
+            'point' => 3,
         ]);
     }
 
@@ -272,6 +432,22 @@ class ManualReviewWorkflowTest extends TestCase
             'criterion_id' => $criterion->id,
             'hemis_id' => $reviewer->hemis_id,
             'criterion_code' => $code,
+        ]);
+    }
+
+    private function createScoreOption(
+        Criterion $criterion,
+        string $code,
+        string $label,
+        float $point,
+    ): CriterionManualScoreOption {
+        return CriterionManualScoreOption::query()->create([
+            'criterion_id' => $criterion->id,
+            'code' => $code,
+            'label' => ['uz' => $label],
+            'point' => $point,
+            'sort_order' => 1,
+            'active' => true,
         ]);
     }
 

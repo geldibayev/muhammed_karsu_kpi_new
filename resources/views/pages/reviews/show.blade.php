@@ -13,6 +13,14 @@
             'certificate_no' => 'Guvohnoma raqami',
             'certificate_date' => 'Guvohnoma sanasi',
         ];
+        $criterionDescription = preg_replace(
+            '/<br\s*\/?>/i',
+            "\n",
+            (string) data_get($datum->criterion?->desc, 'uz', ''),
+        );
+        $criterionDescription = trim(strip_tags($criterionDescription));
+        $isManualCriterion = $datum->criterion?->checking === 'manual';
+        $fixedScoreOption = $scoreOptions->count() === 1 ? $scoreOptions->first() : null;
     @endphp
 
     <section class="content">
@@ -45,6 +53,10 @@
                                 </dd>
                                 <dt class="col-sm-4">Mezon</dt>
                                 <dd class="col-sm-8">{{ data_get($datum->criterion?->name, 'uz', 'Mezon topilmadi') }}</dd>
+                                @if($criterionDescription !== '')
+                                    <dt class="col-sm-4">Baholash qoidasi</dt>
+                                    <dd class="col-sm-8 text-break" style="white-space: pre-line">{{ $criterionDescription }}</dd>
+                                @endif
                                 <dt class="col-sm-4">Resurs yili</dt>
                                 <dd class="col-sm-8">{{ $datum->year?->name ?? 'Ko‘rsatilmagan' }}</dd>
                                 <dt class="col-sm-4">Yuborilgan vaqt</dt>
@@ -67,13 +79,28 @@
                                 <span class="mr-auto"></span>
                             @endif
 
-                            <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn btn-success btn-sm">
+                            @if($isManualCriterion && $scoreOptions->isEmpty())
+                                <button type="button" class="btn btn-success btn-sm mr-2" disabled
+                                        title="Baholash qoidasi sozlanmagan">
                                     <i class="fas fa-check mr-1"></i> Tasdiqlash
                                 </button>
-                            </form>
+                            @elseif($isManualCriterion && $scoreOptions->count() > 1)
+                                <button type="button" class="btn btn-success btn-sm mr-2"
+                                        data-toggle="modal" data-target="#approve-modal">
+                                    <i class="fas fa-check mr-1"></i> Tasdiqlash
+                                </button>
+                            @else
+                                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    @if($fixedScoreOption)
+                                        <input type="hidden" name="score_option_id" value="{{ $fixedScoreOption->id }}">
+                                    @endif
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check mr-1"></i> Tasdiqlash
+                                    </button>
+                                </form>
+                            @endif
                             <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#reject-modal">
                                 <i class="fas fa-times mr-1"></i> Rad etish
                             </button>
@@ -119,6 +146,45 @@
         </div>
     </section>
 
+    @if($isManualCriterion && $scoreOptions->count() > 1)
+        <div class="modal fade" id="approve-modal" tabindex="-1" role="dialog"
+             aria-labelledby="approve-modal-title" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="modal-content">
+                    @csrf
+                    @method('PATCH')
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="approve-modal-title">Baholash qoidasini tanlang</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="score-option">Tavsifga mos variant</label>
+                        <select id="score-option" name="score_option_id" required
+                                class="form-control @error('score_option_id') is-invalid @enderror">
+                            <option value="">Variantni tanlang</option>
+                            @foreach($scoreOptions as $scoreOption)
+                                <option value="{{ $scoreOption->id }}" @selected(old('score_option_id') == $scoreOption->id)>
+                                    {{ data_get($scoreOption->label, 'uz', $scoreOption->code) }}
+                                    — {{ number_format($scoreOption->point, 2) }} ball
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('score_option_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="small text-muted mt-2">Ball tanlangan qoida bo‘yicha avtomatik hisoblanadi.</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                        <button type="submit" class="btn btn-success">Tasdiqlash</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
     <div class="modal fade" id="reject-modal" tabindex="-1" role="dialog" aria-labelledby="reject-modal-title" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <form method="POST" action="{{ route('reviews.reject', $datum) }}" class="modal-content">
@@ -144,7 +210,9 @@
 @endsection
 
 @section('script')
-    @if($errors->has('reason'))
+    @if($errors->has('score_option_id'))
+        <script>$('#approve-modal').modal('show');</script>
+    @elseif($errors->has('reason'))
         <script>$('#reject-modal').modal('show');</script>
     @endif
 @endsection

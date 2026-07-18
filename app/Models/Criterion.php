@@ -54,4 +54,11 @@ class Criterion extends Model
     {
         return $this->hasOne(CriterionReviewerAssignment::class);
     }
+
+    public function manualScoreOptions(): HasMany
+    {
+        return $this->hasMany(CriterionManualScoreOption::class)
+            ->where('active', true)
+            ->orderBy('sort_order');
+    }
 }
