@@ -20,18 +20,19 @@
                         <tr style="background-color: #eee">
                             <th class="align-middle text-center p-4">#{{ $main }}</th>
                             <th colspan="4" class="align-middle">
-                                {{ $item->name['uz'] }}
+                                {{ data_get($item->name, 'uz', 'Nomsiz bo\'lim') }}
                             </th>
                         </tr>
                         @foreach($item->children as $value)
+                            @php($evaluation = $value->criterionEvaluations->first())
                             <tr class="small">
                                 <td class="align-middle text-center">{{ $main }}/{{ $value->id }}</td>
                                 <td class="align-middle">
                                     <div class="font-weight-bold" style="text-align: justify">
-                                        {{ $value->name['uz'] }}
+                                        {{ data_get($value->name, 'uz', 'Nomsiz mezon') }}
                                     </div>
                                     <div style="text-align: justify">
-                                        {!! $value->desc['uz'] !!}
+                                        {!! data_get($value->desc, 'uz', '') !!}
                                     </div>
                                 </td>
                                 <td class="text-center align-middle">
@@ -45,7 +46,7 @@
                                     </span>
                                     /
                                     <span class="font-weight-bold text-primary">
-                                    {{ number_format($value->criterionEvaluation($value->id, auth()->user()->degree)->score ?? 0, 2) }}
+                                        {{ number_format($evaluation?->score ?? 0, 2) }}
                                     </span>
                                 </td>
                                 <td class="align-middle text-center">

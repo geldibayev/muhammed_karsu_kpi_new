@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Criterion;
 use App\Models\Workplace;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class HomeController extends Controller
 {
@@ -13,23 +15,24 @@ class HomeController extends Controller
         $this->middleware('auth');
     }
 
-    public function index()
+    public function index(Request $request): View
     {
-        $rate = auth()->user()->degree;
-        $criteria = Criterion::whereNull('parent_id')
-            ->whereHas('children.criterionEvaluations', function ($query) use ($rate) {
-                $query->where('evaluation', $rate);
-            })->with(['children' => function ($query) use ($rate) {
-                $query->whereHas('criterionEvaluations', function ($q) use ($rate) {
-                    $q->where('evaluation', $rate);
-                });
-            }])->get();
+        $degree = $request->user()->degree;
+        $criteria = Criterion::query()
+            ->whereNull('parent_id')
+            ->with([
+                'children.criterionEvaluations' => fn (HasMany $query): HasMany => $query
+                    ->where('evaluation', $degree)
+                    ->where('has', '1'),
+            ])
+            ->get();
         $breadcrumbs = [
             [
                 'url' => '#',
-                'name' => 'Asosiy sahifa'
-            ]
+                'name' => 'Asosiy sahifa',
+            ],
         ];
+
         return view('home', compact(['criteria', 'breadcrumbs']));
     }
 
@@ -38,8 +41,8 @@ class HomeController extends Controller
         $breadcrumbs = [
             [
                 'url' => '#',
-                'name' => 'Asosiy sahifa'
-            ]
+                'name' => 'Asosiy sahifa',
+            ],
         ];
 
         $user = auth()->user()->load([
@@ -58,6 +61,7 @@ class HomeController extends Controller
     public function logout()
     {
         auth()->logout();
+
         return redirect()->route('login');
     }
 }
