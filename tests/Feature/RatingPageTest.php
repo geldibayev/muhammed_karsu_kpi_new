@@ -133,8 +133,19 @@ class RatingPageTest extends TestCase
             'name' => $this->userName('Boshqa Olim'),
             'degree' => 'hold_degrees',
         ]);
+        $surnameUser = User::factory()->create([
+            'name' => [
+                'full' => 'Begench Yegendurdiyevich',
+                'first' => 'Begench',
+                'last' => 'GELDIBAYEV',
+                'third' => 'Yegendurdiyevich',
+                'short' => 'GELDIBAYEV B.Y.',
+            ],
+            'degree' => 'hold_degrees',
+        ]);
         $this->createWorkplace($matchingUser, $firstDepartment, 'Professor');
         $this->createWorkplace($otherUser, $secondDepartment, 'Assistent');
+        $this->createWorkplace($surnameUser, $firstDepartment, 'Dotsent');
 
         $response = $this->actingAs($viewer)->get(route('ratings.index', [
             'search' => '  Qidirilgan   Olim ',
@@ -150,6 +161,19 @@ class RatingPageTest extends TestCase
             ->assertSee('Birinchi kafedra')
             ->assertSee('Professor')
             ->assertDontSee('Boshqa Olim')
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 1);
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'search' => 'geldibayev begench',
+                'degree_group' => 'with_degree',
+                'faculty' => $firstFaculty->getKey(),
+                'department' => $firstDepartment->getKey(),
+            ]))
+            ->assertOk()
+            ->assertSee('Begench Yegendurdiyevich')
+            ->assertSee('Dotsent')
+            ->assertDontSee('Qidirilgan Olim')
             ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 1);
     }
 

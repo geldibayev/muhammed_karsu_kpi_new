@@ -48,7 +48,7 @@ class PaginateRatingUsers
             ->when(
                 $filters['search'] ?? null,
                 fn (Builder $query, string $search): Builder => $query
-                    ->where('name->full', 'like', "%{$search}%"),
+                    ->tap(fn (Builder $searchQuery): Builder => $this->applyNameSearch($searchQuery, $search)),
             )
             ->when(
                 $filters['faculty'] ?? null,
@@ -68,5 +68,22 @@ class PaginateRatingUsers
             ->orderBy('id')
             ->paginate(25)
             ->withQueryString();
+    }
+
+    private function applyNameSearch(Builder $query, string $search): Builder
+    {
+        $terms = preg_split('/\s+/u', trim($search), flags: PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($terms as $term) {
+            $query->where(function (Builder $nameQuery) use ($term): void {
+                $nameQuery->where('name->full', 'like', "%{$term}%")
+                    ->orWhere('name->first', 'like', "%{$term}%")
+                    ->orWhere('name->last', 'like', "%{$term}%")
+                    ->orWhere('name->third', 'like', "%{$term}%")
+                    ->orWhere('name->short', 'like', "%{$term}%");
+            });
+        }
+
+        return $query;
     }
 }
