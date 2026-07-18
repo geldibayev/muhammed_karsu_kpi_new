@@ -93,6 +93,11 @@ class User extends Authenticatable
         return $this->hasMany(Workplace::class, 'user_id');
     }
 
+    public function points(): HasMany
+    {
+        return $this->hasMany(Point::class);
+    }
+
     public function criterionReviewerAssignments(): HasMany
     {
         return $this->hasMany(CriterionReviewerAssignment::class, 'hemis_id', 'hemis_id');

@@ -24,6 +24,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFour();
+        Gate::define(
+            'view-ratings',
+            fn (User $user): bool => array_intersect(
+                $user->rol ?? [],
+                ['super_admin', 'moder', 'dean', 'department', 'teacher', 'user'],
+            ) !== [],
+        );
         Gate::define('rebuild-report-points', fn (User $user): bool => $user->isSuperAdmin());
         Gate::define(
             'access-manual-reviews',

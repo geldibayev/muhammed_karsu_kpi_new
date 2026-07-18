@@ -107,6 +107,15 @@
                             <p>Asosiy sahifa</p>
                         </a>
                     </li>
+                    @can('view-ratings')
+                        <li class="nav-item">
+                            <a href="{{ route('ratings.index') }}"
+                               class="nav-link @if(request()->routeIs('ratings.*')) active @endif">
+                                <i class="nav-icon fas fa-trophy"></i>
+                                <p>Reyting</p>
+                            </a>
+                        </li>
+                    @endcan
                     <li class="nav-item @if(request()->routeIs('files.show', 'upload.details') || request()->is('home/files*')) menu-open @endif">
                         <a href="#"
                            class="nav-link @if(request()->routeIs('files.show', 'upload.details') || request()->is('home/files*')) active @endif">

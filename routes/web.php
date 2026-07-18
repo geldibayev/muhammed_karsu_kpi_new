@@ -7,6 +7,7 @@ use App\Http\Controllers\DatumHistoryController;
 use App\Http\Controllers\HemisController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ManualReviewController;
+use App\Http\Controllers\RatingController;
 use App\Http\Controllers\ReviewerAssignmentController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::post('/logout', [HomeController::class, 'logout'])->name('auth.logout');
     Route::get('/profile', [HomeController::class, 'profile'])->name('profile');
+    Route::get('/ratings', [RatingController::class, 'index'])
+        ->middleware('can:view-ratings')
+        ->name('ratings.index');
     Route::get('/users/roles', [UserRoleController::class, 'index'])->name('users.roles.index');
     Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
     Route::get('/reviewer-assignments', [ReviewerAssignmentController::class, 'index'])
