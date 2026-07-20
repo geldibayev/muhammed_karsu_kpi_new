@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 
 class PaginateRatingUsers
 {
@@ -73,14 +74,19 @@ class PaginateRatingUsers
     private function applyNameSearch(Builder $query, string $search): Builder
     {
         $terms = preg_split('/\s+/u', trim($search), flags: PREG_SPLIT_NO_EMPTY) ?: [];
+        $grammar = $query->getQuery()->getGrammar();
+        $nameColumns = ['name->full', 'name->first', 'name->last', 'name->third', 'name->short'];
 
         foreach ($terms as $term) {
-            $query->where(function (Builder $nameQuery) use ($term): void {
-                $nameQuery->where('name->full', 'like', "%{$term}%")
-                    ->orWhere('name->first', 'like', "%{$term}%")
-                    ->orWhere('name->last', 'like', "%{$term}%")
-                    ->orWhere('name->third', 'like', "%{$term}%")
-                    ->orWhere('name->short', 'like', "%{$term}%");
+            $query->where(function (Builder $nameQuery) use ($grammar, $nameColumns, $term): void {
+                foreach ($nameColumns as $index => $column) {
+                    $method = $index === 0 ? 'whereRaw' : 'orWhereRaw';
+
+                    $nameQuery->{$method}(
+                        'LOWER('.$grammar->wrap($column).') LIKE ?',
+                        ['%'.Str::lower($term).'%'],
+                    );
+                }
             });
         }
 

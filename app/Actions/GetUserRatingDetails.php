@@ -75,7 +75,7 @@ class GetUserRatingDetails
             ->where('status', '1')
             ->with([
                 'children' => fn (HasMany $query): HasMany => $query
-                    ->select(['id', 'name', 'parent_id', 'checking', 'ai_model'])
+                    ->select(['id', 'name', 'parent_id', 'checking'])
                     ->where('status', '1')
                     ->orderBy('id'),
             ])
@@ -285,11 +285,9 @@ class GetUserRatingDetails
     /** @return array{type: string, name: string} */
     private function aiEvaluator(Criterion $criterion): array
     {
-        $model = $criterion->ai_model ? " ({$criterion->ai_model})" : '';
-
         return [
             'type' => 'ai',
-            'name' => 'Sun’iy intellekt tomonidan baholangan'.$model,
+            'name' => 'Sun’iy intellekt tomonidan baholangan',
         ];
     }
 }
