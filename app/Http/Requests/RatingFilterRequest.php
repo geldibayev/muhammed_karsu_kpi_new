@@ -11,7 +11,7 @@ class RatingFilterRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('view-ratings') === true;
+        return true;
     }
 
     /** @return array<string, ValidationRule|array<mixed>|string> */

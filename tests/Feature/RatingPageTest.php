@@ -46,6 +46,34 @@ class RatingPageTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_guest_can_view_searchable_ratings_on_login_page_without_detail_actions(): void
+    {
+        $matchingUser = User::factory()->create([
+            'name' => $this->userName('Ommaviy Reyting'),
+            'degree' => 'hold_degrees',
+        ]);
+        $otherUser = User::factory()->create([
+            'name' => $this->userName('Boshqa O‘qituvchi'),
+            'degree' => 'hold_degrees',
+        ]);
+
+        $response = $this->get(route('login', ['search' => 'ommaviy']));
+
+        $response
+            ->assertOk()
+            ->assertSee('KPI KarSU')
+            ->assertSee('Kirish')
+            ->assertSee(route('login.user'))
+            ->assertSee('Ommaviy Reyting')
+            ->assertDontSee('Boshqa O‘qituvchi')
+            ->assertDontSee('Ko‘rish')
+            ->assertDontSee(route('ratings.show', $matchingUser));
+
+        $this->assertGuest();
+        $this->get(route('ratings.show', $otherUser))
+            ->assertRedirect(route('login'));
+    }
+
     public function test_users_are_ranked_by_active_report_and_show_hemis_workplace_data(): void
     {
         $viewer = User::factory()->create();

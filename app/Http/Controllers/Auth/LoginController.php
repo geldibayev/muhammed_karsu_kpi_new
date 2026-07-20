@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\GetRatingIndexData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RatingFilterRequest;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use Illuminate\View\View;
 
 class LoginController extends Controller
 {
@@ -36,5 +39,12 @@ class LoginController extends Controller
     {
         $this->middleware('guest')->except('logout');
         $this->middleware('auth')->only('logout');
+    }
+
+    public function showLoginForm(
+        RatingFilterRequest $request,
+        GetRatingIndexData $getRatingIndexData,
+    ): View {
+        return view('auth.login', $getRatingIndexData->handle($request->validated()));
     }
 }
