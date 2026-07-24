@@ -26,10 +26,15 @@ class ManualReviewWorkflowTest extends TestCase
     {
         $report = $this->createReport();
 
-        foreach ([2, 6, 7, 8, 15, 16, 23, 25, 26, 41] as $criterionId) {
+        foreach ([2, 6, 7, 8, 15, 16, 23, 25, 26, 36, 41] as $criterionId) {
             Criterion::query()->create([
                 'id' => $criterionId,
-                'name' => ['uz' => 'Mezon '.$criterionId],
+                'name' => [
+                    'uz' => $criterionId === 36
+                        ? 'OAV yoki ijtimoiy tarmoqlarda universitet va mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqishlar qilganlig'
+                        : 'Mezon '.$criterionId,
+                ],
+                'parent_id' => $criterionId === 36 ? 2 : null,
                 'report_id' => $report->id,
             ]);
         }
@@ -39,11 +44,16 @@ class ManualReviewWorkflowTest extends TestCase
         $this->seed(CriterionManualScoreOptionSeeder::class);
         $this->seed(CriterionManualScoreOptionSeeder::class);
 
-        $this->assertDatabaseCount('criterion_reviewer_assignments', 9);
+        $this->assertDatabaseCount('criterion_reviewer_assignments', 10);
         $this->assertDatabaseHas('criterion_reviewer_assignments', [
             'hemis_id' => 3172011004,
             'criterion_id' => 2,
             'criterion_code' => '1/2',
+        ]);
+        $this->assertDatabaseHas('criterion_reviewer_assignments', [
+            'hemis_id' => 3172011004,
+            'criterion_id' => 36,
+            'criterion_code' => '4/36',
         ]);
         $this->assertNull(CriterionReviewerAssignment::query()->firstOrFail()->user);
         $this->assertDatabaseCount('criterion_manual_score_options', 12);
@@ -85,12 +95,18 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
         $aiCriterion = $this->createCriterion();
         $aiCriterion->update([
-            'name' => ['uz' => 'AI mezon'],
+            'name' => ['uz' => 'Biriktirilgan AI mezon'],
+            'checking' => 'ai',
+        ]);
+        $unassignedAiCriterion = $this->createCriterion();
+        $unassignedAiCriterion->update([
+            'name' => ['uz' => 'Biriktirilmagan AI mezon'],
             'checking' => 'ai',
         ]);
         $superAdmin = User::factory()->superAdmin()->create();
         $teacher = User::factory()->create();
         $this->assign($superAdmin, $criterion, '1/'.$criterion->id);
+        $this->assign($superAdmin, $aiCriterion, '4/'.$aiCriterion->id);
 
         $this->get(route('reviewer-assignments.index'))
             ->assertRedirect(route('login'));
@@ -105,11 +121,51 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertSee('Ma’sul F.I.O.')
             ->assertSee('1/'.$criterion->id)
             ->assertSee('Biriktirilgan mezon')
+            ->assertSee('Biriktirilgan AI mezon')
             ->assertSee('Integratsion mezon')
             ->assertSee($superAdmin->full)
             ->assertSee('Biriktirilmagan')
-            ->assertDontSee('AI mezon')
+            ->assertDontSee('Biriktirilmagan AI mezon')
             ->assertDontSee((string) $superAdmin->hemis_id);
+    }
+
+    public function test_assigned_ai_criterion_pending_resources_are_added_to_reviewer_queue(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $owner = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $criterion->update([
+            'name' => ['uz' => '4/36 OAV kriteriyasi'],
+            'checking' => 'ai',
+        ]);
+        $this->assign($reviewer, $criterion, '4/36');
+
+        $received = $this->createDatum($owner, $criterion, [
+            'name' => 'Yuborilgan OAV resursi',
+            'status' => 'received',
+        ]);
+        $checking = $this->createDatum($owner, $criterion, [
+            'name' => 'Tekshirilayotgan OAV resursi',
+            'status' => 'checking',
+        ]);
+        $this->createDatum($owner, $criterion, [
+            'name' => 'Yakunlangan OAV resursi',
+            'status' => 'accepted',
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.index'))
+            ->assertOk()
+            ->assertSee($received->name)
+            ->assertSee($checking->name)
+            ->assertDontSee('Yakunlangan OAV resursi');
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $received))
+            ->assertOk();
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $checking))
+            ->assertOk();
     }
 
     public function test_reviewer_queue_contains_only_assigned_pending_submissions(): void

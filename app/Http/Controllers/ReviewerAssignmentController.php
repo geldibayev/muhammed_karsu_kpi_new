@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Criterion;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\View\View;
 
 class ReviewerAssignmentController extends Controller
@@ -11,7 +12,10 @@ class ReviewerAssignmentController extends Controller
     {
         $criteria = Criterion::query()
             ->whereNotNull('parent_id')
-            ->where('checking', '!=', 'ai')
+            ->where(function (Builder $query): void {
+                $query->where('checking', '!=', 'ai')
+                    ->orWhereHas('reviewerAssignment');
+            })
             ->with(['reviewerAssignment.user:id,hemis_id,name'])
             ->orderBy('parent_id')
             ->orderBy('id')
