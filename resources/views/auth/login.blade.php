@@ -35,7 +35,7 @@
         />
     </div>
 
-    <footer class="main-footer">
+    <footer class="main-footer text-center">
         <strong>Qoraqalpoq davlat universiteti &copy; 2023-{{ date('Y') }} KPI KarSU.</strong>
     </footer>
 </div>
