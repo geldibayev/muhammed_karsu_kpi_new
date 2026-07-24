@@ -37,6 +37,91 @@
                 </div>
             </div>
 
+            <div class="card card-outline card-secondary">
+                <div class="card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+                    <div>
+                        <h2 class="card-title font-weight-bold">Umumiy resurslar holati</h2>
+                        <div class="small text-muted">
+                            Barcha hisobotlar bo‘yicha; o‘chirilgan resurslar hisobga olinmagan.
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2 mt-md-0">
+                        Oxirgi yuborilgan:
+                        <strong>
+                            {{ $submissionStatistics['last_submission_at']?->format('d.m.Y H:i:s') ?? 'Hali mavjud emas' }}
+                        </strong>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-xl-3 col-md-6">
+                            <div class="info-box bg-info">
+                                <span class="info-box-icon"><i class="fas fa-paper-plane"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Yuborilgan</span>
+                                    <span class="info-box-number">{{ $submissionStatistics['received'] }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="info-box bg-warning">
+                                <span class="info-box-icon"><i class="fas fa-spinner"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Tekshirilmoqda</span>
+                                    <span class="info-box-number">{{ $submissionStatistics['checking'] }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="info-box bg-success">
+                                <span class="info-box-icon"><i class="fas fa-check-circle"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Tasdiqlangan</span>
+                                    <span class="info-box-number">{{ $submissionStatistics['accepted'] }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="info-box bg-danger">
+                                <span class="info-box-icon"><i class="fas fa-undo"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Qaytarilgan</span>
+                                    <span class="info-box-number">{{ $submissionStatistics['cancelled'] }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-3 col-sm-6">
+                            <div class="description-block border-right">
+                                <h3 class="description-header">{{ $submissionStatistics['total'] }}</h3>
+                                <span class="description-text">JAMI FAOL RESURS</span>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-sm-6">
+                            <div class="description-block border-right">
+                                <h3 class="description-header">{{ $submissionStatistics['pending'] }}</h3>
+                                <span class="description-text">JARAYONDA</span>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-sm-6">
+                            <div class="description-block border-right">
+                                <h3 class="description-header">{{ $submissionStatistics['resolved'] }}</h3>
+                                <span class="description-text">YAKUNLANGAN</span>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-sm-6">
+                            <div class="description-block">
+                                <h3 class="description-header">{{ number_format($submissionStatistics['approval_rate'], 1) }}%</h3>
+                                <span class="description-text">YAKUNLANGANLARDAN TASDIQLANGAN</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="h5 font-weight-bold mb-3">AI tekshiruvlari statistikasi</h2>
             <div class="row">
                 <div class="col-lg-4 col-md-6">
                     <div class="small-box bg-info">

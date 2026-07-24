@@ -78,6 +78,11 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $secondCheck = $this->createAiHistory('ai_failed', 'warning', 'Ikkinchi xato');
         $thirdCheck = $this->createAiHistory('ai_evaluation', 'success', 'Uchinchi tekshiruv');
         $fourthCheck = $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
+        $this->createDatum(['status' => 'received']);
+        $this->createDatum(['status' => 'checking']);
+        $this->createDatum(['status' => 'accepted']);
+        $this->createDatum(['status' => 'cancelled']);
+        $this->createDatum(['status' => 'deleted']);
 
         $this->actingAs($statusViewer)
             ->get(route('home'))
@@ -95,6 +100,13 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertSee('Oxirgi muvaffaqiyatli tekshiruv')
             ->assertSee('Oxirgi xato')
             ->assertSee('Oxirgi 3 ta AI tekshiruvi')
+            ->assertSee('Umumiy resurslar holati')
+            ->assertSee('Yuborilgan')
+            ->assertSee('Tekshirilmoqda')
+            ->assertSee('Tasdiqlangan')
+            ->assertSee('Qaytarilgan')
+            ->assertSee('JAMI FAOL RESURS')
+            ->assertSee('YAKUNLANGANLARDAN TASDIQLANGAN')
             ->assertSeeInOrder(['To‘rtinchi xato', 'Uchinchi tekshiruv', 'Ikkinchi xato'])
             ->assertDontSee('Birinchi tekshiruv')
             ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['total_checks'] === 4
@@ -109,7 +121,16 @@ class ProcessAiDatumEvaluationTest extends TestCase
                     $thirdCheck->id,
                     $secondCheck->id,
                 ] && ! $checks->contains('id', $firstCheck->id),
-            );
+            )
+            ->assertViewHas('submissionStatistics', fn (array $statistics): bool => $statistics['total'] === 8
+                && $statistics['received'] === 1
+                && $statistics['checking'] === 3
+                && $statistics['accepted'] === 3
+                && $statistics['cancelled'] === 1
+                && $statistics['pending'] === 4
+                && $statistics['resolved'] === 4
+                && $statistics['approval_rate'] === 75.0
+                && $statistics['last_submission_at'] !== null);
     }
 
     public function test_ai_status_dashboard_is_hidden_from_other_users_and_guests(): void
@@ -126,7 +147,16 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $statistics['successful_checks'] === 0
                 && $statistics['failed_checks'] === 0
                 && $statistics['last_success_at'] === null
-                && $statistics['last_failure_at'] === null);
+                && $statistics['last_failure_at'] === null)
+            ->assertViewHas('submissionStatistics', fn (array $statistics): bool => $statistics['total'] === 0
+                && $statistics['received'] === 0
+                && $statistics['checking'] === 0
+                && $statistics['accepted'] === 0
+                && $statistics['cancelled'] === 0
+                && $statistics['pending'] === 0
+                && $statistics['resolved'] === 0
+                && $statistics['approval_rate'] === 0.0
+                && $statistics['last_submission_at'] === null);
 
         $this->actingAs($otherUser)
             ->get(route('home'))
@@ -143,7 +173,9 @@ class ProcessAiDatumEvaluationTest extends TestCase
 
     private function createAiHistory(string $messageType, string $type, string $message): DatumHistory
     {
-        $datum = $this->createDatum();
+        $datum = $this->createDatum([
+            'status' => $messageType === 'ai_evaluation' ? 'accepted' : 'checking',
+        ]);
 
         return $datum->histories()->create([
             'user_id' => $datum->user_id,
