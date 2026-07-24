@@ -168,6 +168,15 @@
                     <li class="nav-header font-weight-bold" style="text-transform: uppercase">
                         Tizim
                     </li>
+                    @can('view-ai-status')
+                        <li class="nav-item">
+                            <a href="{{ route('ai-status.index') }}"
+                               class="nav-link @if(request()->routeIs('ai-status.*')) active @endif">
+                                <i class="nav-icon fas fa-robot"></i>
+                                <p>AI holati</p>
+                            </a>
+                        </li>
+                    @endcan
                     <li class="nav-item">
                         <a href="{{ route('reviewer-assignments.index') }}"
                            class="nav-link @if(request()->routeIs('reviewer-assignments.*')) active @endif">

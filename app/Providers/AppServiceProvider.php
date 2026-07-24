@@ -25,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFour();
         Gate::define(
+            'view-ai-status',
+            fn (User $user): bool => (string) $user->hemis_id
+                === (string) config('kpi.ai_status_viewer_hemis_id'),
+        );
+        Gate::define(
             'view-ratings',
             fn (User $user): bool => array_intersect(
                 $user->rol ?? [],

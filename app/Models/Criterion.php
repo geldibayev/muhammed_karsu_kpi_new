@@ -25,6 +25,11 @@ class Criterion extends Model
         return $this->hasMany(Criterion::class, 'parent_id');
     }
 
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Criterion::class, 'parent_id');
+    }
+
     public function report(): BelongsTo
     {
         return $this->belongsTo(Report::class);

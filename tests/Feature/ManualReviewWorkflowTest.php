@@ -214,6 +214,101 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_assigned_reviewer_can_transfer_submission_to_another_criterion_with_audit(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create();
+        $sourceCriterion = $this->createCriterion();
+        $targetCriterion = $this->createSiblingCriterion($sourceCriterion, 'Tegishli mezon');
+        $this->assign($reviewer, $sourceCriterion, '1/'.$sourceCriterion->id);
+        $datum = $this->createDatum($owner, $sourceCriterion, [
+            'material' => ['type' => 'file', 'path' => 'uploads/proof.pdf'],
+            'status' => 'checking',
+            'point' => 4.5,
+            'reason' => 'Eski baholash sababi',
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $datum))
+            ->assertOk()
+            ->assertSee('Boshqa kriteriyaga o‘tkazish')
+            ->assertSee('Tegishli mezon')
+            ->assertSee(route('reviews.transfer-criterion', $datum));
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.transfer-criterion', $datum), [
+                'criterion_id' => $targetCriterion->id,
+            ])
+            ->assertRedirect(route('reviews.index'))
+            ->assertSessionHas('success', 'Resurs boshqa kriteriyaga o‘tkazildi.');
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'criterion_id' => $targetCriterion->id,
+            'status' => 'checking',
+            'point' => 0,
+            'reason' => 'Kriteriya o‘zgartirildi. Inson tekshiruvi kutilmoqda.',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'user_id' => $reviewer->id,
+            'type' => 'info',
+            'message_type' => 'criterion_transferred',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'message' => "Resurs “Manual test mezoni” (#{$sourceCriterion->id}) kriteriyasidan “Tegishli mezon” (#{$targetCriterion->id}) kriteriyasiga o‘tkazildi.",
+        ]);
+        $this->assertSame('uploads/proof.pdf', $datum->refresh()->storagePath());
+    }
+
+    public function test_criterion_transfer_rejects_unauthorized_and_invalid_destinations(): void
+    {
+        $reviewer = User::factory()->create();
+        $unauthorizedUser = User::factory()->create();
+        $owner = User::factory()->create();
+        $sourceCriterion = $this->createCriterion();
+        $crossReportCriterion = $this->createCriterion();
+        $this->assign($reviewer, $sourceCriterion, '1/'.$sourceCriterion->id);
+        $datum = $this->createDatum($owner, $sourceCriterion);
+
+        $this->patch(route('reviews.transfer-criterion', $datum), [
+            'criterion_id' => $crossReportCriterion->id,
+        ])->assertRedirect(route('login'));
+
+        $this->actingAs($unauthorizedUser)
+            ->patch(route('reviews.transfer-criterion', $datum), [
+                'criterion_id' => $crossReportCriterion->id,
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $datum))
+            ->patch(route('reviews.transfer-criterion', $datum), [
+                'criterion_id' => $sourceCriterion->id,
+            ])
+            ->assertRedirect(route('reviews.show', $datum))
+            ->assertSessionHasErrors('criterion_id');
+
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $datum))
+            ->patch(route('reviews.transfer-criterion', $datum), [
+                'criterion_id' => $crossReportCriterion->id,
+            ])
+            ->assertRedirect(route('reviews.show', $datum))
+            ->assertSessionHasErrors('criterion_id');
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'criterion_id' => $sourceCriterion->id,
+            'status' => 'received',
+        ]);
+        $this->assertDatabaseMissing('datum_histories', [
+            'datum_id' => $datum->id,
+            'message_type' => 'criterion_transferred',
+        ]);
+    }
+
     public function test_approval_uses_degree_score_records_audit_and_recalculates_report_points(): void
     {
         $reviewer = User::factory()->create();
@@ -477,6 +572,23 @@ class ManualReviewWorkflowTest extends TestCase
             'upload' => '1',
             'status' => '1',
         ]);
+    }
+
+    /** @param array<string, mixed> $attributes */
+    private function createSiblingCriterion(
+        Criterion $criterion,
+        string $name,
+        array $attributes = [],
+    ): Criterion {
+        return Criterion::query()->create(array_merge([
+            'name' => ['uz' => $name],
+            'parent_id' => $criterion->parent_id,
+            'report_id' => $criterion->report_id,
+            'formula_id' => $criterion->formula_id,
+            'checking' => 'manual',
+            'upload' => '1',
+            'status' => '1',
+        ], $attributes));
     }
 
     private function assign(User $reviewer, Criterion $criterion, string $code): CriterionReviewerAssignment

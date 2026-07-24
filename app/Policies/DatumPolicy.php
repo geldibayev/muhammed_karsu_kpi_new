@@ -38,6 +38,11 @@ class DatumPolicy
             && $this->isAssignedReviewer($user, $datum);
     }
 
+    public function transferCriterion(User $user, Datum $datum): bool
+    {
+        return $this->review($user, $datum);
+    }
+
     private function ownsDatumOrIsSuperAdmin(User $user, Datum $datum): bool
     {
         return $user->isSuperAdmin() || $datum->user_id === $user->id;

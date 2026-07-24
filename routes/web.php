@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiReviewerStatusController;
 use App\Http\Controllers\CriterionController;
 use App\Http\Controllers\CriterionPointController;
 use App\Http\Controllers\DatumController;
@@ -21,6 +22,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::post('/logout', [HomeController::class, 'logout'])->name('auth.logout');
     Route::get('/profile', [HomeController::class, 'profile'])->name('profile');
+    Route::get('/ai-status', AiReviewerStatusController::class)
+        ->middleware('can:view-ai-status')
+        ->name('ai-status.index');
     Route::get('/ratings', [RatingController::class, 'index'])
         ->middleware('can:view-ratings')
         ->name('ratings.index');
@@ -37,6 +41,8 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/reviews/{datum}', [ManualReviewController::class, 'show'])->name('reviews.show');
     Route::patch('/reviews/{datum}/approve', [ManualReviewController::class, 'approve'])->name('reviews.approve');
     Route::patch('/reviews/{datum}/reject', [ManualReviewController::class, 'reject'])->name('reviews.reject');
+    Route::patch('/reviews/{datum}/transfer-criterion', [ManualReviewController::class, 'transferCriterion'])
+        ->name('reviews.transfer-criterion');
     Route::post('/reports/{report}/points/rebuild', [CriterionPointController::class, 'rebuild'])->middleware('can:rebuild-report-points')->name('reports.points.rebuild');
     Route::get('/upload/{upload}', [DatumController::class, 'show'])->name('upload.show');
     Route::post('/upload/{upload}', [DatumController::class, 'store'])->name('upload.store');

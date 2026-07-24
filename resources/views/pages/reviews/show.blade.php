@@ -79,6 +79,18 @@
                                 <span class="mr-auto"></span>
                             @endif
 
+                            @if($transferCriteria->isNotEmpty())
+                                <button type="button" class="btn btn-warning btn-sm mr-2"
+                                        data-toggle="modal" data-target="#transfer-criterion-modal">
+                                    <i class="fas fa-exchange-alt mr-1"></i> Boshqa kriteriyaga o‘tkazish
+                                </button>
+                            @else
+                                <button type="button" class="btn btn-warning btn-sm mr-2" disabled
+                                        title="O‘tkazish uchun mos kriteriya topilmadi">
+                                    <i class="fas fa-exchange-alt mr-1"></i> Boshqa kriteriyaga o‘tkazish
+                                </button>
+                            @endif
+
                             @if($isManualCriterion && $scoreOptions->isEmpty())
                                 <button type="button" class="btn btn-success btn-sm mr-2" disabled
                                         title="Baholash qoidasi sozlanmagan">
@@ -185,6 +197,50 @@
         </div>
     @endif
 
+    @if($transferCriteria->isNotEmpty())
+        <div class="modal fade" id="transfer-criterion-modal" tabindex="-1" role="dialog"
+             aria-labelledby="transfer-criterion-modal-title" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <form method="POST" action="{{ route('reviews.transfer-criterion', $datum) }}" class="modal-content">
+                    @csrf
+                    @method('PATCH')
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="transfer-criterion-modal-title">Boshqa kriteriyaga o‘tkazish</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-warning small">
+                            Resurs yangi kriteriyada tekshirilayotgan holatga o‘tadi va balli 0 ga qaytariladi.
+                        </div>
+                        <label for="transfer-criterion">Yangi kriteriya</label>
+                        <select id="transfer-criterion" name="criterion_id" required
+                                class="form-control @error('criterion_id') is-invalid @enderror">
+                            <option value="">Kriteriyani tanlang</option>
+                            @foreach($transferCriteria as $transferCriterion)
+                                <option value="{{ $transferCriterion->id }}"
+                                    @selected(old('criterion_id') == $transferCriterion->id)>
+                                    {{ data_get($transferCriterion->parent?->name, 'uz', 'Bo‘limsiz') }}
+                                    / {{ data_get($transferCriterion->name, 'uz', 'Nomsiz kriteriya') }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('criterion_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-exchange-alt mr-1"></i> O‘tkazish
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
     <div class="modal fade" id="reject-modal" tabindex="-1" role="dialog" aria-labelledby="reject-modal-title" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <form method="POST" action="{{ route('reviews.reject', $datum) }}" class="modal-content">
@@ -210,7 +266,9 @@
 @endsection
 
 @section('script')
-    @if($errors->has('score_option_id'))
+    @if($errors->has('criterion_id'))
+        <script>$('#transfer-criterion-modal').modal('show');</script>
+    @elseif($errors->has('score_option_id'))
         <script>$('#approve-modal').modal('show');</script>
     @elseif($errors->has('reason'))
         <script>$('#reject-modal').modal('show');</script>

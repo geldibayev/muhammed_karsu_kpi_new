@@ -6,10 +6,12 @@ use App\Data\AiEvaluationResult;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\Datum;
+use App\Models\DatumHistory;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\AiSubmissionEvaluator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Collection;
 use Mockery;
 use RuntimeException;
 use Tests\TestCase;
@@ -65,6 +67,89 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'datum_id' => $datum->id,
             'type' => 'warning',
             'message_type' => 'ai_failed',
+        ]);
+    }
+
+    public function test_configured_hemis_user_sees_ai_status_dashboard_statistics_and_latest_checks(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $firstCheck = $this->createAiHistory('ai_evaluation', 'success', 'Birinchi tekshiruv');
+        $secondCheck = $this->createAiHistory('ai_failed', 'warning', 'Ikkinchi xato');
+        $thirdCheck = $this->createAiHistory('ai_evaluation', 'success', 'Uchinchi tekshiruv');
+        $fourthCheck = $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
+
+        $this->actingAs($statusViewer)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('AI holati')
+            ->assertSee(route('ai-status.index'));
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('AI tekshiruvchi ishlamayapti')
+            ->assertSee('Umumiy AI tekshiruvlari')
+            ->assertSee('Muvaffaqiyatli tekshiruvlar')
+            ->assertSee('Xato yakunlangan tekshiruvlar')
+            ->assertSee('Oxirgi muvaffaqiyatli tekshiruv')
+            ->assertSee('Oxirgi xato')
+            ->assertSee('Oxirgi 3 ta AI tekshiruvi')
+            ->assertSeeInOrder(['To‘rtinchi xato', 'Uchinchi tekshiruv', 'Ikkinchi xato'])
+            ->assertDontSee('Birinchi tekshiruv')
+            ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['total_checks'] === 4
+                && $statistics['successful_checks'] === 2
+                && $statistics['failed_checks'] === 2
+                && $statistics['last_success_at'] !== null
+                && $statistics['last_failure_at'] !== null)
+            ->assertViewHas(
+                'recentChecks',
+                fn (Collection $checks): bool => $checks->pluck('id')->all() === [
+                    $fourthCheck->id,
+                    $thirdCheck->id,
+                    $secondCheck->id,
+                ] && ! $checks->contains('id', $firstCheck->id),
+            );
+    }
+
+    public function test_ai_status_dashboard_is_hidden_from_other_users_and_guests(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $otherUser = User::factory()->create();
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('AI tekshiruvchi statusi hali aniqlanmagan')
+            ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['total_checks'] === 0
+                && $statistics['successful_checks'] === 0
+                && $statistics['failed_checks'] === 0
+                && $statistics['last_success_at'] === null
+                && $statistics['last_failure_at'] === null);
+
+        $this->actingAs($otherUser)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertDontSee(route('ai-status.index'));
+        $this->actingAs($otherUser)
+            ->get(route('ai-status.index'))
+            ->assertForbidden();
+
+        auth()->logout();
+        $this->get(route('ai-status.index'))
+            ->assertRedirect(route('login'));
+    }
+
+    private function createAiHistory(string $messageType, string $type, string $message): DatumHistory
+    {
+        $datum = $this->createDatum();
+
+        return $datum->histories()->create([
+            'user_id' => $datum->user_id,
+            'type' => $type,
+            'message' => $message,
+            'message_type' => $messageType,
         ]);
     }
 
