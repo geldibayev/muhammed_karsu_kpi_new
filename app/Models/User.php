@@ -13,17 +13,17 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    public static function make_short_name($firstname, $surname, $patronymic)
+    public static function make_short_name(string $firstname, string $surname, string $patronymic): string
     {
-        $firstname = strtoupper(trim($firstname));
-        $surname = strtoupper(trim($surname));
-        $patronymic = strtoupper(trim($patronymic));
-        if (str_starts_with($firstname, 'SH') || str_starts_with($patronymic, 'SH')) {
-            $firstInitial = 'SH';
-        } else {
-            $firstInitial = substr($firstname, 0, 1);
-        }
-        $patronymicInitial = str_starts_with($patronymic, 'SH') ? 'SH' : substr($patronymic, 0, 1);
+        $firstname = mb_strtoupper(trim($firstname), 'UTF-8');
+        $surname = mb_strtoupper(trim($surname), 'UTF-8');
+        $patronymic = mb_strtoupper(trim($patronymic), 'UTF-8');
+        $firstInitial = str_starts_with($firstname, 'SH')
+            ? 'SH'
+            : mb_substr($firstname, 0, 1, 'UTF-8');
+        $patronymicInitial = str_starts_with($patronymic, 'SH')
+            ? 'SH'
+            : mb_substr($patronymic, 0, 1, 'UTF-8');
 
         return "$surname $firstInitial.$patronymicInitial.";
     }
