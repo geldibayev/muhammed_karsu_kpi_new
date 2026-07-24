@@ -4,8 +4,10 @@ namespace App\Providers;
 
 use App\Models\CriterionReviewerAssignment;
 use App\Models\User;
+use App\View\Composers\AiStatusMenuComposer;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -43,5 +45,6 @@ class AppServiceProvider extends ServiceProvider
                 ->where('hemis_id', $user->hemis_id)
                 ->exists(),
         );
+        View::composer('layouts.app', AiStatusMenuComposer::class);
     }
 }

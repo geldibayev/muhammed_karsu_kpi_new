@@ -169,11 +169,49 @@
                         Tizim
                     </li>
                     @can('view-ai-status')
+                        @php
+                            $aiMenuPresentation = match ($aiMenuStatus['state'] ?? 'unknown') {
+                                'operational' => [
+                                    'badge' => 'badge-success',
+                                    'icon' => 'fa-check-circle',
+                                    'label' => 'Ishlayapti',
+                                ],
+                                'processing' => [
+                                    'badge' => 'badge-warning',
+                                    'icon' => 'fa-spinner',
+                                    'label' => 'Navbatda',
+                                ],
+                                'degraded' => [
+                                    'badge' => 'badge-warning',
+                                    'icon' => 'fa-exclamation-triangle',
+                                    'label' => 'E’tibor kerak',
+                                ],
+                                'unavailable' => [
+                                    'badge' => 'badge-danger',
+                                    'icon' => 'fa-times-circle',
+                                    'label' => 'Ishlamayapti',
+                                ],
+                                default => [
+                                    'badge' => 'badge-secondary',
+                                    'icon' => 'fa-question-circle',
+                                    'label' => 'Aniqlanmagan',
+                                ],
+                            };
+                            $aiMenuTitle = $aiMenuStatus['reason']
+                                ?? (($aiMenuStatus['pending_resources'] ?? 0).' ta resurs navbatda');
+                        @endphp
                         <li class="nav-item">
                             <a href="{{ route('ai-status.index') }}"
+                               title="{{ $aiMenuTitle }}"
                                class="nav-link @if(request()->routeIs('ai-status.*')) active @endif">
                                 <i class="nav-icon fas fa-robot"></i>
-                                <p>AI holati</p>
+                                <p>
+                                    AI holati
+                                    <span class="right badge {{ $aiMenuPresentation['badge'] }}">
+                                        <i class="fas {{ $aiMenuPresentation['icon'] }} mr-1" aria-hidden="true"></i>
+                                        {{ $aiMenuPresentation['label'] }}
+                                    </span>
+                                </p>
                             </a>
                         </li>
                     @endcan

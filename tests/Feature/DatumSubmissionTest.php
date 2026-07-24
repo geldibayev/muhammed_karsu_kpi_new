@@ -12,6 +12,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class DatumSubmissionTest extends TestCase
@@ -79,6 +80,39 @@ class DatumSubmissionTest extends TestCase
             ->assertSessionHasErrors(['uploadResourceType', 'year']);
 
         $this->assertDatabaseCount('data', 0);
+    }
+
+    public function test_ai_queue_dispatch_failure_is_recorded_for_status_monitoring(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'res_type' => 'url',
+            'checking' => 'ai',
+            'ai_prompt' => 'Tekshiring.',
+            'ai_model' => 'gemini-test',
+        ]);
+        $year = $this->createActiveYear();
+        Queue::shouldReceive('connection')
+            ->once()
+            ->andThrow(new RuntimeException('Queue unavailable'));
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'url',
+                'uploadResourceUrl' => 'https://example.com/resource',
+                'year' => $year->id,
+            ])
+            ->assertRedirect();
+
+        $datum = Datum::query()->sole();
+
+        $this->assertSame('checking', $datum->status);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'message_type' => 'ai_failed',
+            'message' => 'AI tekshiruvi navbatga qo‘yilmadi. Queue ulanishi yoki worker sozlamasi tekshirilishi kerak.',
+        ]);
     }
 
     public function test_file_limit_is_rechecked_when_submission_is_created(): void

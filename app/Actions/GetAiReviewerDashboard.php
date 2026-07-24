@@ -13,7 +13,15 @@ class GetAiReviewerDashboard
 {
     /**
      * @return array{
-     *     status: array{state: 'operational'|'unavailable'|'unknown', checked_at: CarbonInterface|null},
+     *     status: array{
+     *         state: 'operational'|'processing'|'degraded'|'unavailable'|'unknown',
+     *         checked_at: CarbonInterface|null,
+     *         reason: string|null,
+     *         pending_resources: int,
+     *         waiting_resources: int,
+     *         failed_pending_resources: int,
+     *         oldest_waiting_at: CarbonInterface|null
+     *     },
      *     statistics: array{
      *         total_checks: int,
      *         successful_checks: int,
@@ -32,11 +40,26 @@ class GetAiReviewerDashboard
      *         evaluation_rate: float,
      *         last_submission_at: CarbonInterface|null
      *     },
+     *     reportStatistics: Collection<int, array{
+     *         id: int,
+     *         name: string,
+     *         active: bool,
+     *         total: int,
+     *         evaluated: int,
+     *         waiting: int,
+     *         failed_pending: int,
+     *         accepted: int,
+     *         cancelled: int,
+     *         evaluation_rate: float
+     *     }>,
      *     recentChecks: Collection<int, DatumHistory>
      * }
      */
+    public function __construct(private GetAiReviewerHealth $getAiReviewerHealth) {}
+
     public function handle(): array
     {
+        $status = $this->getAiReviewerHealth->handle();
         $aiDatumIds = Datum::query()
             ->select('data.id')
             ->join('criteria', 'criteria.id', '=', 'data.criterion_id')
@@ -66,7 +89,6 @@ class GetAiReviewerDashboard
             ->limit(3)
             ->get();
 
-        $latestCheck = $recentChecks->first();
         $aiHistorySummary = DatumHistory::query()
             ->select('datum_id')
             ->selectRaw("MAX(CASE WHEN message_type = 'ai_evaluation' THEN 1 ELSE 0 END) AS has_evaluation")
@@ -77,7 +99,7 @@ class GetAiReviewerDashboard
         $resourceAggregate = Datum::query()
             ->toBase()
             ->join('criteria', 'criteria.id', '=', 'data.criterion_id')
-            ->leftJoinSub($aiHistorySummary->toBase(), 'ai_history', function (Builder $join): void {
+            ->leftJoinSub((clone $aiHistorySummary)->toBase(), 'ai_history', function (Builder $join): void {
                 $join->on('ai_history.datum_id', '=', 'data.id');
             })
             ->where('criteria.checking', 'ai')
@@ -94,16 +116,56 @@ class GetAiReviewerDashboard
 
         $totalResources = (int) ($resourceAggregate->total ?? 0);
         $evaluatedResources = (int) ($resourceAggregate->evaluated ?? 0);
+        $reportStatistics = Datum::query()
+            ->toBase()
+            ->join('criteria', 'criteria.id', '=', 'data.criterion_id')
+            ->join('reports', 'reports.id', '=', 'criteria.report_id')
+            ->leftJoinSub((clone $aiHistorySummary)->toBase(), 'ai_history', function (Builder $join): void {
+                $join->on('ai_history.datum_id', '=', 'data.id');
+            })
+            ->where('criteria.checking', 'ai')
+            ->where('data.status', '!=', 'deleted')
+            ->groupBy(['reports.id', 'reports.name', 'reports.status'])
+            ->select([
+                'reports.id',
+                'reports.name',
+                'reports.status AS report_status',
+            ])
+            ->selectRaw('COUNT(*) AS total')
+            ->selectRaw("SUM(CASE WHEN data.status IN ('accepted', 'cancelled') OR COALESCE(ai_history.has_evaluation, 0) = 1 THEN 1 ELSE 0 END) AS evaluated")
+            ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.has_evaluation, 0) = 0 AND COALESCE(ai_history.has_failure, 0) = 0 THEN 1 ELSE 0 END) AS waiting")
+            ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.has_evaluation, 0) = 0 AND COALESCE(ai_history.has_failure, 0) = 1 THEN 1 ELSE 0 END) AS failed_pending")
+            ->selectRaw("SUM(CASE WHEN data.status = 'accepted' THEN 1 ELSE 0 END) AS accepted")
+            ->selectRaw("SUM(CASE WHEN data.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled")
+            ->orderByDesc('reports.status')
+            ->orderByDesc('reports.id')
+            ->get()
+            ->map(function (object $report): array {
+                $name = json_decode((string) $report->name, true);
+                $total = (int) $report->total;
+                $evaluated = (int) $report->evaluated;
+
+                return [
+                    'id' => (int) $report->id,
+                    'name' => is_array($name)
+                        ? (string) data_get($name, 'uz', 'Nomsiz hisobot')
+                        : 'Nomsiz hisobot',
+                    'active' => (string) $report->report_status === '1',
+                    'total' => $total,
+                    'evaluated' => $evaluated,
+                    'waiting' => (int) $report->waiting,
+                    'failed_pending' => (int) $report->failed_pending,
+                    'accepted' => (int) $report->accepted,
+                    'cancelled' => (int) $report->cancelled,
+                    'evaluation_rate' => $total > 0
+                        ? round(($evaluated / $total) * 100, 1)
+                        : 0.0,
+                ];
+            })
+            ->values();
 
         return [
-            'status' => [
-                'state' => match ($latestCheck?->message_type) {
-                    'ai_evaluation' => 'operational',
-                    'ai_failed' => 'unavailable',
-                    default => 'unknown',
-                },
-                'checked_at' => $latestCheck?->created_at,
-            ],
+            'status' => $status,
             'statistics' => [
                 'total_checks' => (int) $aggregate->total_checks,
                 'successful_checks' => (int) ($aggregate->successful_checks ?? 0),
@@ -124,6 +186,7 @@ class GetAiReviewerDashboard
                     : 0.0,
                 'last_submission_at' => $this->toDate($resourceAggregate->last_submission_at ?? null),
             ],
+            'reportStatistics' => $reportStatistics,
             'recentChecks' => $recentChecks,
         ];
     }

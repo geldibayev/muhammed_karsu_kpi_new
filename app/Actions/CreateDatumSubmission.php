@@ -85,7 +85,23 @@ class CreateDatumSubmission
                     'exception' => $exception->getMessage(),
                 ]);
 
-                $datum->update(['reason' => 'AI tekshiruvi navbatga qo\'yilmadi. Inson tekshiruvi zarur.']);
+                $reason = 'AI tekshiruvi navbatga qo‘yilmadi. Queue ulanishi yoki worker sozlamasi tekshirilishi kerak.';
+
+                DB::transaction(function () use ($datum, $reason): void {
+                    $lockedDatum = Datum::query()->lockForUpdate()->find($datum->id);
+
+                    if ($lockedDatum === null || $lockedDatum->status !== 'checking') {
+                        return;
+                    }
+
+                    $lockedDatum->update(['reason' => $reason]);
+                    $lockedDatum->histories()->create([
+                        'user_id' => $lockedDatum->user_id,
+                        'type' => 'warning',
+                        'message' => $reason,
+                        'message_type' => 'ai_failed',
+                    ]);
+                }, 3);
             }
         }
 
