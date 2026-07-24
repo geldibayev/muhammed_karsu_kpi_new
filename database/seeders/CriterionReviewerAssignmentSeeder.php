@@ -31,7 +31,7 @@ class CriterionReviewerAssignmentSeeder extends Seeder
             throw new RuntimeException('4/36 OAV kriteriyasi topilmadi.');
         }
 
-        $oavReviewerHemisId = (int) config('kpi.oav_reviewer_hemis_id');
+        $oavReviewerHemisId = (int) config('kpi.ai_status_viewer_hemis_id');
 
         if ($oavReviewerHemisId <= 0) {
             throw new RuntimeException('4/36 OAV kriteriyasi mas’ulining HEMIS IDsi sozlanmagan.');

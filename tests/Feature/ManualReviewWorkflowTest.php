@@ -55,7 +55,13 @@ class ManualReviewWorkflowTest extends TestCase
             'criterion_id' => 36,
             'criterion_code' => '4/36',
         ]);
-        $this->assertNull(CriterionReviewerAssignment::query()->firstOrFail()->user);
+        $oavAssignment = CriterionReviewerAssignment::query()
+            ->where('criterion_code', '4/36')
+            ->firstOrFail();
+        $this->assertNull($oavAssignment->user);
+
+        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $this->assertTrue($oavAssignment->fresh()->user->is($reviewer));
         $this->assertDatabaseCount('criterion_manual_score_options', 12);
 
         $expectedScoreOptions = [
