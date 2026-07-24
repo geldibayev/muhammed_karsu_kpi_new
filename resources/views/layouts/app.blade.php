@@ -258,35 +258,7 @@
 <script src="{{ asset('plugins/toastr/toastr.min.js') }}"></script>
 <script src="{{ asset('dist/js/adminlte.min.js') }}"></script>
 <script src="{{ asset('dist/js/demo.js') }}"></script>
-<script>
-    $(document).ready(function () {
-        // Toastr asosiy sozlamalari (Pastki o'ng burchak va 5 soniya)
-        toastr.options = {
-            "closeButton": true,
-            "progressBar": true,
-            "positionClass": "toast-bottom-right",
-            "timeOut": "5000",
-            "extendedTimeOut": "1000",
-        };
-
-        // Sessiyadan kelgan xabarlarni tutib olish
-        @if(Session::has('success'))
-        toastr.success("{{ Session::get('success') }}");
-        @endif
-
-        @if(Session::has('error'))
-        toastr.error("{{ Session::get('error') }}");
-        @endif
-
-        @if(Session::has('warning'))
-        toastr.warning("{{ Session::get('warning') }}");
-        @endif
-
-        @if(Session::has('info'))
-        toastr.info("{{ Session::get('info') }}");
-        @endif
-    });
-</script>
+<x-session-notifications />
 @yield('script')
 </body>
 </html>

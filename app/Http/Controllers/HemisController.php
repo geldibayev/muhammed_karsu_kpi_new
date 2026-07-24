@@ -13,13 +13,17 @@ use App\Models\StaffPosition;
 use App\Models\User;
 use App\Models\Workplace;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Provider\GenericProvider;
 use Throwable;
+use UnexpectedValueException;
 
 class HemisController extends Controller
 {
@@ -29,14 +33,17 @@ class HemisController extends Controller
 
         if (! $request->filled('code')) {
             if ($request->filled('error')) {
-                return to_route('home')->with('error', 'HEMIS tizimiga kirish bekor qilindi yoki rad etildi.');
+                return to_route('login')->with('error', $this->authorizationErrorMessage($request));
             }
 
             return $this->redirectToHemis($request, $provider);
         }
 
         if (! $this->hasValidState($request)) {
-            return to_route('home')->with('error', 'Yaroqsiz so‘rov holati. Iltimos, qaytadan kiring.');
+            return to_route('login')->with(
+                'error',
+                'Kirish sessiyasi muddati tugagan yoki so‘rov yaroqsiz. Iltimos, qaytadan urinib ko‘ring.',
+            );
         }
 
         try {
@@ -57,8 +64,29 @@ class HemisController extends Controller
                 'exception' => $exception,
             ]);
 
-            return to_route('home')->with('error', 'HEMIS orqali kirishda xatolik yuz berdi. Keyinroq qayta urinib ko‘ring.');
+            return to_route('login')->with('error', $this->loginErrorMessage($exception));
         }
+    }
+
+    private function authorizationErrorMessage(Request $request): string
+    {
+        return match ($request->string('error')->toString()) {
+            'access_denied' => 'HEMIS tizimiga kirish bekor qilindi yoki ruxsat berilmadi.',
+            'temporarily_unavailable' => 'HEMIS avtorizatsiya xizmati vaqtincha ishlamayapti. Keyinroq qayta urinib ko‘ring.',
+            'server_error' => 'HEMIS avtorizatsiya xizmatida ichki xatolik yuz berdi. Keyinroq qayta urinib ko‘ring.',
+            default => 'HEMIS avtorizatsiya xizmati kirishni tasdiqlamadi. Qaytadan urinib ko‘ring.',
+        };
+    }
+
+    private function loginErrorMessage(Throwable $exception): string
+    {
+        return match (true) {
+            $exception instanceof IdentityProviderException => 'HEMIS avtorizatsiya xizmati so‘rovni rad etdi. Qaytadan urinib ko‘ring.',
+            $exception instanceof ConnectionException => 'HEMIS xizmatiga ulanib bo‘lmadi. Internet yoki HEMIS xizmati holatini tekshirib, qayta urinib ko‘ring.',
+            $exception instanceof RequestException => 'HEMIS xizmati foydalanuvchi ma’lumotlarini olishda xatolik qaytardi.',
+            $exception instanceof UnexpectedValueException => 'HEMIS profilingizdagi tizimga kirish uchun zarur ma’lumotlar to‘liq emas.',
+            default => 'HEMIS orqali kirishda kutilmagan xatolik yuz berdi. Keyinroq qayta urinib ko‘ring.',
+        };
     }
 
     private function provider(): GenericProvider
@@ -100,7 +128,7 @@ class HemisController extends Controller
         $hemisId = data_get($hemisUser, 'employee_id_number');
 
         if (! is_numeric($userId) || ! is_numeric($hemisId)) {
-            throw new \UnexpectedValueException('HEMIS foydalanuvchi uchun identifikatorlar topilmadi.');
+            throw new UnexpectedValueException('HEMIS foydalanuvchi uchun identifikatorlar topilmadi.');
         }
 
         $firstName = (string) data_get($hemisUser, 'firstname', '');
@@ -188,7 +216,7 @@ class HemisController extends Controller
         $name = data_get($reference, 'name');
 
         if (! is_numeric($id) || ! is_string($name) || $name === '') {
-            throw new \UnexpectedValueException("Invalid HEMIS reference for {$model}.");
+            throw new UnexpectedValueException("Invalid HEMIS reference for {$model}.");
         }
 
         return $model::updateOrCreate(['id' => $id], ['name' => $name])->id;
