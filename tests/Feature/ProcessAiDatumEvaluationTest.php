@@ -83,6 +83,12 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->createDatum(['status' => 'accepted']);
         $this->createDatum(['status' => 'cancelled']);
         $this->createDatum(['status' => 'deleted']);
+        $this->createAiHistory(
+            'ai_evaluation',
+            'success',
+            'Qo‘lda tekshiriladigan kriteriya',
+            checking: 'manual',
+        );
 
         $this->actingAs($statusViewer)
             ->get(route('home'))
@@ -94,21 +100,23 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->get(route('ai-status.index'))
             ->assertOk()
             ->assertSee('AI tekshiruvchi ishlamayapti')
-            ->assertSee('Umumiy AI tekshiruvlari')
-            ->assertSee('Muvaffaqiyatli tekshiruvlar')
-            ->assertSee('Xato yakunlangan tekshiruvlar')
+            ->assertSee('Jami AI urinishlari')
+            ->assertSee('Natija qaytargan urinishlar')
+            ->assertSee('Xato bo‘lgan urinishlar')
             ->assertSee('Oxirgi muvaffaqiyatli tekshiruv')
             ->assertSee('Oxirgi xato')
             ->assertSee('Oxirgi 3 ta AI tekshiruvi')
-            ->assertSee('Umumiy resurslar holati')
-            ->assertSee('Yuborilgan')
-            ->assertSee('Tekshirilmoqda')
-            ->assertSee('Tasdiqlangan')
-            ->assertSee('Qaytarilgan')
-            ->assertSee('JAMI FAOL RESURS')
-            ->assertSee('YAKUNLANGANLARDAN TASDIQLANGAN')
+            ->assertSee('AI kriteriyalaridagi resurslar')
+            ->assertSee('Jami AI resurslari')
+            ->assertSee('AI tekshirgan')
+            ->assertSee('Tekshiruvni kutmoqda')
+            ->assertSee('AI xatosi sabab kutilmoqda')
+            ->assertSee('QABUL QILINGAN')
+            ->assertSee('QAYTARILGAN')
+            ->assertSee('AI TEKSHIRGAN ULUSH')
             ->assertSeeInOrder(['To‘rtinchi xato', 'Uchinchi tekshiruv', 'Ikkinchi xato'])
             ->assertDontSee('Birinchi tekshiruv')
+            ->assertDontSee('Qo‘lda tekshiriladigan kriteriya')
             ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['total_checks'] === 4
                 && $statistics['successful_checks'] === 2
                 && $statistics['failed_checks'] === 2
@@ -122,15 +130,77 @@ class ProcessAiDatumEvaluationTest extends TestCase
                     $secondCheck->id,
                 ] && ! $checks->contains('id', $firstCheck->id),
             )
-            ->assertViewHas('submissionStatistics', fn (array $statistics): bool => $statistics['total'] === 8
-                && $statistics['received'] === 1
-                && $statistics['checking'] === 3
+            ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 8
+                && $statistics['evaluated'] === 4
+                && $statistics['waiting'] === 2
+                && $statistics['failed_pending'] === 2
                 && $statistics['accepted'] === 3
                 && $statistics['cancelled'] === 1
-                && $statistics['pending'] === 4
-                && $statistics['resolved'] === 4
-                && $statistics['approval_rate'] === 75.0
+                && $statistics['human_review'] === 0
+                && $statistics['evaluation_rate'] === 50.0
                 && $statistics['last_submission_at'] !== null);
+    }
+
+    public function test_ai_resource_statistics_are_unique_and_partition_every_ai_resource(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+
+        $humanReview = $this->createDatum(['status' => 'checking']);
+        $humanReview->histories()->createMany([
+            [
+                'user_id' => $humanReview->user_id,
+                'type' => 'warning',
+                'message' => 'Birinchi AI natijasi.',
+                'message_type' => 'ai_evaluation',
+            ],
+            [
+                'user_id' => $humanReview->user_id,
+                'type' => 'warning',
+                'message' => 'Takroriy AI natijasi.',
+                'message_type' => 'ai_evaluation',
+            ],
+        ]);
+
+        $recoveredAfterFailure = $this->createDatum(['status' => 'accepted']);
+        $recoveredAfterFailure->histories()->createMany([
+            [
+                'user_id' => $recoveredAfterFailure->user_id,
+                'type' => 'warning',
+                'message' => 'Vaqtinchalik xato.',
+                'message_type' => 'ai_failed',
+            ],
+            [
+                'user_id' => $recoveredAfterFailure->user_id,
+                'type' => 'success',
+                'message' => 'Keyingi urinish muvaffaqiyatli.',
+                'message_type' => 'ai_evaluation',
+            ],
+        ]);
+
+        $this->createDatum(['status' => 'received']);
+        $this->createAiHistory('ai_failed', 'warning', 'Tekshirishda xato.');
+        $this->createDatum(['status' => 'accepted']);
+        $this->createDatum(['status' => 'cancelled']);
+        $this->createDatum(['status' => 'deleted']);
+        $this->createDatum(['status' => 'checking'], 'manual');
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 6
+                && $statistics['evaluated'] === 4
+                && $statistics['waiting'] === 1
+                && $statistics['failed_pending'] === 1
+                && $statistics['accepted'] === 2
+                && $statistics['cancelled'] === 1
+                && $statistics['human_review'] === 1
+                && $statistics['evaluation_rate'] === 66.7
+                && $statistics['total'] === (
+                    $statistics['evaluated']
+                    + $statistics['waiting']
+                    + $statistics['failed_pending']
+                ));
     }
 
     public function test_ai_status_dashboard_is_hidden_from_other_users_and_guests(): void
@@ -148,14 +218,14 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $statistics['failed_checks'] === 0
                 && $statistics['last_success_at'] === null
                 && $statistics['last_failure_at'] === null)
-            ->assertViewHas('submissionStatistics', fn (array $statistics): bool => $statistics['total'] === 0
-                && $statistics['received'] === 0
-                && $statistics['checking'] === 0
+            ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 0
+                && $statistics['evaluated'] === 0
+                && $statistics['waiting'] === 0
+                && $statistics['failed_pending'] === 0
                 && $statistics['accepted'] === 0
                 && $statistics['cancelled'] === 0
-                && $statistics['pending'] === 0
-                && $statistics['resolved'] === 0
-                && $statistics['approval_rate'] === 0.0
+                && $statistics['human_review'] === 0
+                && $statistics['evaluation_rate'] === 0.0
                 && $statistics['last_submission_at'] === null);
 
         $this->actingAs($otherUser)
@@ -171,11 +241,15 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
-    private function createAiHistory(string $messageType, string $type, string $message): DatumHistory
-    {
+    private function createAiHistory(
+        string $messageType,
+        string $type,
+        string $message,
+        string $checking = 'ai',
+    ): DatumHistory {
         $datum = $this->createDatum([
             'status' => $messageType === 'ai_evaluation' ? 'accepted' : 'checking',
-        ]);
+        ], $checking);
 
         return $datum->histories()->create([
             'user_id' => $datum->user_id,
@@ -186,7 +260,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
     }
 
     /** @param array<string, mixed> $attributes */
-    private function createDatum(array $attributes = []): Datum
+    private function createDatum(array $attributes = [], string $checking = 'ai'): Datum
     {
         $user = User::factory()->create();
         $report = Report::query()->create([
@@ -198,7 +272,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'report_id' => $report->id,
             'upload' => '1',
             'status' => '1',
-            'checking' => 'ai',
+            'checking' => $checking,
             'ai_prompt' => 'Tekshiring.',
             'ai_model' => 'gemini-test',
         ]);

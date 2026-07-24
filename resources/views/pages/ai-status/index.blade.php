@@ -37,18 +37,18 @@
                 </div>
             </div>
 
-            <div class="card card-outline card-secondary">
+            <div class="card card-outline card-primary">
                 <div class="card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between">
                     <div>
-                        <h2 class="card-title font-weight-bold">Umumiy resurslar holati</h2>
+                        <h2 class="card-title font-weight-bold">AI kriteriyalaridagi resurslar</h2>
                         <div class="small text-muted">
-                            Barcha hisobotlar bo‘yicha; o‘chirilgan resurslar hisobga olinmagan.
+                            Barcha davrlar bo‘yicha faqat AI tekshiradigan kriteriyalar hisoblangan.
                         </div>
                     </div>
                     <div class="small text-muted mt-2 mt-md-0">
-                        Oxirgi yuborilgan:
+                        Oxirgi AI resursi:
                         <strong>
-                            {{ $submissionStatistics['last_submission_at']?->format('d.m.Y H:i:s') ?? 'Hali mavjud emas' }}
+                            {{ $resourceStatistics['last_submission_at']?->format('d.m.Y H:i:s') ?? 'Hali mavjud emas' }}
                         </strong>
                     </div>
                 </div>
@@ -56,78 +56,89 @@
                     <div class="row">
                         <div class="col-xl-3 col-md-6">
                             <div class="info-box bg-info">
-                                <span class="info-box-icon"><i class="fas fa-paper-plane"></i></span>
+                                <span class="info-box-icon"><i class="fas fa-folder-open"></i></span>
                                 <div class="info-box-content">
-                                    <span class="info-box-text">Yuborilgan</span>
-                                    <span class="info-box-number">{{ $submissionStatistics['received'] }}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-3 col-md-6">
-                            <div class="info-box bg-warning">
-                                <span class="info-box-icon"><i class="fas fa-spinner"></i></span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">Tekshirilmoqda</span>
-                                    <span class="info-box-number">{{ $submissionStatistics['checking'] }}</span>
+                                    <span class="info-box-text">Jami AI resurslari</span>
+                                    <span class="info-box-number">{{ $resourceStatistics['total'] }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="col-xl-3 col-md-6">
                             <div class="info-box bg-success">
-                                <span class="info-box-icon"><i class="fas fa-check-circle"></i></span>
+                                <span class="info-box-icon"><i class="fas fa-robot"></i></span>
                                 <div class="info-box-content">
-                                    <span class="info-box-text">Tasdiqlangan</span>
-                                    <span class="info-box-number">{{ $submissionStatistics['accepted'] }}</span>
+                                    <span class="info-box-text">AI tekshirgan</span>
+                                    <span class="info-box-number">{{ $resourceStatistics['evaluated'] }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xl-3 col-md-6">
+                            <div class="info-box bg-warning">
+                                <span class="info-box-icon"><i class="fas fa-hourglass-half"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Tekshiruvni kutmoqda</span>
+                                    <span class="info-box-number">{{ $resourceStatistics['waiting'] }}</span>
                                 </div>
                             </div>
                         </div>
                         <div class="col-xl-3 col-md-6">
                             <div class="info-box bg-danger">
-                                <span class="info-box-icon"><i class="fas fa-undo"></i></span>
+                                <span class="info-box-icon"><i class="fas fa-exclamation-triangle"></i></span>
                                 <div class="info-box-content">
-                                    <span class="info-box-text">Qaytarilgan</span>
-                                    <span class="info-box-number">{{ $submissionStatistics['cancelled'] }}</span>
+                                    <span class="info-box-text">AI xatosi sabab kutilmoqda</span>
+                                    <span class="info-box-number">{{ $resourceStatistics['failed_pending'] }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <div class="alert alert-light border mb-4">
+                        <i class="fas fa-info-circle text-primary mr-1" aria-hidden="true"></i>
+                        <strong>Hisoblash tartibi:</strong>
+                        eski qabul qilingan yoki qaytarilgan AI resurslari tarix yozuvi bo‘lmasa ham
+                        “AI tekshirgan” soniga kiradi. Yangi yuklangan va hali AI natijasi yo‘q resurs
+                        “Tekshiruvni kutmoqda” sifatida ko‘rsatiladi.
+                    </div>
+
                     <div class="row">
                         <div class="col-lg-3 col-sm-6">
                             <div class="description-block border-right">
-                                <h3 class="description-header">{{ $submissionStatistics['total'] }}</h3>
-                                <span class="description-text">JAMI FAOL RESURS</span>
+                                <h3 class="description-header text-success">{{ $resourceStatistics['accepted'] }}</h3>
+                                <span class="description-text">QABUL QILINGAN</span>
                             </div>
                         </div>
                         <div class="col-lg-3 col-sm-6">
                             <div class="description-block border-right">
-                                <h3 class="description-header">{{ $submissionStatistics['pending'] }}</h3>
-                                <span class="description-text">JARAYONDA</span>
+                                <h3 class="description-header text-danger">{{ $resourceStatistics['cancelled'] }}</h3>
+                                <span class="description-text">QAYTARILGAN</span>
                             </div>
                         </div>
                         <div class="col-lg-3 col-sm-6">
                             <div class="description-block border-right">
-                                <h3 class="description-header">{{ $submissionStatistics['resolved'] }}</h3>
-                                <span class="description-text">YAKUNLANGAN</span>
+                                <h3 class="description-header text-warning">{{ $resourceStatistics['human_review'] }}</h3>
+                                <span class="description-text">INSON KO‘RIGI KERAK</span>
                             </div>
                         </div>
                         <div class="col-lg-3 col-sm-6">
                             <div class="description-block">
-                                <h3 class="description-header">{{ number_format($submissionStatistics['approval_rate'], 1) }}%</h3>
-                                <span class="description-text">YAKUNLANGANLARDAN TASDIQLANGAN</span>
+                                <h3 class="description-header">{{ number_format($resourceStatistics['evaluation_rate'], 1) }}%</h3>
+                                <span class="description-text">AI TEKSHIRGAN ULUSH</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <h2 class="h5 font-weight-bold mb-3">AI tekshiruvlari statistikasi</h2>
+            <h2 class="h5 font-weight-bold mb-1">AI xizmatining urinishlari</h2>
+            <p class="text-muted small">
+                Bu raqamlar resurslar soni emas, AI xizmatiga qilingan tekshiruv urinishlari soni.
+            </p>
             <div class="row">
                 <div class="col-lg-4 col-md-6">
                     <div class="small-box bg-info">
                         <div class="inner">
                             <h3>{{ $statistics['total_checks'] }}</h3>
-                            <p>Umumiy AI tekshiruvlari</p>
+                            <p>Jami AI urinishlari</p>
                         </div>
                         <div class="icon"><i class="fas fa-robot"></i></div>
                     </div>
@@ -136,7 +147,7 @@
                     <div class="small-box bg-success">
                         <div class="inner">
                             <h3>{{ $statistics['successful_checks'] }}</h3>
-                            <p>Muvaffaqiyatli tekshiruvlar</p>
+                            <p>Natija qaytargan urinishlar</p>
                         </div>
                         <div class="icon"><i class="fas fa-check"></i></div>
                     </div>
@@ -145,7 +156,7 @@
                     <div class="small-box bg-danger">
                         <div class="inner">
                             <h3>{{ $statistics['failed_checks'] }}</h3>
-                            <p>Xato yakunlangan tekshiruvlar</p>
+                            <p>Xato bo‘lgan urinishlar</p>
                         </div>
                         <div class="icon"><i class="fas fa-times"></i></div>
                     </div>
