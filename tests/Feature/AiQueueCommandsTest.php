@@ -170,6 +170,21 @@ class AiQueueCommandsTest extends TestCase
         $this->assertStringNotContainsString('secret', $reason);
     }
 
+    public function test_depleted_prepayment_credit_has_a_specific_safe_message(): void
+    {
+        $reason = app(DescribeAiFailure::class)->handle(new ErrorException([
+            'code' => 429,
+            'message' => 'Your prepayment credits are depleted. Go to https://ai.studio/projects.',
+            'status' => 'RESOURCE_EXHAUSTED',
+        ]));
+
+        $this->assertSame(
+            'Gemini API oldindan to‘lov krediti tugagan. AI Studio billing hisobiga kredit qo‘shish kerak.',
+            $reason,
+        );
+        $this->assertStringNotContainsString('https://', $reason);
+    }
+
     private function markAsQueued(Datum $datum): void
     {
         $datum->histories()->create([

@@ -66,6 +66,13 @@ class DescribeAiFailure
 
     private function geminiErrorReason(ErrorException $exception): string
     {
+        if (str_contains(
+            mb_strtolower($exception->getErrorMessage(), 'UTF-8'),
+            'prepayment credits are depleted',
+        )) {
+            return 'Gemini API oldindan to‘lov krediti tugagan. AI Studio billing hisobiga kredit qo‘shish kerak.';
+        }
+
         return match ($exception->getErrorCode()) {
             400 => 'Gemini kriteriyadagi model yoki JSON sxema bilan yuborilgan so‘rov formatini qabul qilmadi.',
             401, 403 => 'AI xizmatiga kirish kaliti yoki ruxsat sozlamasi noto‘g‘ri.',

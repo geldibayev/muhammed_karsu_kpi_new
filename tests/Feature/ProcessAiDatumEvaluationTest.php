@@ -12,7 +12,6 @@ use App\Models\User;
 use App\Services\AiSubmissionEvaluator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Queue\Middleware\RateLimited;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use RuntimeException;
@@ -135,10 +134,10 @@ class ProcessAiDatumEvaluationTest extends TestCase
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
         $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
-        $firstCheck = $this->createAiHistory('ai_evaluation', 'success', 'Birinchi tekshiruv');
-        $secondCheck = $this->createAiHistory('ai_failed', 'warning', 'Ikkinchi xato');
-        $thirdCheck = $this->createAiHistory('ai_evaluation', 'success', 'Uchinchi tekshiruv');
-        $fourthCheck = $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
+        $this->createAiHistory('ai_evaluation', 'success', 'Birinchi tekshiruv');
+        $this->createAiHistory('ai_failed', 'warning', 'Ikkinchi xato');
+        $this->createAiHistory('ai_evaluation', 'success', 'Uchinchi tekshiruv');
+        $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
         $this->markAsSubmitted($this->createDatum(['status' => 'received']));
         $this->markAsSubmitted($this->createDatum(['status' => 'checking']));
         $this->createDatum(['status' => 'accepted']);
@@ -161,65 +160,38 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI tekshiruvchi ishlamayapti')
-            ->assertSee('Muammo sababi:')
+            ->assertSee('AI ishlamayapti')
+            ->assertSee('Oxirgi AI xabari')
             ->assertSee('To‘rtinchi xato')
-            ->assertSee('Jami AI urinishlari')
-            ->assertSee('Natija qaytargan urinishlar')
-            ->assertSee('Xato bo‘lgan urinishlar')
-            ->assertSee('Oxirgi muvaffaqiyatli tekshiruv')
-            ->assertSee('Oxirgi xato')
-            ->assertSee('Oxirgi 3 ta AI tekshiruvi')
-            ->assertSee('AI kriteriyalaridagi resurslar')
-            ->assertSee('Jami AI resurslari')
-            ->assertSee('AI tekshirgan')
-            ->assertSee('Tekshiruvni kutmoqda')
-            ->assertSee('AI xatosi sabab kutilmoqda')
-            ->assertSee('QABUL QILINGAN')
-            ->assertSee('QAYTARILGAN')
-            ->assertSee('AI TEKSHIRGAN ULUSH')
-            ->assertSee('Hisobotlar kesimida AI holati')
-            ->assertSee('Hisobot davri')
-            ->assertSee('Bajarilish')
-            ->assertSeeInOrder(['To‘rtinchi xato', 'Uchinchi tekshiruv', 'Ikkinchi xato'])
-            ->assertDontSee('Birinchi tekshiruv')
+            ->assertSee('Resurslar holati')
+            ->assertSee('TEKSHIRILGAN')
+            ->assertSee('NAVBATDA')
+            ->assertSee('XATO')
+            ->assertSee('NAVBATGA QO‘YILMAGAN')
+            ->assertDontSee('AI xizmatining urinishlari')
+            ->assertDontSee('Hisoblash tartibi')
+            ->assertDontSee('Hisobotlar kesimida AI holati')
+            ->assertDontSee('Oxirgi 3 ta AI tekshiruvi')
+            ->assertDontSee('Worker heartbeat')
             ->assertDontSee('Qo‘lda tekshiriladigan kriteriya')
-            ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['total_checks'] === 4
-                && $statistics['successful_checks'] === 2
-                && $statistics['failed_checks'] === 2
-                && $statistics['last_success_at'] !== null
-                && $statistics['last_failure_at'] !== null)
-            ->assertViewHas(
-                'recentChecks',
-                fn (Collection $checks): bool => $checks->pluck('id')->all() === [
-                    $fourthCheck->id,
-                    $thirdCheck->id,
-                    $secondCheck->id,
-                ] && ! $checks->contains('id', $firstCheck->id),
-            )
+            ->assertViewMissing('statistics')
+            ->assertViewMissing('recentChecks')
+            ->assertViewMissing('reportStatistics')
             ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 8
                 && $statistics['evaluated'] === 4
                 && $statistics['waiting'] === 2
                 && $statistics['failed_pending'] === 2
                 && $statistics['legacy_untracked'] === 0
-                && $statistics['accepted'] === 3
-                && $statistics['cancelled'] === 1
-                && $statistics['human_review'] === 0
-                && $statistics['evaluation_rate'] === 50.0
-                && $statistics['last_submission_at'] !== null)
+                && $statistics['evaluation_rate'] === 50.0)
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
                 && $status['reason'] === 'To‘rtinchi xato'
+                && $status['last_message'] === 'To‘rtinchi xato'
+                && $status['last_message_type'] === 'failure'
+                && $status['last_message_at'] !== null
                 && $status['pending_resources'] === 4
                 && $status['waiting_resources'] === 2
                 && $status['failed_pending_resources'] === 2
-                && $status['legacy_untracked_resources'] === 0)
-            ->assertViewHas('reportStatistics', fn (Collection $statistics): bool => $statistics->sum('total') === 8
-                && $statistics->sum('evaluated') === 4
-                && $statistics->sum('waiting') === 2
-                && $statistics->sum('failed_pending') === 2
-                && $statistics->sum('legacy_untracked') === 0
-                && $statistics->sum('accepted') === 3
-                && $statistics->sum('cancelled') === 1);
+                && $status['legacy_untracked_resources'] === 0);
     }
 
     public function test_stale_ai_queue_is_shown_as_unavailable_with_a_clear_reason(): void
@@ -245,8 +217,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI tekshiruvchi ishlamayapti')
-            ->assertSee('Muammo sababi:')
+            ->assertSee('AI ishlamayapti')
+            ->assertSee('Oxirgi AI xabari')
             ->assertSee('AI worker heartbeat hali qayd etilmagan.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
                 && $status['waiting_resources'] === 1
@@ -270,7 +242,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI resurslari navbatda')
+            ->assertSee('AI navbatni ishlamoqda')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'processing'
                 && $status['worker_last_seen_at'] !== null
                 && $status['waiting_resources'] === 1);
@@ -291,10 +263,29 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI tekshiruvchi ishlamayapti')
+            ->assertSee('AI ishlamayapti')
+            ->assertSee('Oxirgi AI xabari')
             ->assertSee('AI xizmatidan belgilangan vaqt ichida javob kelmadi.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
                 && str_contains((string) $status['reason'], 'javob kelmadi'));
+    }
+
+    public function test_latest_ai_message_is_escaped_in_the_status_card(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        Cache::put('kpi:ai-worker:last-failure-at', now()->toIso8601String(), now()->addHour());
+        Cache::put(
+            'kpi:ai-worker:last-failure-reason',
+            '<script>alert("unsafe")</script>',
+            now()->addHour(),
+        );
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('&lt;script&gt;alert(&quot;unsafe&quot;)&lt;/script&gt;', false)
+            ->assertDontSee('<script>alert("unsafe")</script>', false);
     }
 
     public function test_fresh_ai_queue_is_shown_as_processing(): void
@@ -312,7 +303,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI resurslari navbatda')
+            ->assertSee('AI navbatni ishlamoqda')
             ->assertSee('1 ta resurs AI tekshiruv navbatida.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'processing'
                 && $status['waiting_resources'] === 1
@@ -332,7 +323,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('1 ta eski/auditsiz resurs')
+            ->assertSee('1 ta eski resursda AI navbat auditi')
             ->assertDontSee('AI worker heartbeat hali qayd etilmagan.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unknown'
                 && $status['waiting_resources'] === 0
@@ -359,9 +350,14 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI tekshiruvchi ishlayapti')
+            ->assertSee('AI ishlayapti')
+            ->assertSee('Oxirgi tekshiruv')
+            ->assertSee('AI tekshiruvi muvaffaqiyatli.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'operational'
                 && $status['reason'] === null
+                && $status['last_message'] === 'AI tekshiruvi muvaffaqiyatli.'
+                && $status['last_message_type'] === 'success'
+                && $status['last_message_at'] !== null
                 && $status['pending_resources'] === 0);
     }
 
@@ -417,9 +413,6 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $statistics['waiting'] === 1
                 && $statistics['failed_pending'] === 1
                 && $statistics['legacy_untracked'] === 0
-                && $statistics['accepted'] === 2
-                && $statistics['cancelled'] === 1
-                && $statistics['human_review'] === 1
                 && $statistics['evaluation_rate'] === 66.7
                 && $statistics['total'] === (
                     $statistics['evaluated']
@@ -438,29 +431,20 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI tekshiruvchi statusi hali aniqlanmagan')
-            ->assertViewHas('statistics', fn (array $statistics): bool => $statistics['total_checks'] === 0
-                && $statistics['successful_checks'] === 0
-                && $statistics['failed_checks'] === 0
-                && $statistics['last_success_at'] === null
-                && $statistics['last_failure_at'] === null)
+            ->assertSee('AI holati aniqlanmagan')
             ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 0
                 && $statistics['evaluated'] === 0
                 && $statistics['waiting'] === 0
                 && $statistics['failed_pending'] === 0
                 && $statistics['legacy_untracked'] === 0
-                && $statistics['accepted'] === 0
-                && $statistics['cancelled'] === 0
-                && $statistics['human_review'] === 0
-                && $statistics['evaluation_rate'] === 0.0
-                && $statistics['last_submission_at'] === null)
+                && $statistics['evaluation_rate'] === 0.0)
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unknown'
                 && $status['reason'] === null
                 && $status['pending_resources'] === 0
                 && $status['waiting_resources'] === 0
                 && $status['failed_pending_resources'] === 0
-                && $status['legacy_untracked_resources'] === 0)
-            ->assertViewHas('reportStatistics', fn (Collection $statistics): bool => $statistics->isEmpty());
+                && $status['legacy_untracked_resources'] === 0
+                && $status['last_message'] === null);
 
         $this->actingAs($otherUser)
             ->get(route('home'))

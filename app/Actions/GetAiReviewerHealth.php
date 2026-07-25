@@ -16,6 +16,9 @@ class GetAiReviewerHealth
      *     state: 'operational'|'processing'|'degraded'|'unavailable'|'unknown',
      *     checked_at: CarbonInterface|null,
      *     reason: string|null,
+     *     last_message: string|null,
+     *     last_message_at: CarbonInterface|null,
+     *     last_message_type: 'success'|'failure'|'status'|null,
      *     pending_resources: int,
      *     waiting_resources: int,
      *     failed_pending_resources: int,
@@ -108,11 +111,30 @@ class GetAiReviewerHealth
             $legacyUntrackedResources > 0 && $latestCheck === null => "{$legacyUntrackedResources} ta eski resursda AI navbat auditi mavjud emas. Ular joriy worker holatini bildirmaydi.",
             default => null,
         };
+        $isProblemState = in_array($state, ['unavailable', 'degraded'], true);
+        $lastMessage = $isProblemState
+            ? $reason
+            : ($latestCheck?->message ?? $reason);
+        $lastMessageAt = match (true) {
+            $hasUnresolvedAttemptFailure => $workerLastFailureAt,
+            $isProblemState && $latestCheck?->message_type === 'ai_failed' => $latestCheck->created_at,
+            $state === 'operational' && $latestCheck !== null => $latestCheck->created_at,
+            default => $workerLastAttemptAt ?? $latestCheck?->created_at,
+        };
+        $lastMessageType = match (true) {
+            $isProblemState => 'failure',
+            $latestCheck?->message_type === 'ai_evaluation' => 'success',
+            $lastMessage !== null => 'status',
+            default => null,
+        };
 
         return [
             'state' => $state,
             'checked_at' => $workerLastAttemptAt ?? $latestCheck?->created_at,
             'reason' => $reason,
+            'last_message' => $lastMessage,
+            'last_message_at' => $lastMessageAt,
+            'last_message_type' => $lastMessageType,
             'pending_resources' => $pendingResources,
             'waiting_resources' => $waitingResources,
             'failed_pending_resources' => $failedPendingResources,
