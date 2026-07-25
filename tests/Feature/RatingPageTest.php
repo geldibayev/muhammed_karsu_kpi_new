@@ -56,6 +56,9 @@ class RatingPageTest extends TestCase
             'name' => $this->userName('Boshqa O‘qituvchi'),
             'degree' => 'hold_degrees',
         ]);
+        $department = $this->createDepartment('Ommaviy reyting kafedrasi');
+        $this->createWorkplace($matchingUser, $department, 'Professor');
+        $this->createWorkplace($otherUser, $department, 'Dotsent');
 
         $response = $this->get(route('login', ['search' => 'ommaviy']));
 
@@ -99,6 +102,8 @@ class RatingPageTest extends TestCase
         $algebraDepartment = $this->createDepartment('Algebra kafedrasi', $mathematicsFaculty);
         $this->createWorkplace($firstUser, $algebraDepartment, 'Dotsent');
         $this->createWorkplace($secondUser, $algebraDepartment, 'Assistent');
+        $this->createWorkplace($zeroPointUser, $algebraDepartment, 'O‘qituvchi');
+        $this->createWorkplace($withoutDegreeUser, $algebraDepartment, 'O‘qituvchi');
 
         $activeReport = $this->createReport('Faol hisobot', '1');
         $oldReport = $this->createReport('Eski hisobot', '2');
@@ -384,7 +389,11 @@ class RatingPageTest extends TestCase
     {
         $academicDegree = AcademicDegree::query()->create(['id' => $this->referenceId++, 'name' => 'PhD']);
         $academicRank = AcademicRank::query()->create(['id' => $this->referenceId++, 'name' => 'Dotsent']);
-        $form = EmploymentForm::query()->create(['id' => $this->referenceId++, 'name' => 'Asosiy ish joyi']);
+        $form = EmploymentForm::query()->firstOrCreate([
+            'id' => EmploymentForm::PRIMARY_WORKPLACE_ID,
+        ], [
+            'name' => 'Asosiy ish joyi',
+        ]);
         $staff = EmploymentStaff::query()->create(['id' => $this->referenceId++, 'name' => '1 stavka']);
         $position = StaffPosition::query()->create(['id' => $this->referenceId++, 'name' => $positionName]);
         $status = EmployeeStatus::query()->create(['id' => $this->referenceId++, 'name' => 'Ishlamoqda']);

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -109,9 +110,20 @@ class User extends Authenticatable
         return $this->hasMany(Workplace::class, 'user_id');
     }
 
+    public function primaryWorkplaces(): HasMany
+    {
+        return $this->workplaces()
+            ->where('form_id', EmploymentForm::PRIMARY_WORKPLACE_ID);
+    }
+
     public function primaryWorkplace(): HasOne
     {
-        return $this->hasOne(Workplace::class)->oldestOfMany();
+        return $this->hasOne(Workplace::class)
+            ->ofMany(
+                ['id' => 'min'],
+                fn (Builder $query): Builder => $query
+                    ->where('form_id', EmploymentForm::PRIMARY_WORKPLACE_ID),
+            );
     }
 
     public function points(): HasMany

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Criterion;
-use App\Models\Workplace;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -46,6 +45,8 @@ class HomeController extends Controller
         ];
 
         $user = auth()->user()->load([
+            'primaryWorkplace.academic_degree',
+            'primaryWorkplace.academic_rank',
             'workplaces.department',
             'workplaces.staff',
             'workplaces.form',
@@ -53,7 +54,7 @@ class HomeController extends Controller
             'workplaces.status',
         ]);
 
-        $workpl = Workplace::where('user_id', auth()->id())->first();
+        $workpl = $user->primaryWorkplace;
 
         return view('pages.users.profile', compact(['breadcrumbs', 'workpl', 'user']));
     }

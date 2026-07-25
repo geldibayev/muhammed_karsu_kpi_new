@@ -36,11 +36,11 @@
                             </tr>
                             <tr>
                                 <th class="align-middle">Ilmiy unvon</th>
-                                <td>{{ $workpl->academic_rank->name }}</td>
+                                <td>{{ $workpl?->academic_rank?->name ?? 'Kiritilmagan' }}</td>
                             </tr>
                             <tr>
                                 <th class="align-middle">Ilmiy daraja</th>
-                                <td>{{ $workpl->academic_degree->name }}</td>
+                                <td>{{ $workpl?->academic_degree?->name ?? 'Kiritilmagan' }}</td>
                             </tr>
                             <tr>
                                 <th class="align-middle">Yaratilgan</th>

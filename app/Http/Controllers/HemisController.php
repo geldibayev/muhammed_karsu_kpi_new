@@ -2,23 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AcademicDegree;
-use App\Models\AcademicRank;
-use App\Models\Department;
-use App\Models\EmployeeStatus;
-use App\Models\EmployeeType;
-use App\Models\EmploymentForm;
-use App\Models\EmploymentStaff;
-use App\Models\StaffPosition;
+use App\Actions\SyncHemisWorkplaces;
 use App\Models\User;
-use App\Models\Workplace;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Provider\GenericProvider;
@@ -27,7 +17,7 @@ use UnexpectedValueException;
 
 class HemisController extends Controller
 {
-    public function index(Request $request): RedirectResponse
+    public function index(Request $request, SyncHemisWorkplaces $syncHemisWorkplaces): RedirectResponse
     {
         $provider = $this->provider();
 
@@ -53,7 +43,7 @@ class HemisController extends Controller
             $hemisUser = $provider->getResourceOwner($accessToken)->toArray();
 
             $user = $this->storeUser($hemisUser);
-            $user->update(['degree' => $this->syncWorkplaces($hemisUser)]);
+            $user = $syncHemisWorkplaces->handle($user);
 
             Auth::login($user);
             $request->session()->regenerate();
@@ -159,66 +149,5 @@ class HemisController extends Controller
         $user->save();
 
         return $user;
-    }
-
-    private function syncWorkplaces(array $hemisUser): string
-    {
-        $response = Http::acceptJson()
-            ->withToken(config('services.hemis.api_key'))
-            ->timeout(10)
-            ->retry(2, 200)
-            ->get(config('services.hemis.employee_api_url'), [
-                'type' => 'all',
-                'search' => data_get($hemisUser, 'employee_id_number'),
-            ])
-            ->throw();
-
-        $degreeType = 'no_degrees';
-
-        foreach (data_get($response->json(), 'data.items', []) as $employee) {
-            $departmentId = data_get($employee, 'department.id');
-
-            if (! $departmentId || ! ($department = Department::find($departmentId))) {
-                Log::warning('HEMIS workplace skipped because its department was not found.', ['department_id' => $departmentId]);
-
-                continue;
-            }
-
-            $workplace = [
-                'academic_degree_id' => $this->syncReference(AcademicDegree::class, data_get($employee, 'academicDegree')),
-                'academic_rank_id' => $this->syncReference(AcademicRank::class, data_get($employee, 'academicRank')),
-                'form_id' => $this->syncReference(EmploymentForm::class, data_get($employee, 'employmentForm')),
-                'staff_id' => $this->syncReference(EmploymentStaff::class, data_get($employee, 'employmentStaff')),
-                'staff_position_id' => $this->syncReference(StaffPosition::class, data_get($employee, 'staffPosition')),
-                'status_id' => $this->syncReference(EmployeeStatus::class, data_get($employee, 'employeeStatus')),
-                'type_id' => $this->syncReference(EmployeeType::class, data_get($employee, 'employeeType')),
-            ];
-
-            Workplace::updateOrCreate(
-                ['user_id' => data_get($employee, 'id'), 'department_id' => $departmentId],
-                $workplace,
-            );
-
-            if ($workplace['academic_degree_id'] > 10) {
-                $degreeType = 'hold_degrees';
-            } elseif ($degreeType === 'no_degrees' && $department->evaluation) {
-                $degreeType = $department->evaluation;
-            }
-        }
-
-        return $degreeType;
-    }
-
-    /** @param class-string<Model> $model */
-    private function syncReference(string $model, mixed $reference): int
-    {
-        $id = data_get($reference, 'code');
-        $name = data_get($reference, 'name');
-
-        if (! is_numeric($id) || ! is_string($name) || $name === '') {
-            throw new UnexpectedValueException("Invalid HEMIS reference for {$model}.");
-        }
-
-        return $model::updateOrCreate(['id' => $id], ['name' => $name])->id;
     }
 }
