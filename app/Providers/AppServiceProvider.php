@@ -2,19 +2,24 @@
 
 namespace App\Providers;
 
+use App\Actions\DescribeAiFailure;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\User;
 use App\View\Composers\AiStatusMenuComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Queue\Events\JobTimedOut;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -41,6 +46,37 @@ class AppServiceProvider extends ServiceProvider
         Queue::before(function (JobProcessing $event): void {
             if ($event->job->resolveName() === ProcessAiDatumEvaluation::class) {
                 Cache::put('kpi:ai-worker:last-seen-at', now()->toIso8601String(), now()->addDays(30));
+            }
+        });
+        Queue::exceptionOccurred(function (JobExceptionOccurred $event): void {
+            if ($event->job->resolveName() !== ProcessAiDatumEvaluation::class) {
+                return;
+            }
+
+            try {
+                Cache::putMany([
+                    'kpi:ai-worker:last-failure-at' => now()->toIso8601String(),
+                    'kpi:ai-worker:last-failure-reason' => app(DescribeAiFailure::class)
+                        ->handle($event->exception),
+                    'kpi:ai-worker:last-failure-attempt' => $event->job->attempts(),
+                ], now()->addDays(30));
+            } catch (Throwable) {
+                // Queue exception handling must not be interrupted by monitoring.
+            }
+        });
+        Event::listen(JobTimedOut::class, function (JobTimedOut $event): void {
+            if ($event->job->resolveName() !== ProcessAiDatumEvaluation::class) {
+                return;
+            }
+
+            try {
+                Cache::putMany([
+                    'kpi:ai-worker:last-failure-at' => now()->toIso8601String(),
+                    'kpi:ai-worker:last-failure-reason' => 'AI tekshiruvi 60 soniyalik job limitidan oshdi.',
+                    'kpi:ai-worker:last-failure-attempt' => $event->job->attempts(),
+                ], now()->addDays(30));
+            } catch (Throwable) {
+                // Queue timeout handling must not be interrupted by monitoring.
             }
         });
         Gate::define(

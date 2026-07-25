@@ -43,6 +43,12 @@ class DiagnoseAiQueue extends Command
         $workerLastSeenAt = is_string($workerHeartbeat)
             ? CarbonImmutable::parse($workerHeartbeat)
             : null;
+        $lastSuccessAt = $this->cachedDate('kpi:ai-worker:last-success-at');
+        $lastAttemptFailureAt = $this->cachedDate('kpi:ai-worker:last-failure-at');
+        $lastAttemptFailureReason = Cache::get('kpi:ai-worker:last-failure-reason');
+        $lastAttemptFailureNumber = Cache::get('kpi:ai-worker:last-failure-attempt');
+        $hasUnresolvedAttemptFailure = $lastAttemptFailureAt !== null
+            && ($lastSuccessAt === null || $lastAttemptFailureAt->gt($lastSuccessAt));
 
         $this->table(['Tekshiruv', 'Natija'], [
             ['Muhit', app()->environment()],
@@ -59,6 +65,14 @@ class DiagnoseAiQueue extends Command
             ['Worker heartbeat', $workerLastSeenAt instanceof CarbonInterface
                 ? $workerLastSeenAt->format('d.m.Y H:i:s')
                 : 'Hali qayd etilmagan'],
+            ['Oxirgi muvaffaqiyatli job', $lastSuccessAt?->format('d.m.Y H:i:s') ?? 'Mavjud emas'],
+            ['Oxirgi urinish xatosi', $lastAttemptFailureAt?->format('d.m.Y H:i:s') ?? 'Mavjud emas'],
+            ['Urinishdagi xavfsiz sabab', is_string($lastAttemptFailureReason)
+                ? $lastAttemptFailureReason
+                : 'Mavjud emas'],
+            ['Xato bo‘lgan urinish raqami', is_numeric($lastAttemptFailureNumber)
+                ? (int) $lastAttemptFailureNumber
+                : 'Mavjud emas'],
             ['Failed AI joblar', $failedMetrics['total']],
             ['Oxirgi failed vaqt', $failedMetrics['latest_at']],
             ['Oxirgi xavfsiz xato sababi', $failedMetrics['reason']],
@@ -71,9 +85,20 @@ class DiagnoseAiQueue extends Command
             $queueMetrics,
             $failedMetrics,
             $workerLastSeenAt,
+            $hasUnresolvedAttemptFailure,
+            is_string($lastAttemptFailureReason) ? $lastAttemptFailureReason : null,
         ));
 
         return self::SUCCESS;
+    }
+
+    private function cachedDate(string $key): ?CarbonInterface
+    {
+        $value = Cache::get($key);
+
+        return is_string($value) && $value !== ''
+            ? CarbonImmutable::parse($value)
+            : null;
     }
 
     private function hasConfiguredGeminiKey(): bool
@@ -153,9 +178,16 @@ class DiagnoseAiQueue extends Command
         array $queueMetrics,
         array $failedMetrics,
         ?CarbonInterface $workerLastSeenAt,
+        bool $hasUnresolvedAttemptFailure,
+        ?string $lastAttemptFailureReason,
     ): string {
         if (! $hasGeminiKey) {
             return 'Xulosa: joriy muhit konfiguratsiyasida GEMINI_API_KEY mavjud emas yoki placeholder qiymat ishlatilgan.';
+        }
+
+        if ($hasUnresolvedAttemptFailure) {
+            return 'Xulosa: AI worker jobni oldi, lekin urinish xato bilan yakunlandi. Sabab: '
+                .($lastAttemptFailureReason ?? 'noma’lum xato.');
         }
 
         if (is_int($failedMetrics['total']) && $failedMetrics['total'] > 0) {

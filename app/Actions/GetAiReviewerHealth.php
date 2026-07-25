@@ -69,12 +69,24 @@ class GetAiReviewerHealth
         $legacyUntrackedResources = (int) ($pendingAggregate->legacy_untracked_resources ?? 0);
         $oldestWaitingAt = $this->toDate($pendingAggregate->oldest_waiting_at ?? null);
         $workerLastSeenAt = $this->toDate(Cache::get('kpi:ai-worker:last-seen-at'));
+        $workerLastSuccessAt = $this->toDate(Cache::get('kpi:ai-worker:last-success-at'));
+        $workerLastFailureAt = $this->toDate(Cache::get('kpi:ai-worker:last-failure-at'));
+        $workerLastFailureReason = Cache::get('kpi:ai-worker:last-failure-reason');
+        $hasUnresolvedAttemptFailure = $workerLastFailureAt !== null
+            && ($workerLastSuccessAt === null || $workerLastFailureAt->gt($workerLastSuccessAt));
+        $workerLastAttemptAt = match (true) {
+            $workerLastFailureAt === null => $workerLastSuccessAt,
+            $workerLastSuccessAt === null => $workerLastFailureAt,
+            $workerLastFailureAt->gte($workerLastSuccessAt) => $workerLastFailureAt,
+            default => $workerLastSuccessAt,
+        };
         $staleAfterMinutes = max(1, (int) config('kpi.ai_queue_stale_after_minutes', 10));
         $staleThreshold = now()->subMinutes($staleAfterMinutes);
         $hasStaleQueue = ($oldestWaitingAt?->lte($staleThreshold) ?? false)
             && ($workerLastSeenAt?->lte($staleThreshold) ?? true);
 
         $state = match (true) {
+            $hasUnresolvedAttemptFailure => 'unavailable',
             $hasStaleQueue => 'unavailable',
             $latestCheck?->message_type === 'ai_failed' => 'unavailable',
             $failedPendingResources > 0 => 'degraded',
@@ -84,6 +96,9 @@ class GetAiReviewerHealth
         };
 
         $reason = match (true) {
+            $hasUnresolvedAttemptFailure => is_string($workerLastFailureReason)
+                ? $workerLastFailureReason
+                : 'AI worker jobni oldi, lekin urinish xato bilan yakunlandi.',
             $hasStaleQueue => $workerLastSeenAt === null
                 ? "{$waitingResources} ta resurs navbatda, lekin AI worker heartbeat hali qayd etilmagan."
                 : "{$waitingResources} ta resurs navbatda. AI worker oxirgi marta {$workerLastSeenAt->format('d.m.Y H:i:s')} da faol bo‘lgan.",
@@ -96,7 +111,7 @@ class GetAiReviewerHealth
 
         return [
             'state' => $state,
-            'checked_at' => $latestCheck?->created_at,
+            'checked_at' => $workerLastAttemptAt ?? $latestCheck?->created_at,
             'reason' => $reason,
             'pending_resources' => $pendingResources,
             'waiting_resources' => $waitingResources,

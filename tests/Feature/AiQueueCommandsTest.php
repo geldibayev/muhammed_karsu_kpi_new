@@ -2,18 +2,32 @@
 
 namespace Tests\Feature;
 
+use App\Actions\DescribeAiFailure;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\Datum;
 use App\Models\Report;
 use App\Models\User;
+use Gemini\Exceptions\ErrorException;
+use Illuminate\Contracts\Queue\Job as QueueJob;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Queue\Events\JobExceptionOccurred;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
+use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 class AiQueueCommandsTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->clearAiWorkerCache();
+    }
 
     public function test_dry_run_reports_candidates_without_changing_or_dispatching_them(): void
     {
@@ -100,6 +114,62 @@ class AiQueueCommandsTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_diagnostic_command_prioritizes_the_latest_attempt_failure(): void
+    {
+        config()->set('gemini.api_key', 'configured-key');
+        Cache::put('kpi:ai-worker:last-seen-at', now()->toIso8601String(), now()->addHour());
+        Cache::put('kpi:ai-worker:last-failure-at', now()->toIso8601String(), now()->addHour());
+        Cache::put(
+            'kpi:ai-worker:last-failure-reason',
+            'AI xizmatiga kirish kaliti yoki ruxsat sozlamasi noto‘g‘ri.',
+            now()->addHour(),
+        );
+
+        $this->artisan('kpi:ai:diagnose')
+            ->expectsOutputToContain('AI worker jobni oldi, lekin urinish xato bilan yakunlandi')
+            ->expectsOutputToContain('kirish kaliti yoki ruxsat sozlamasi noto‘g‘ri')
+            ->assertSuccessful();
+    }
+
+    public function test_queue_exception_event_records_a_safe_attempt_failure(): void
+    {
+        $queueJob = Mockery::mock(QueueJob::class);
+        $queueJob->shouldReceive('resolveName')
+            ->once()
+            ->andReturn(ProcessAiDatumEvaluation::class);
+        $queueJob->shouldReceive('attempts')
+            ->once()
+            ->andReturn(1);
+
+        event(new JobExceptionOccurred(
+            'database',
+            $queueJob,
+            new RuntimeException('429 quota exceeded: secret details'),
+        ));
+
+        $this->assertSame(
+            'AI xizmatining so‘rov limiti tugagan. Limit yangilanishi yoki tarif sozlamasi tekshirilishi kerak.',
+            Cache::get('kpi:ai-worker:last-failure-reason'),
+        );
+        $this->assertNotNull(Cache::get('kpi:ai-worker:last-failure-at'));
+        $this->assertSame(1, Cache::get('kpi:ai-worker:last-failure-attempt'));
+    }
+
+    public function test_gemini_error_codes_are_mapped_without_exposing_raw_details(): void
+    {
+        $reason = app(DescribeAiFailure::class)->handle(new ErrorException([
+            'code' => 404,
+            'message' => 'models/secret-model was not found for API key secret-key',
+            'status' => 'NOT_FOUND',
+        ]));
+
+        $this->assertSame(
+            'Kriteriyada ko‘rsatilgan Gemini modeli topilmadi yoki ushbu API versiyasida ishlamaydi.',
+            $reason,
+        );
+        $this->assertStringNotContainsString('secret', $reason);
+    }
+
     private function markAsQueued(Datum $datum): void
     {
         $datum->histories()->create([
@@ -108,6 +178,19 @@ class AiQueueCommandsTest extends TestCase
             'message' => 'Resurs yuborildi.',
             'message_type' => 'submission_created',
         ]);
+    }
+
+    private function clearAiWorkerCache(): void
+    {
+        foreach ([
+            'kpi:ai-worker:last-seen-at',
+            'kpi:ai-worker:last-success-at',
+            'kpi:ai-worker:last-failure-at',
+            'kpi:ai-worker:last-failure-reason',
+            'kpi:ai-worker:last-failure-attempt',
+        ] as $key) {
+            Cache::forget($key);
+        }
     }
 
     /** @param array<string, mixed> $attributes */

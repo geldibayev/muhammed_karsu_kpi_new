@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\RateLimited;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -49,13 +50,13 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
         $result = $evaluator->evaluate($datum);
 
-        DB::transaction(function () use ($expectedCriterionId, $result): void {
+        $resultPersisted = DB::transaction(function () use ($expectedCriterionId, $result): bool {
             $lockedDatum = Datum::query()->lockForUpdate()->find($this->datumId);
 
             if ($lockedDatum === null
                 || $lockedDatum->status !== 'checking'
                 || $lockedDatum->criterion_id !== $expectedCriterionId) {
-                return;
+                return false;
             }
 
             $lockedDatum->update([
@@ -74,7 +75,13 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 'message' => $result->reason,
                 'message_type' => 'ai_evaluation',
             ]);
+
+            return true;
         }, 3);
+
+        if ($resultPersisted) {
+            Cache::put('kpi:ai-worker:last-success-at', now()->toIso8601String(), now()->addDays(30));
+        }
     }
 
     /** @return array<int, int> */

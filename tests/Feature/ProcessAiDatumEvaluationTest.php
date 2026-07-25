@@ -22,6 +22,21 @@ class ProcessAiDatumEvaluationTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        foreach ([
+            'kpi:ai-worker:last-seen-at',
+            'kpi:ai-worker:last-success-at',
+            'kpi:ai-worker:last-failure-at',
+            'kpi:ai-worker:last-failure-reason',
+            'kpi:ai-worker:last-failure-attempt',
+        ] as $key) {
+            Cache::forget($key);
+        }
+    }
+
     public function test_job_persists_a_valid_ai_result_and_history(): void
     {
         $datum = $this->createDatum();
@@ -41,6 +56,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'type' => 'success',
             'message_type' => 'ai_evaluation',
         ]);
+        $this->assertNotNull(Cache::get('kpi:ai-worker:last-success-at'));
     }
 
     public function test_job_does_not_overwrite_a_submission_already_reviewed(): void
@@ -258,6 +274,27 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'processing'
                 && $status['worker_last_seen_at'] !== null
                 && $status['waiting_resources'] === 1);
+    }
+
+    public function test_latest_worker_attempt_failure_is_shown_immediately(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        Cache::put('kpi:ai-worker:last-seen-at', now()->toIso8601String(), now()->addHour());
+        Cache::put('kpi:ai-worker:last-failure-at', now()->toIso8601String(), now()->addHour());
+        Cache::put(
+            'kpi:ai-worker:last-failure-reason',
+            'AI xizmatidan belgilangan vaqt ichida javob kelmadi.',
+            now()->addHour(),
+        );
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('AI tekshiruvchi ishlamayapti')
+            ->assertSee('AI xizmatidan belgilangan vaqt ichida javob kelmadi.')
+            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
+                && str_contains((string) $status['reason'], 'javob kelmadi'));
     }
 
     public function test_fresh_ai_queue_is_shown_as_processing(): void
