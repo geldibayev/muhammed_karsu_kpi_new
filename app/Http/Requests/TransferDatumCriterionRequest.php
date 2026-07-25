@@ -75,7 +75,7 @@ class TransferDatumCriterionRequest extends FormRequest
                 $submissionCount = Datum::query()
                     ->where('user_id', $datum->user_id)
                     ->where('criterion_id', $criterion->getKey())
-                    ->where('status', '!=', 'deleted')
+                    ->countsTowardsUploadLimit()
                     ->count();
 
                 if ($submissionCount >= $criterion->file_limit) {

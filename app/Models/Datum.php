@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\DatumStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,6 +15,21 @@ class Datum extends Model
     protected $fillable = [
         'id', 'name', 'material', 'user_id', 'criterion_id', 'status', 'year_id', 'language_id', 'point', 'reason',
     ];
+
+    /** @return array<int, string> */
+    public static function statusesCountingTowardsUploadLimit(): array
+    {
+        return [
+            DatumStatus::Received->value,
+            DatumStatus::Checking->value,
+            DatumStatus::Accepted->value,
+        ];
+    }
+
+    public function scopeCountsTowardsUploadLimit(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::statusesCountingTowardsUploadLimit());
+    }
 
     public function criterion(): BelongsTo
     {

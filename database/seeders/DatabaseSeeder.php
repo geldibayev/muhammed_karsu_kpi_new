@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             CriterionSeeder::class,
             Criterion16EvaluationSeeder::class,
             CriterionReviewerAssignmentSeeder::class,
+            OavCriterionRuleSeeder::class,
             CriterionManualScoreOptionSeeder::class,
             DepartmentSeeder::class,
         ]);

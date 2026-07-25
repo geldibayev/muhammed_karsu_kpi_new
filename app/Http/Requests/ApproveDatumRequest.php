@@ -34,10 +34,16 @@ class ApproveDatumRequest extends FormRequest
             : null;
         $criterionId = $datum instanceof Datum ? $datum->criterion_id : 0;
         $isManualCriterion = $criterion?->checking === 'manual';
+        $activeScoreOptionCount = $isManualCriterion
+            ? CriterionManualScoreOption::query()
+                ->where('criterion_id', $criterionId)
+                ->where('active', true)
+                ->count()
+            : 0;
 
         return [
             'score_option_id' => [
-                Rule::requiredIf($isManualCriterion),
+                Rule::requiredIf($isManualCriterion && $activeScoreOptionCount !== 1),
                 Rule::prohibitedIf(! $isManualCriterion),
                 'nullable',
                 'integer',

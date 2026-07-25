@@ -20,7 +20,6 @@
         );
         $criterionDescription = trim(strip_tags($criterionDescription));
         $isManualCriterion = $datum->criterion?->checking === 'manual';
-        $fixedScoreOption = $scoreOptions->count() === 1 ? $scoreOptions->first() : null;
     @endphp
 
     <section class="content">
@@ -105,9 +104,6 @@
                                 <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
                                     @csrf
                                     @method('PATCH')
-                                    @if($fixedScoreOption)
-                                        <input type="hidden" name="score_option_id" value="{{ $fixedScoreOption->id }}">
-                                    @endif
                                     <button type="submit" class="btn btn-success btn-sm">
                                         <i class="fas fa-check mr-1"></i> Tasdiqlash
                                     </button>

@@ -143,6 +143,46 @@ class DatumSubmissionTest extends TestCase
         $this->assertDatabaseCount('data', 1);
     }
 
+    public function test_cancelled_submission_does_not_consume_file_limit(): void
+    {
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'res_type' => 'url',
+            'file_limit' => 1,
+        ]);
+        $year = $this->createActiveYear();
+        Datum::query()->create([
+            'name' => 'Qaytarilgan URL',
+            'material' => ['type' => 'url', 'link' => 'https://example.com/rejected'],
+            'user_id' => $teacher->id,
+            'criterion_id' => $criterion->id,
+            'year_id' => $year->id,
+            'status' => 'cancelled',
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('upload.show', $criterion))
+            ->assertOk()
+            ->assertSee('id="fileForm"', false);
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'url',
+                'uploadResourceUrl' => 'https://example.com/replacement',
+                'year' => $year->id,
+            ])
+            ->assertRedirect(route('upload.show', $criterion))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('data', 2);
+        $this->assertDatabaseHas('data', [
+            'criterion_id' => $criterion->id,
+            'user_id' => $teacher->id,
+            'status' => 'received',
+            'name' => 'URL havola',
+        ]);
+    }
+
     public function test_manual_url_submission_is_received_without_ai_job(): void
     {
         $teacher = User::factory()->create();
@@ -179,6 +219,7 @@ class DatumSubmissionTest extends TestCase
 
         return Criterion::query()->create(array_merge([
             'name' => ['uz' => 'Test mezoni'],
+            'desc' => ['uz' => 'Test mezoni tavsifi'],
             'report_id' => $report->id,
             'upload' => '1',
             'status' => '1',

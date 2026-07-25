@@ -27,7 +27,7 @@ class TransferDatumCriterion
             ->withCount([
                 'files as user_submission_count' => fn (Builder $query): Builder => $query
                     ->where('user_id', $datum->user_id)
-                    ->where('status', '!=', 'deleted'),
+                    ->countsTowardsUploadLimit(),
             ])
             ->where('report_id', $datum->criterion->report_id)
             ->whereKeyNot($datum->criterion_id)
@@ -119,7 +119,7 @@ class TransferDatumCriterion
         $submissionCount = Datum::query()
             ->where('user_id', $datum->user_id)
             ->where('criterion_id', $criterion->getKey())
-            ->where('status', '!=', 'deleted')
+            ->countsTowardsUploadLimit()
             ->count();
 
         if ($submissionCount >= $criterion->file_limit) {

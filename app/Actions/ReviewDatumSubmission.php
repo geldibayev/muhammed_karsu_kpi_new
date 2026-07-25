@@ -79,12 +79,17 @@ class ReviewDatumSubmission
             ];
         }
 
-        $option = CriterionManualScoreOption::query()
-            ->whereKey($scoreOptionId)
+        $optionQuery = CriterionManualScoreOption::query()
             ->where('criterion_id', $datum->criterion_id)
             ->where('active', true)
-            ->lockForUpdate()
-            ->first();
+            ->lockForUpdate();
+
+        if ($scoreOptionId !== null) {
+            $optionQuery->whereKey($scoreOptionId);
+        }
+
+        $options = $optionQuery->limit(2)->get();
+        $option = $options->count() === 1 ? $options->first() : null;
 
         if ($option === null) {
             throw ValidationException::withMessages([

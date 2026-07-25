@@ -34,7 +34,7 @@ class CreateDatumSubmission
                 $submissionCount = Datum::query()
                     ->whereBelongsTo($user)
                     ->whereBelongsTo($lockedCriterion)
-                    ->where('status', '!=', 'deleted')
+                    ->countsTowardsUploadLimit()
                     ->count();
 
                 if ($lockedCriterion->file_limit > 0 && $submissionCount >= $lockedCriterion->file_limit) {

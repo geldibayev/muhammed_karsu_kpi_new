@@ -38,7 +38,9 @@ class DatumController extends Controller
             ->where('status', '!=', 'deleted')
             ->latest()
             ->get();
-        $files = $submissions->count();
+        $files = $submissions
+            ->whereIn('status', Datum::statusesCountingTowardsUploadLimit())
+            ->count();
 
         return view('pages.users.upload.index', compact(
             'upload',

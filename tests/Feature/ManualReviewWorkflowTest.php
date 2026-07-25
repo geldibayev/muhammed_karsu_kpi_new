@@ -14,6 +14,7 @@ use App\Models\Report;
 use App\Models\User;
 use Database\Seeders\CriterionManualScoreOptionSeeder;
 use Database\Seeders\CriterionReviewerAssignmentSeeder;
+use Database\Seeders\OavCriterionRuleSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -86,6 +87,115 @@ class ManualReviewWorkflowTest extends TestCase
                 'point' => $point,
             ]);
         }
+    }
+
+    public function test_oav_rule_seeder_configures_fixed_manual_scoring_idempotently(): void
+    {
+        $report = $this->createReport();
+        Formula::query()->create([
+            'id' => 1,
+            'name' => ['uz' => 'Raqobat reyting tizimida'],
+            'status' => '1',
+        ]);
+        $maximumFormula = Formula::query()->create([
+            'id' => 2,
+            'name' => ['uz' => 'Maksimal ballga asoslangan'],
+            'status' => '1',
+        ]);
+        $parent = Criterion::query()->create([
+            'name' => ['uz' => 'Ijtimoiy-ma’naviy faoliyat'],
+            'report_id' => $report->id,
+            'formula_id' => 1,
+        ]);
+        $criterion = Criterion::query()->create([
+            'name' => [
+                'uz' => 'OAV yoki ijtimoiy tarmoqlarda universitet va mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqishlar qilganlig',
+            ],
+            'parent_id' => $parent->id,
+            'report_id' => $report->id,
+            'formula_id' => 1,
+            'checking' => 'ai',
+            'file_limit' => 0,
+            'upload' => '1',
+            'status' => '1',
+        ]);
+        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $this->assign($reviewer, $criterion, '4/36');
+        Evaluation::query()->create([
+            'code' => 'no_degrees',
+            'name' => ['uz' => 'Ilmiy darajasiz'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 2,
+        ]);
+
+        $this->seed(OavCriterionRuleSeeder::class);
+        $this->seed(OavCriterionRuleSeeder::class);
+
+        $criterion->refresh();
+        $this->assertSame('manual', $criterion->checking);
+        $this->assertSame(4, $criterion->file_limit);
+        $this->assertSame($maximumFormula->getKey(), $criterion->formula_id);
+        $this->assertDatabaseHas('criterion_evaluations', [
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'no_degrees',
+            'score' => 3,
+        ]);
+        $this->assertDatabaseCount('criterion_manual_score_options', 1);
+        $this->assertDatabaseHas('criterion_manual_score_options', [
+            'criterion_id' => $criterion->id,
+            'code' => 'approved_resource',
+            'point' => 0.75,
+            'active' => true,
+        ]);
+
+        $datum = $this->createDatum($owner, $criterion);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $datum))
+            ->assertOk()
+            ->assertSee('Tasdiqlash')
+            ->assertSee('Rad etish')
+            ->assertDontSee('id="score-option"', false)
+            ->assertDontSee('name="score_option_id"', false);
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $datum))
+            ->assertRedirect(route('reviews.index'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'status' => 'accepted',
+            'point' => 0.75,
+        ]);
+
+        foreach (range(1, 3) as $index) {
+            $additionalDatum = $this->createDatum($owner, $criterion, [
+                'name' => 'Qo‘shimcha OAV resursi '.$index,
+            ]);
+
+            $this->actingAs($reviewer)
+                ->patch(route('reviews.approve', $additionalDatum))
+                ->assertRedirect(route('reviews.index'))
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->assertSame(4, Datum::query()
+            ->where('user_id', $owner->id)
+            ->where('criterion_id', $criterion->id)
+            ->where('status', 'accepted')
+            ->where('point', 0.75)
+            ->count());
+        $this->assertSame(3.0, (float) Point::query()
+            ->where('user_id', $owner->id)
+            ->where('criterion_id', $criterion->id)
+            ->value('point'));
     }
 
     public function test_all_authenticated_users_can_open_responsible_people_page(): void
@@ -492,7 +602,7 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
     }
 
-    public function test_fixed_manual_rule_awards_one_raw_point_without_manual_point_input(): void
+    public function test_fixed_manual_rule_awards_one_raw_point_with_approve_click_only(): void
     {
         $reviewer = User::factory()->create();
         $owner = User::factory()->create(['degree' => 'hold_degrees']);
@@ -522,11 +632,10 @@ class ManualReviewWorkflowTest extends TestCase
             ->get(route('reviews.show', $datum))
             ->assertOk()
             ->assertSee('OAK diplomi asosida baholanadi.')
-            ->assertSee('name="score_option_id"', false)
-            ->assertSee('value="'.$scoreOption->id.'"', false);
+            ->assertDontSee('name="score_option_id"', false);
 
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $datum), ['score_option_id' => $scoreOption->id])
+            ->patch(route('reviews.approve', $datum))
             ->assertRedirect(route('reviews.index'));
 
         $this->assertDatabaseHas('data', [
