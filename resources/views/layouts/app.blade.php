@@ -116,6 +116,15 @@
                             </a>
                         </li>
                     @endcan
+                    @can('view-resource-statistics')
+                        <li class="nav-item">
+                            <a href="{{ route('statistics.index') }}"
+                               class="nav-link @if(request()->routeIs('statistics.*')) active @endif">
+                                <i class="nav-icon fas fa-chart-pie"></i>
+                                <p>Statistika</p>
+                            </a>
+                        </li>
+                    @endcan
                     <li class="nav-item @if(request()->routeIs('files.show', 'upload.details') || request()->is('home/files*')) menu-open @endif">
                         <a href="#"
                            class="nav-link @if(request()->routeIs('files.show', 'upload.details') || request()->is('home/files*')) active @endif">

@@ -9,6 +9,7 @@ use App\Http\Controllers\HemisController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ManualReviewController;
 use App\Http\Controllers\RatingController;
+use App\Http\Controllers\ResourceStatisticsController;
 use App\Http\Controllers\ReviewerAssignmentController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/ai-status', AiReviewerStatusController::class)
         ->middleware('can:view-ai-status')
         ->name('ai-status.index');
+    Route::get('/statistics', ResourceStatisticsController::class)
+        ->middleware('can:view-resource-statistics')
+        ->name('statistics.index');
     Route::get('/ratings', [RatingController::class, 'index'])
         ->middleware('can:view-ratings')
         ->name('ratings.index');

@@ -85,6 +85,10 @@ class AppServiceProvider extends ServiceProvider
                 === (string) config('kpi.ai_status_viewer_hemis_id'),
         );
         Gate::define(
+            'view-resource-statistics',
+            fn (User $user): bool => Gate::forUser($user)->allows('view-ai-status'),
+        );
+        Gate::define(
             'view-ratings',
             fn (User $user): bool => array_intersect(
                 $user->rol ?? [],
