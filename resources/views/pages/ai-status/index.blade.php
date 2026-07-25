@@ -49,7 +49,7 @@
                     </div>
                     <div class="text-md-right mt-3 mt-md-0">
                         <div class="font-weight-bold">
-                            {{ $status['pending_resources'] }} ta resurs jarayonda
+                            {{ $status['waiting_resources'] }} ta resurs faol AI navbatida
                         </div>
                         <div class="small">
                             @if($status['checked_at'])
@@ -57,6 +57,10 @@
                             @else
                                 AI urinish vaqti hali mavjud emas
                             @endif
+                        </div>
+                        <div class="small">
+                            Worker heartbeat:
+                            {{ $status['worker_last_seen_at']?->format('d.m.Y H:i:s') ?? 'Hali qayd etilmagan' }}
                         </div>
                     </div>
                 </div>
@@ -137,6 +141,15 @@
                         “AI tekshirgan” soniga kiradi. Yangi yuklangan va hali AI natijasi yo‘q resurs
                         “Tekshiruvni kutmoqda” sifatida ko‘rsatiladi.
                     </div>
+
+                    @if($resourceStatistics['legacy_untracked'] > 0)
+                        <div class="alert alert-secondary border mb-4">
+                            <i class="fas fa-archive mr-1" aria-hidden="true"></i>
+                            <strong>{{ $resourceStatistics['legacy_untracked'] }} ta eski/auditsiz resurs:</strong>
+                            bu yozuvlarda yuklash auditi mavjud emas. Ular haqiqiy AI navbati va worker
+                            holatini aniqlashda hisobga olinmadi.
+                        </div>
+                    @endif
 
                     <div class="row">
                         <div class="col-lg-3 col-sm-6">
@@ -240,6 +253,7 @@
                                 <th class="text-center">AI tekshirgan</th>
                                 <th class="text-center">Navbatda</th>
                                 <th class="text-center">AI xatosi</th>
+                                <th class="text-center">Eski/auditsiz</th>
                                 <th class="text-center">Qabul qilingan</th>
                                 <th class="text-center">Qaytarilgan</th>
                                 <th class="text-center">Bajarilish</th>
@@ -264,6 +278,9 @@
                                     <td class="align-middle text-center text-danger font-weight-bold">
                                         {{ $reportStatistic['failed_pending'] }}
                                     </td>
+                                    <td class="align-middle text-center text-muted font-weight-bold">
+                                        {{ $reportStatistic['legacy_untracked'] }}
+                                    </td>
                                     <td class="align-middle text-center">{{ $reportStatistic['accepted'] }}</td>
                                     <td class="align-middle text-center">{{ $reportStatistic['cancelled'] }}</td>
                                     <td class="align-middle text-center">
@@ -274,7 +291,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="9" class="text-center text-muted py-4">
                                         AI kriteriyalariga tegishli resurslar hali mavjud emas.
                                     </td>
                                 </tr>

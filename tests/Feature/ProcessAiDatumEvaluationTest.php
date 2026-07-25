@@ -11,7 +11,9 @@ use App\Models\Report;
 use App\Models\User;
 use App\Services\AiSubmissionEvaluator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Mockery;
 use RuntimeException;
 use Tests\TestCase;
@@ -53,6 +55,48 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertDatabaseCount('datum_histories', 0);
     }
 
+    public function test_job_does_not_write_an_old_criterion_result_after_a_transfer(): void
+    {
+        $datum = $this->createDatum();
+        $originalCriterionId = $datum->criterion_id;
+        $targetCriterion = Criterion::query()->create([
+            'name' => ['uz' => 'Yangi mezon'],
+            'report_id' => $datum->criterion->report_id,
+            'upload' => '1',
+            'status' => '1',
+            'checking' => 'ai',
+            'ai_prompt' => 'Yangi mezon bo‘yicha tekshiring.',
+            'ai_model' => 'gemini-test',
+        ]);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturnUsing(function () use ($datum, $targetCriterion): AiEvaluationResult {
+                $datum->update(['criterion_id' => $targetCriterion->id]);
+
+                return new AiEvaluationResult('accepted', 8.5, 'Eski mezon natijasi.');
+            });
+
+        (new ProcessAiDatumEvaluation($datum->id, $originalCriterionId))->handle($evaluator);
+
+        $datum->refresh();
+        $this->assertSame($targetCriterion->id, $datum->criterion_id);
+        $this->assertSame('checking', $datum->status);
+        $this->assertSame(0.0, $datum->point);
+        $this->assertDatabaseMissing('datum_histories', [
+            'datum_id' => $datum->id,
+            'message_type' => 'ai_evaluation',
+        ]);
+    }
+
+    public function test_ai_job_uses_the_gemini_rate_limiter(): void
+    {
+        $middleware = (new ProcessAiDatumEvaluation(1, 1))->middleware();
+
+        $this->assertCount(1, $middleware);
+        $this->assertInstanceOf(RateLimited::class, $middleware[0]);
+    }
+
     public function test_failed_job_leaves_submission_for_human_review(): void
     {
         $datum = $this->createDatum();
@@ -79,8 +123,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $secondCheck = $this->createAiHistory('ai_failed', 'warning', 'Ikkinchi xato');
         $thirdCheck = $this->createAiHistory('ai_evaluation', 'success', 'Uchinchi tekshiruv');
         $fourthCheck = $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
-        $this->createDatum(['status' => 'received']);
-        $this->createDatum(['status' => 'checking']);
+        $this->markAsSubmitted($this->createDatum(['status' => 'received']));
+        $this->markAsSubmitted($this->createDatum(['status' => 'checking']));
         $this->createDatum(['status' => 'accepted']);
         $this->createDatum(['status' => 'cancelled']);
         $this->createDatum(['status' => 'deleted']);
@@ -141,6 +185,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $statistics['evaluated'] === 4
                 && $statistics['waiting'] === 2
                 && $statistics['failed_pending'] === 2
+                && $statistics['legacy_untracked'] === 0
                 && $statistics['accepted'] === 3
                 && $statistics['cancelled'] === 1
                 && $statistics['human_review'] === 0
@@ -150,11 +195,13 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $status['reason'] === 'To‘rtinchi xato'
                 && $status['pending_resources'] === 4
                 && $status['waiting_resources'] === 2
-                && $status['failed_pending_resources'] === 2)
+                && $status['failed_pending_resources'] === 2
+                && $status['legacy_untracked_resources'] === 0)
             ->assertViewHas('reportStatistics', fn (Collection $statistics): bool => $statistics->sum('total') === 8
                 && $statistics->sum('evaluated') === 4
                 && $statistics->sum('waiting') === 2
                 && $statistics->sum('failed_pending') === 2
+                && $statistics->sum('legacy_untracked') === 0
                 && $statistics->sum('accepted') === 3
                 && $statistics->sum('cancelled') === 1);
     }
@@ -165,27 +212,52 @@ class ProcessAiDatumEvaluationTest extends TestCase
         config()->set('kpi.ai_queue_stale_after_minutes', 10);
         $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
         $datum = $this->createDatum(['status' => 'checking']);
+        $this->markAsSubmitted($datum);
         Datum::query()
             ->whereKey($datum)
+            ->update(['created_at' => now()->subMinutes(11)]);
+        $datum->histories()
+            ->where('message_type', 'submission_created')
             ->update(['created_at' => now()->subMinutes(11)]);
 
         $this->actingAs($statusViewer)
             ->get(route('home'))
             ->assertOk()
             ->assertSee('Ishlamayapti')
-            ->assertSee('AI navbat ishlovchisi javob bermayapti.');
+            ->assertSee('AI worker heartbeat hali qayd etilmagan.');
 
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
             ->assertSee('AI tekshiruvchi ishlamayapti')
             ->assertSee('Muammo sababi:')
-            ->assertSee('AI navbat ishlovchisi javob bermayapti.')
+            ->assertSee('AI worker heartbeat hali qayd etilmagan.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
                 && $status['waiting_resources'] === 1
                 && $status['oldest_waiting_at'] !== null
                 && $status['oldest_waiting_at']->lte(now()->subMinutes(10))
-                && str_contains((string) $status['reason'], 'navbat ishlovchisi'));
+                && str_contains((string) $status['reason'], 'heartbeat'));
+    }
+
+    public function test_recent_worker_heartbeat_keeps_an_old_backlog_in_processing_state(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        config()->set('kpi.ai_queue_stale_after_minutes', 10);
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $datum = $this->createDatum(['status' => 'checking']);
+        $this->markAsSubmitted($datum);
+        $datum->histories()
+            ->where('message_type', 'submission_created')
+            ->update(['created_at' => now()->subHour()]);
+        Cache::put('kpi:ai-worker:last-seen-at', now()->toIso8601String(), now()->addHour());
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('AI resurslari navbatda')
+            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'processing'
+                && $status['worker_last_seen_at'] !== null
+                && $status['waiting_resources'] === 1);
     }
 
     public function test_fresh_ai_queue_is_shown_as_processing(): void
@@ -193,7 +265,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
         config()->set('kpi.ai_queue_stale_after_minutes', 10);
         $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
-        $this->createDatum(['status' => 'checking']);
+        $this->markAsSubmitted($this->createDatum(['status' => 'checking']));
 
         $this->actingAs($statusViewer)
             ->get(route('home'))
@@ -208,6 +280,31 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'processing'
                 && $status['waiting_resources'] === 1
                 && $status['pending_resources'] === 1);
+    }
+
+    public function test_legacy_pending_resources_do_not_report_the_ai_worker_as_unavailable(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        config()->set('kpi.ai_queue_stale_after_minutes', 10);
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $datum = $this->createDatum(['status' => 'checking']);
+        Datum::query()
+            ->whereKey($datum)
+            ->update(['created_at' => now()->subYear()]);
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('1 ta eski/auditsiz resurs')
+            ->assertDontSee('AI worker heartbeat hali qayd etilmagan.')
+            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unknown'
+                && $status['waiting_resources'] === 0
+                && $status['legacy_untracked_resources'] === 1
+                && $status['oldest_waiting_at'] === null
+                && str_contains((string) $status['reason'], 'joriy worker holatini bildirmaydi'))
+            ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 1
+                && $statistics['waiting'] === 0
+                && $statistics['legacy_untracked'] === 1);
     }
 
     public function test_latest_successful_ai_check_is_shown_as_operational(): void
@@ -268,7 +365,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ],
         ]);
 
-        $this->createDatum(['status' => 'received']);
+        $this->markAsSubmitted($this->createDatum(['status' => 'received']));
         $this->createAiHistory('ai_failed', 'warning', 'Tekshirishda xato.');
         $this->createDatum(['status' => 'accepted']);
         $this->createDatum(['status' => 'cancelled']);
@@ -282,6 +379,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $statistics['evaluated'] === 4
                 && $statistics['waiting'] === 1
                 && $statistics['failed_pending'] === 1
+                && $statistics['legacy_untracked'] === 0
                 && $statistics['accepted'] === 2
                 && $statistics['cancelled'] === 1
                 && $statistics['human_review'] === 1
@@ -290,6 +388,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
                     $statistics['evaluated']
                     + $statistics['waiting']
                     + $statistics['failed_pending']
+                    + $statistics['legacy_untracked']
                 ));
     }
 
@@ -312,6 +411,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $statistics['evaluated'] === 0
                 && $statistics['waiting'] === 0
                 && $statistics['failed_pending'] === 0
+                && $statistics['legacy_untracked'] === 0
                 && $statistics['accepted'] === 0
                 && $statistics['cancelled'] === 0
                 && $statistics['human_review'] === 0
@@ -321,7 +421,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $status['reason'] === null
                 && $status['pending_resources'] === 0
                 && $status['waiting_resources'] === 0
-                && $status['failed_pending_resources'] === 0)
+                && $status['failed_pending_resources'] === 0
+                && $status['legacy_untracked_resources'] === 0)
             ->assertViewHas('reportStatistics', fn (Collection $statistics): bool => $statistics->isEmpty());
 
         $this->actingAs($otherUser)
@@ -352,6 +453,16 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'type' => $type,
             'message' => $message,
             'message_type' => $messageType,
+        ]);
+    }
+
+    private function markAsSubmitted(Datum $datum): void
+    {
+        $datum->histories()->create([
+            'user_id' => $datum->user_id,
+            'type' => 'info',
+            'message' => 'Resurs yuborildi.',
+            'message_type' => 'submission_created',
         ]);
     }
 

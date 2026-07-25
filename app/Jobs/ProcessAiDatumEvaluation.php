@@ -2,11 +2,14 @@
 
 namespace App\Jobs;
 
+use App\Actions\DescribeAiFailure;
 use App\Models\Datum;
 use App\Services\AiSubmissionEvaluator;
+use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -15,14 +18,18 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
-    public int $tries = 3;
+    public int $tries = 0;
 
     public int $timeout = 60;
 
     public int $uniqueFor = 600;
 
-    public function __construct(public int $datumId)
-    {
+    public int $maxExceptions = 3;
+
+    public function __construct(
+        public int $datumId,
+        public ?int $criterionId = null,
+    ) {
         $this->onQueue('ai-evaluations');
     }
 
@@ -31,17 +38,23 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
         $datum = Datum::query()
             ->with(['criterion.criterionEvaluations', 'user'])
             ->find($this->datumId);
+        $expectedCriterionId = $this->criterionId ?? $datum?->criterion_id;
 
-        if ($datum === null || $datum->status !== 'checking' || $datum->criterion?->checking !== 'ai') {
+        if ($datum === null
+            || $datum->status !== 'checking'
+            || $datum->criterion?->checking !== 'ai'
+            || $datum->criterion_id !== $expectedCriterionId) {
             return;
         }
 
         $result = $evaluator->evaluate($datum);
 
-        DB::transaction(function () use ($result): void {
+        DB::transaction(function () use ($expectedCriterionId, $result): void {
             $lockedDatum = Datum::query()->lockForUpdate()->find($this->datumId);
 
-            if ($lockedDatum === null || $lockedDatum->status !== 'checking') {
+            if ($lockedDatum === null
+                || $lockedDatum->status !== 'checking'
+                || $lockedDatum->criterion_id !== $expectedCriterionId) {
                 return;
             }
 
@@ -70,6 +83,17 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
         return [10, 30, 60];
     }
 
+    /** @return array<int, object> */
+    public function middleware(): array
+    {
+        return [(new RateLimited('gemini-api'))->releaseAfter(10)];
+    }
+
+    public function retryUntil(): DateTimeInterface
+    {
+        return now()->addDays(7);
+    }
+
     public function uniqueId(): string
     {
         return (string) $this->datumId;
@@ -77,13 +101,15 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
     public function failed(?Throwable $exception): void
     {
-        $reason = $this->failureReason($exception);
+        $reason = app(DescribeAiFailure::class)->handle($exception);
 
         try {
             DB::transaction(function () use ($reason): void {
                 $datum = Datum::query()->lockForUpdate()->find($this->datumId);
 
-                if ($datum === null || $datum->status !== 'checking') {
+                if ($datum === null
+                    || $datum->status !== 'checking'
+                    || ($this->criterionId !== null && $datum->criterion_id !== $this->criterionId)) {
                     return;
                 }
 
@@ -102,30 +128,5 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 'history_exception' => $historyException->getMessage(),
             ]);
         }
-    }
-
-    private function failureReason(?Throwable $exception): string
-    {
-        $message = mb_strtolower($exception?->getMessage() ?? '', 'UTF-8');
-
-        return match (true) {
-            str_contains($message, '429'),
-            str_contains($message, 'quota'),
-            str_contains($message, 'rate limit') => 'AI xizmatining so‘rov limiti tugagan. Limit yangilanishi yoki tarif sozlamasi tekshirilishi kerak.',
-
-            str_contains($message, 'timed out'),
-            str_contains($message, 'timeout') => 'AI xizmatidan belgilangan vaqt ichida javob kelmadi.',
-
-            str_contains($message, '401'),
-            str_contains($message, '403'),
-            str_contains($message, 'api key'),
-            str_contains($message, 'unauthenticated') => 'AI xizmatiga kirish kaliti yoki ruxsat sozlamasi noto‘g‘ri.',
-
-            str_contains($message, 'connection'),
-            str_contains($message, 'could not resolve'),
-            str_contains($message, 'network') => 'AI xizmatiga tarmoq orqali ulanib bo‘lmadi.',
-
-            default => 'AI tekshiruvi kutilmagan xato sabab yakunlanmadi. Inson tekshiruvi zarur.',
-        };
     }
 }

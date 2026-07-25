@@ -78,7 +78,7 @@ class CreateDatumSubmission
 
         if ($datum->status === 'checking') {
             try {
-                ProcessAiDatumEvaluation::dispatch($datum->id);
+                ProcessAiDatumEvaluation::dispatch($datum->id, $datum->criterion_id);
             } catch (Throwable $exception) {
                 Log::error('AI tekshiruv jobi navbatga qo\'yilmadi.', [
                     'datum_id' => $datum->id,

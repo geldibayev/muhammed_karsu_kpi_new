@@ -2,11 +2,17 @@
 
 namespace App\Providers;
 
+use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\User;
 use App\View\Composers\AiStatusMenuComposer;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Queue\Events\JobProcessing;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +32,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFour();
+        RateLimiter::for(
+            'gemini-api',
+            fn (): Limit => Limit::perMinute(
+                max(1, (int) config('kpi.ai_requests_per_minute', 10)),
+            )->by('gemini-api'),
+        );
+        Queue::before(function (JobProcessing $event): void {
+            if ($event->job->resolveName() === ProcessAiDatumEvaluation::class) {
+                Cache::put('kpi:ai-worker:last-seen-at', now()->toIso8601String(), now()->addDays(30));
+            }
+        });
         Gate::define(
             'view-ai-status',
             fn (User $user): bool => (string) $user->hemis_id
