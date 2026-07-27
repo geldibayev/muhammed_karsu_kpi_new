@@ -11,7 +11,7 @@
                         <th>Mezon</th>
                         <th class="text-center" style="width: 20%;">Masʼul</th>
                         <th class="text-center" style="width: 10%;">Ball</th>
-                        <th class="text-center" style="width: 5%;"></th>
+                        <th class="text-center" style="width: 10%;">Amallar</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -37,7 +37,18 @@
                                 </td>
                                 <td class="text-center align-middle">
                                     @if($value->checking == 'ai')
-                                        <i class="fa fa-robot"></i>
+                                        <div>
+                                            <i class="fa fa-robot mr-1"></i>
+                                            Sunʼiy intellekt
+                                        </div>
+                                    @endif
+                                    @if($value->reviewerAssignment)
+                                        <div @class(['mt-1' => $value->checking == 'ai'])>
+                                            <i class="fa fa-user-check mr-1"></i>
+                                            {{ $value->reviewerAssignment->user?->full
+                                                ?: ($value->reviewerAssignment->user?->short
+                                                    ?: 'HEMIS ID: '.$value->reviewerAssignment->hemis_id) }}
+                                        </div>
                                     @endif
                                 </td>
                                 <td class="align-middle text-center">
@@ -50,12 +61,20 @@
                                     </span>
                                 </td>
                                 <td class="align-middle text-center">
-                                    @if($value->upload == '1' || $value->isHIndexCriterion())
-                                        <a href="{{ route('upload.show', $value->id) }}"
-                                           class="btn btn-outline-primary btn-sm">
-                                            <i class="fa fa-plus"></i>
+                                    <div class="d-flex justify-content-center">
+                                        <a href="{{ route('criteria.ratings.show', $value) }}"
+                                           class="btn btn-outline-info btn-sm mr-1"
+                                           title="Kriteriya reytingini ko‘rish">
+                                            <i class="fa fa-eye"></i>
                                         </a>
-                                    @endif
+                                        @if($value->upload == '1' || $value->isHIndexCriterion())
+                                            <a href="{{ route('upload.show', $value->id) }}"
+                                               class="btn btn-outline-primary btn-sm"
+                                               title="Ma’lumot kiritish">
+                                                <i class="fa fa-plus"></i>
+                                            </a>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
