@@ -30,7 +30,9 @@
             :$departments
             :$faculties
             :$filters
+            :$mode
             :$report
+            :$unitRankings
             :$users
             filter-route="login"
         />

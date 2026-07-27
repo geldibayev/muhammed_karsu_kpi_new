@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\RatingMode;
 use App\Models\Department;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class RatingFilterRequest extends FormRequest
 {
@@ -19,6 +21,7 @@ class RatingFilterRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
+            'mode' => ['nullable', Rule::enum(RatingMode::class)],
             'degree_group' => ['nullable', 'string', Rule::in(['with_degree', 'without_degree'])],
             'faculty' => [
                 'nullable',
@@ -30,6 +33,30 @@ class RatingFilterRequest extends FormRequest
                 'integer',
                 Rule::exists(Department::class, 'id')->whereNotNull('parent_id'),
             ],
+        ];
+    }
+
+    /** @return array<callable(Validator): void> */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $facultyId = $this->integer('faculty');
+                $departmentId = $this->integer('department');
+
+                if ($facultyId === 0 || $departmentId === 0) {
+                    return;
+                }
+
+                $belongsToFaculty = Department::query()
+                    ->whereKey($departmentId)
+                    ->where('parent_id', $facultyId)
+                    ->exists();
+
+                if (! $belongsToFaculty) {
+                    $validator->errors()->add('department', 'Tanlangan kafedra ushbu fakultetga tegishli emas.');
+                }
+            },
         ];
     }
 

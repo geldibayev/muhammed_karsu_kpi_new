@@ -19,7 +19,9 @@ use App\Models\User;
 use App\Models\Workplace;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
+use ZipArchive;
 
 class RatingPageTest extends TestCase
 {
@@ -69,6 +71,7 @@ class RatingPageTest extends TestCase
             ->assertSee(route('login.user'))
             ->assertSee('Ommaviy Reyting')
             ->assertDontSee('Boshqa O‘qituvchi')
+            ->assertDontSee('Excelga yuklash')
             ->assertDontSee('Ko‘rish')
             ->assertDontSee(route('ratings.show', $matchingUser));
 
@@ -217,6 +220,172 @@ class RatingPageTest extends TestCase
         $this->actingAs($viewer)
             ->get(route('ratings.index', ['degree_group' => 'invalid']))
             ->assertSessionHasErrors('degree_group');
+    }
+
+    public function test_faculty_and_department_modes_rank_units_and_show_internal_user_rankings(): void
+    {
+        $viewer = User::factory()->create();
+        $firstFaculty = $this->createDepartment('Birinchi fakultet');
+        $firstDepartment = $this->createDepartment('Birinchi kafedra', $firstFaculty);
+        $secondFaculty = $this->createDepartment('Ikkinchi fakultet');
+        $secondDepartment = $this->createDepartment('Ikkinchi kafedra', $secondFaculty);
+        $firstUser = User::factory()->create([
+            'name' => $this->userName('Birinchi Fakultet Yetakchisi'),
+            'degree' => 'hold_degrees',
+        ]);
+        $secondUser = User::factory()->create([
+            'name' => $this->userName('Birinchi Fakultet Ikkinchisi'),
+            'degree' => 'no_degrees',
+        ]);
+        $thirdUser = User::factory()->create([
+            'name' => $this->userName('Ikkinchi Fakultet Yetakchisi'),
+            'degree' => 'hold_degrees',
+        ]);
+        $this->createWorkplace($firstUser, $firstDepartment, 'Professor');
+        $this->createWorkplace($secondUser, $firstDepartment, 'Assistent');
+        $this->createWorkplace($thirdUser, $secondDepartment, 'Dotsent');
+        $report = $this->createReport('Tuzilmalar hisoboti', '1');
+        $criterion = $this->createCriterion($report, 'Umumiy mezon');
+        $this->createPoint($firstUser, $criterion, $report, 10);
+        $this->createPoint($secondUser, $criterion, $report, 5);
+        $this->createPoint($thirdUser, $criterion, $report, 20);
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', ['mode' => 'faculties']))
+            ->assertOk()
+            ->assertSee('Fakultet bo‘yicha')
+            ->assertSee('Kafedra bo‘yicha')
+            ->assertSee('Fakultetlar reytingi')
+            ->assertSee('Ichki reyting')
+            ->assertSee('Excelga yuklash')
+            ->assertViewHas('unitRankings', function (LengthAwarePaginator $rankings) use (
+                $firstFaculty,
+                $secondFaculty,
+            ): bool {
+                return $rankings->total() === 2
+                    && $rankings->items()[0]['id'] === $secondFaculty->getKey()
+                    && (float) $rankings->items()[0]['total_points'] === 20.0
+                    && $rankings->items()[1]['id'] === $firstFaculty->getKey()
+                    && $rankings->items()[1]['users_count'] === 2
+                    && $rankings->items()[1]['with_degree_count'] === 1
+                    && $rankings->items()[1]['without_degree_count'] === 1;
+            });
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'faculties',
+                'faculty' => $firstFaculty->getKey(),
+            ]))
+            ->assertOk()
+            ->assertSee('Birinchi fakultet ichki reytingi')
+            ->assertSeeInOrder(['Birinchi Fakultet Yetakchisi', 'Birinchi Fakultet Ikkinchisi'])
+            ->assertDontSee('Ikkinchi Fakultet Yetakchisi')
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 2);
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'departments',
+                'faculty' => $firstFaculty->getKey(),
+            ]))
+            ->assertOk()
+            ->assertSee('Kafedralar reytingi')
+            ->assertViewHas(
+                'unitRankings',
+                fn (LengthAwarePaginator $rankings): bool => $rankings->total() === 1
+                    && $rankings->items()[0]['id'] === $firstDepartment->getKey()
+                    && (float) $rankings->items()[0]['average_points'] === 7.5,
+            );
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'departments',
+                'faculty' => $firstFaculty->getKey(),
+                'department' => $firstDepartment->getKey(),
+            ]))
+            ->assertOk()
+            ->assertSee('Birinchi kafedra ichki reytingi')
+            ->assertSee('Birinchi Fakultet Yetakchisi')
+            ->assertSee('Birinchi Fakultet Ikkinchisi')
+            ->assertDontSee('Ikkinchi Fakultet Yetakchisi');
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'departments',
+                'faculty' => $firstFaculty->getKey(),
+                'department' => $secondDepartment->getKey(),
+            ]))
+            ->assertSessionHasErrors('department');
+    }
+
+    public function test_authorized_user_can_export_filtered_rating_as_real_xlsx(): void
+    {
+        $viewer = User::factory()->create();
+        $faculty = $this->createDepartment('Eksport fakulteti');
+        $department = $this->createDepartment('Eksport kafedrasi', $faculty);
+        $firstUser = User::factory()->create([
+            'name' => $this->userName('=2+2 Formula Emas'),
+            'degree' => 'hold_degrees',
+        ]);
+        $secondUser = User::factory()->create([
+            'name' => $this->userName('Oddiy Foydalanuvchi'),
+            'degree' => 'hold_degrees',
+        ]);
+        $this->createWorkplace($firstUser, $department, 'Professor');
+        $this->createWorkplace($secondUser, $department, 'Dotsent');
+        $report = $this->createReport('Eksport hisoboti', '1');
+        $criterion = $this->createCriterion($report, 'Eksport mezoni');
+        $this->createPoint($firstUser, $criterion, $report, 12.5);
+        $this->createPoint($secondUser, $criterion, $report, 7);
+
+        $response = $this->actingAs($viewer)->get(route('ratings.export', [
+            'mode' => 'with_degree',
+            'faculty' => $faculty->getKey(),
+        ]));
+
+        $response
+            ->assertOk()
+            ->assertDownload()
+            ->assertHeader(
+                'content-type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            );
+
+        $path = $response->baseResponse->getFile()->getPathname();
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        @unlink($path);
+
+        $this->assertIsString($sheet);
+        $this->assertStringContainsString('=2+2 Formula Emas', $sheet);
+        $this->assertStringContainsString('Oddiy Foydalanuvchi', $sheet);
+        $this->assertStringContainsString('12.5', $sheet);
+        $this->assertStringNotContainsString('<f>', $sheet);
+
+        $unitResponse = $this->actingAs($viewer)->get(route('ratings.export', [
+            'mode' => 'faculties',
+        ]));
+        $unitResponse->assertOk()->assertDownload();
+        $unitPath = $unitResponse->baseResponse->getFile()->getPathname();
+        $unitZip = new ZipArchive;
+        $this->assertTrue($unitZip->open($unitPath) === true);
+        $unitSheet = $unitZip->getFromName('xl/worksheets/sheet1.xml');
+        $unitZip->close();
+        @unlink($unitPath);
+
+        $this->assertIsString($unitSheet);
+        $this->assertStringContainsString('Eksport fakulteti', $unitSheet);
+        $this->assertStringContainsString('Xodimlar', $unitSheet);
+        $this->assertStringContainsString('19.5', $unitSheet);
+
+        Auth::logout();
+        $this->get(route('ratings.export'))->assertRedirect(route('login'));
+
+        $unknownRole = User::factory()->withRole('unknown')->create();
+        $this->actingAs($unknownRole)
+            ->get(route('ratings.export'))
+            ->assertForbidden();
     }
 
     public function test_rating_details_show_criterion_scores_and_attributed_evaluators(): void

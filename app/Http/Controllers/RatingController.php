@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ExportRatingsToXlsx;
 use App\Actions\GetRatingIndexData;
 use App\Actions\GetUserRatingDetails;
 use App\Http\Requests\RatingFilterRequest;
 use App\Models\User;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class RatingController extends Controller
 {
@@ -38,5 +40,12 @@ class RatingController extends Controller
         ];
 
         return view('pages.ratings.show', [...$details, 'breadcrumbs' => $breadcrumbs, 'filters' => $filters]);
+    }
+
+    public function export(
+        RatingFilterRequest $request,
+        ExportRatingsToXlsx $exportRatingsToXlsx,
+    ): BinaryFileResponse {
+        return $exportRatingsToXlsx->handle($request->validated());
     }
 }

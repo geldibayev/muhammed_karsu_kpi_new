@@ -32,6 +32,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/ratings', [RatingController::class, 'index'])
         ->middleware('can:view-ratings')
         ->name('ratings.index');
+    Route::get('/ratings/export', [RatingController::class, 'export'])
+        ->middleware('can:view-ratings')
+        ->name('ratings.export');
     Route::get('/ratings/{user}', [RatingController::class, 'show'])
         ->middleware('can:view-ratings')
         ->name('ratings.show');

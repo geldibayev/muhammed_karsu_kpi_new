@@ -2,9 +2,11 @@
 
 namespace App\Actions;
 
+use App\Enums\RatingMode;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
@@ -17,10 +19,27 @@ class PaginateRatingUsers
      */
     public function handle(?Report $report, array $filters): LengthAwarePaginator
     {
-        $degreeGroup = $filters['degree_group'] ?? 'with_degree';
+        return $this->query($report, $filters)
+            ->paginate(25)
+            ->withQueryString();
+    }
+
+    /** @return Collection<int, User> */
+    public function all(?Report $report, array $filters): Collection
+    {
+        return $this->query($report, $filters)->get();
+    }
+
+    /**
+     * @param  array{search?: string|null, mode?: string, degree_group?: string, faculty?: int|null, department?: int|null}  $filters
+     * @return Builder<User>
+     */
+    private function query(?Report $report, array $filters): Builder
+    {
+        $mode = RatingMode::fromFilters($filters);
 
         return User::query()
-            ->select(['id', 'name', 'image', 'degree'])
+            ->select(['id', 'hemis_id', 'name', 'image', 'degree'])
             ->whereHas('ratingWorkplace')
             ->has('primaryWorkplaces', '<', 2)
             ->with([
@@ -44,8 +63,11 @@ class PaginateRatingUsers
                 },
             ], 'point')
             ->when(
-                $degreeGroup === 'with_degree',
+                $mode === RatingMode::WithDegree,
                 fn (Builder $query): Builder => $query->where('degree', 'hold_degrees'),
+            )
+            ->when(
+                $mode === RatingMode::WithoutDegree,
                 fn (Builder $query): Builder => $query->where('degree', '!=', 'hold_degrees'),
             )
             ->when(
@@ -68,9 +90,7 @@ class PaginateRatingUsers
                         ->where('department_id', $departmentId)),
             )
             ->orderByDesc('total_points')
-            ->orderBy('id')
-            ->paginate(25)
-            ->withQueryString();
+            ->orderBy('id');
     }
 
     private function applyNameSearch(Builder $query, string $search): Builder
