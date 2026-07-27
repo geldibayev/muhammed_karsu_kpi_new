@@ -12,7 +12,7 @@ class CriterionPolicy
         $hasTeacherRole = $user->hasRole('teacher') || $user->hasRole('user');
 
         return ($hasTeacherRole || $user->isSuperAdmin())
-            && $criterion->upload === '1'
+            && ($criterion->upload === '1' || $criterion->isHIndexCriterion())
             && $criterion->status === '1';
     }
 

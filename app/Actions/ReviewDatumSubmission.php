@@ -6,13 +6,17 @@ use App\Models\CriterionEvaluation;
 use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Models\User;
+use App\Services\HIndexScoreCalculator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class ReviewDatumSubmission
 {
-    public function __construct(private RecalculateReportPoints $recalculateReportPoints) {}
+    public function __construct(
+        private RecalculateReportPoints $recalculateReportPoints,
+        private HIndexScoreCalculator $hIndexScoreCalculator,
+    ) {}
 
     public function approve(User $reviewer, Datum $datum, ?int $scoreOptionId = null): Datum
     {
@@ -34,6 +38,28 @@ class ReviewDatumSubmission
                 throw ValidationException::withMessages([
                     'datum' => 'Foydalanuvchi darajasi uchun avtomatik ball sozlanmagan.',
                 ]);
+            }
+
+            if ($lockedDatum->criterion->isHIndexCriterion()) {
+                $calculation = $this->hIndexScoreCalculator->calculate(
+                    $lockedDatum->material['profiles'] ?? [],
+                    max(0, (float) $evaluation->score),
+                );
+                $message = 'Mas’ul tomonidan tasdiqlandi. '.$calculation['summary'];
+
+                $lockedDatum->update([
+                    'status' => 'accepted',
+                    'point' => $calculation['total'],
+                    'reason' => $message,
+                ]);
+                $lockedDatum->histories()->create([
+                    'user_id' => $reviewer->getKey(),
+                    'type' => 'success',
+                    'message' => $message,
+                    'message_type' => 'h_index_review_approved',
+                ]);
+
+                return $lockedDatum;
             }
 
             ['point' => $point, 'rule' => $rule] = $this->approvedScore(

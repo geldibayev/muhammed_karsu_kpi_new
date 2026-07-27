@@ -20,6 +20,7 @@ class HomeController extends Controller
         $criteria = Criterion::query()
             ->whereNull('parent_id')
             ->with([
+                'children.reviewerAssignment:id,criterion_id,criterion_code',
                 'children.criterionEvaluations' => fn (HasMany $query): HasMany => $query
                     ->where('evaluation', $degree)
                     ->where('has', '1'),

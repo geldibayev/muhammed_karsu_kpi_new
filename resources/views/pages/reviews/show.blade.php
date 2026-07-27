@@ -20,6 +20,7 @@
         );
         $criterionDescription = trim(strip_tags($criterionDescription));
         $isManualCriterion = $datum->criterion?->checking === 'manual';
+        $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
     @endphp
 
     <section class="content">
@@ -66,7 +67,9 @@
                             <a href="{{ route('reviews.index') }}" class="btn btn-default btn-sm mr-2">
                                 <i class="fas fa-arrow-left mr-1"></i> Ro‘yxatga qaytish
                             </a>
-                            @if($datum->storagePath() !== null)
+                            @if($isHIndexCriterion)
+                                <span class="mr-auto text-muted small">Uchta baza profili tekshiruv uchun berilgan.</span>
+                            @elseif($datum->storagePath() !== null)
                                 <a href="{{ route('upload.file.download', $datum) }}" class="btn btn-outline-primary btn-sm mr-auto">
                                     <i class="fas fa-download mr-1"></i> Faylni yuklab olish
                                 </a>
@@ -90,7 +93,15 @@
                                 </button>
                             @endif
 
-                            @if($isManualCriterion && $scoreOptions->isEmpty())
+                            @if($isHIndexCriterion)
+                                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check mr-1"></i> Tasdiqlash
+                                    </button>
+                                </form>
+                            @elseif($isManualCriterion && $scoreOptions->isEmpty())
                                 <button type="button" class="btn btn-success btn-sm mr-2" disabled
                                         title="Baholash qoidasi sozlanmagan">
                                     <i class="fas fa-check mr-1"></i> Tasdiqlash
@@ -124,6 +135,31 @@
                                         <tr>
                                             <th style="width: 35%">{{ $metadataLabels[$key] ?? $key }}</th>
                                             <td class="text-break">{{ $value }}</td>
+                                        </tr>
+                                    @endforeach
+                                </table>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if($isHIndexCriterion)
+                        <div class="card">
+                            <div class="card-header"><h3 class="card-title font-weight-bold">H-index ma’lumotlari</h3></div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-striped mb-0">
+                                    @foreach([
+                                        'scopus' => 'Scopus',
+                                        'web_of_science' => 'Web of Science',
+                                        'research_gate' => 'Research Gate',
+                                    ] as $profileKey => $profileLabel)
+                                        <tr>
+                                            <th style="width: 35%">{{ $profileLabel }}</th>
+                                            <td>
+                                                <a href="{{ data_get($datum->hIndexProfiles(), $profileKey.'.link') }}" target="_blank" rel="noopener noreferrer">
+                                                    Profilni ochish
+                                                </a>
+                                                <span class="ml-2">h-index: <strong>{{ data_get($datum->hIndexProfiles(), $profileKey.'.value') }}</strong></span>
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </table>

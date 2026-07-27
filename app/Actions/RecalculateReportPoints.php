@@ -67,6 +67,7 @@ class RecalculateReportPoints
             ->whereNotNull('parent_id')
             ->with([
                 'criterionEvaluations:id,criterion_id,evaluation,has,score',
+                'reviewerAssignment:id,criterion_id,criterion_code',
                 'criterionPoints' => fn ($query) => $query
                     ->where('report_id', $report->getKey())
                     ->with('user:id,degree'),
@@ -99,14 +100,16 @@ class RecalculateReportPoints
                 $maximumPoint = $evaluation?->has === '1' ? max(0, (float) $evaluation->score) : 0;
                 $rawPoint = max(0, (float) $criterionPoint->point);
 
-                $calculatedPoint = match ((int) $criterion->formula_id) {
-                    1 => $highestRawPoint > 0 ? $maximumPoint * ($rawPoint / $highestRawPoint) : 0,
-                    2 => min($rawPoint, $maximumPoint),
-                    3 => $rawPoint,
-                    default => throw new UnexpectedValueException(
-                        "Unknown scoring formula [{$criterion->formula_id}] for criterion [{$criterion->getKey()}].",
-                    ),
-                };
+                $calculatedPoint = $criterion->isHIndexCriterion()
+                    ? $rawPoint
+                    : match ((int) $criterion->formula_id) {
+                        1 => $highestRawPoint > 0 ? $maximumPoint * ($rawPoint / $highestRawPoint) : 0,
+                        2 => min($rawPoint, $maximumPoint),
+                        3 => $rawPoint,
+                        default => throw new UnexpectedValueException(
+                            "Unknown scoring formula [{$criterion->formula_id}] for criterion [{$criterion->getKey()}].",
+                        ),
+                    };
 
                 return [
                     'user_id' => $criterionPoint->user_id,

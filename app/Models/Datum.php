@@ -96,6 +96,14 @@ class Datum extends Model
         );
     }
 
+    /** @return array<string, array{link: string, value: int|string}> */
+    public function hIndexProfiles(): array
+    {
+        $profiles = data_get($this->material, 'profiles', []);
+
+        return is_array($profiles) ? $profiles : [];
+    }
+
     protected function casts(): array
     {
         return [

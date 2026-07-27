@@ -50,7 +50,7 @@
                                     </span>
                                 </td>
                                 <td class="align-middle text-center">
-                                    @if($value->upload == '1')
+                                    @if($value->upload == '1' || $value->isHIndexCriterion())
                                         <a href="{{ route('upload.show', $value->id) }}"
                                            class="btn btn-outline-primary btn-sm">
                                             <i class="fa fa-plus"></i>

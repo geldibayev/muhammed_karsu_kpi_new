@@ -79,7 +79,48 @@
                     @endif
                 </div>
                 <div class="card-body p-0">
-                    @if($upload->upload == '1')
+                    @if($upload->isHIndexCriterion())
+                        <form action="{{ route('upload.store', $upload) }}" method="post" id="hIndexForm">
+                            @csrf
+                            <input type="hidden" name="uploadResourceType" value="h_index">
+                            <div class="card-footer">
+                                <div class="alert alert-info small">
+                                    Har bir bazadagi profilingiz havolasi va h-index qiymatini kiriting. Ma’lumotlar mas’ul tekshiruviga yuboriladi.
+                                </div>
+                                <div class="row">
+                                    @foreach([
+                                        'scopus' => 'Scopus',
+                                        'web_of_science' => 'Web of Science',
+                                        'research_gate' => 'Research Gate',
+                                    ] as $profileKey => $profileLabel)
+                                        <div class="col-md-4 mb-3">
+                                            <label class="font-weight-bold">{{ $profileLabel }}</label>
+                                            <input type="url" name="h_index[{{ $profileKey }}][link]"
+                                                   class="form-control mb-2" placeholder="Profil havolasi" required
+                                                   value="{{ old('h_index.'.$profileKey.'.link') }}">
+                                            <input type="number" name="h_index[{{ $profileKey }}][value]"
+                                                   class="form-control" min="0" placeholder="h-index" required
+                                                   value="{{ old('h_index.'.$profileKey.'.value') }}">
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 ml-auto">
+                                        <label class="small mb-0" for="h_index_year_id">Resurs yili</label>
+                                        <select name="year" id="h_index_year_id" class="form-control" required>
+                                            <option selected disabled value=""></option>
+                                            @foreach($years as $year)
+                                                <option value="{{ $year->id }}">{{ $year->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-block mt-3">
+                                    <i class="fas fa-save mr-1"></i> Saqlash va mas’ulga yuborish
+                                </button>
+                            </div>
+                        </form>
+                    @elseif($upload->upload == '1')
                         @if($upload->file_limit == 0 || $files < $upload->file_limit)
                             <form action="{{ route('upload.store', $upload) }}" method="post"
                                   enctype="multipart/form-data" id="fileForm">
@@ -212,10 +253,12 @@
                                     <td class="align-middle">{{ number_format($file->point ?? 0, 2) }}</td>
                                     <td class="align-middle">{{ $file->created_at->format('d.m.Y H:i') }}</td>
                                     <td>
-                                        <a href="{{ route('upload.file.download', $file->id) }}"
-                                           class="btn btn-xs btn-outline-primary">
-                                            <i class="fas fa-download m-1"></i>
-                                        </a>
+                                        @if($file->material['type'] !== 'h_index')
+                                            <a href="{{ route('upload.file.download', $file->id) }}"
+                                               class="btn btn-xs btn-outline-primary">
+                                                <i class="fas fa-download m-1"></i>
+                                            </a>
+                                        @endif
                                         <form action="{{ route('upload.destroy', $file->id) }}" method="POST"
                                               class="d-inline">
                                             @csrf

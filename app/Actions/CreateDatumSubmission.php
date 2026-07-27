@@ -54,9 +54,11 @@ class CreateDatumSubmission
                     'reason' => $lockedCriterion->checking === 'ai'
                         ? 'AI tahlili navbatga qo\'yildi.'
                         : '',
-                    'name' => $material['type'] === 'file'
-                        ? $material['original_name']
-                        : 'URL havola',
+                    'name' => match ($material['type']) {
+                        'file' => $material['original_name'],
+                        'h_index' => 'H-index profillari',
+                        default => 'URL havola',
+                    },
                 ]);
 
                 $datum->histories()->create([
@@ -114,6 +116,13 @@ class CreateDatumSubmission
      */
     private function buildMaterial(array $validated, ?string &$storedPath): array
     {
+        if ($validated['uploadResourceType'] === 'h_index') {
+            return [
+                'type' => 'h_index',
+                'profiles' => $validated['h_index'],
+            ];
+        }
+
         if ($validated['uploadResourceType'] === 'url') {
             $material = [
                 'type' => 'url',

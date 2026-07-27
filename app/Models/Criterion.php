@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Criterion extends Model
 {
+    public const H_INDEX_CODE = '3/23';
+
     protected $fillable = [
         'id', 'name', 'desc', 'parent_id', 'template',
         'upload', 'file_limit', 'observation', 'report_id', 'res_type',
@@ -58,6 +60,17 @@ class Criterion extends Model
     public function reviewerAssignment(): HasOne
     {
         return $this->hasOne(CriterionReviewerAssignment::class);
+    }
+
+    public function isHIndexCriterion(): bool
+    {
+        if ($this->relationLoaded('reviewerAssignment')) {
+            return $this->reviewerAssignment?->criterion_code === self::H_INDEX_CODE;
+        }
+
+        return $this->reviewerAssignment()
+            ->where('criterion_code', self::H_INDEX_CODE)
+            ->exists();
     }
 
     public function manualScoreOptions(): HasMany

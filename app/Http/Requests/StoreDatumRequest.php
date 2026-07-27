@@ -34,6 +34,26 @@ class StoreDatumRequest extends FormRequest
             ? [$criterion->res_type]
             : ['file', 'url'];
 
+        if ($criterion instanceof Criterion && $criterion->isHIndexCriterion()) {
+            return [
+                'uploadResourceType' => ['required', Rule::in(['h_index'])],
+                'year' => [
+                    'required',
+                    Rule::exists('years', 'id')->where(fn (Builder $query): Builder => $query->where('status', '1')),
+                ],
+                'h_index' => ['required', 'array:scopus,web_of_science,research_gate'],
+                'h_index.scopus' => ['required', 'array:link,value'],
+                'h_index.scopus.link' => ['required', 'url:http,https', 'max:255'],
+                'h_index.scopus.value' => ['required', 'integer', 'min:0'],
+                'h_index.web_of_science' => ['required', 'array:link,value'],
+                'h_index.web_of_science.link' => ['required', 'url:http,https', 'max:255'],
+                'h_index.web_of_science.value' => ['required', 'integer', 'min:0'],
+                'h_index.research_gate' => ['required', 'array:link,value'],
+                'h_index.research_gate.link' => ['required', 'url:http,https', 'max:255'],
+                'h_index.research_gate.value' => ['required', 'integer', 'min:0'],
+            ];
+        }
+
         $rules = [
             'uploadResourceType' => ['required', Rule::in($allowedResourceTypes)],
             'year' => [
