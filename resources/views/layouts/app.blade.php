@@ -239,12 +239,6 @@
                     </li>--}}
                     <li class="nav-item">
                         <a href="{{ url('/') }}" class="nav-link">
-                            <i class="nav-icon fa fa-link"></i>
-                            <p>Ilmiy profillar</p>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url('/') }}" class="nav-link">
                             <i class="nav-icon fa fa-cog"></i>
                             <p>Sozlamalar</p>
                         </a>
