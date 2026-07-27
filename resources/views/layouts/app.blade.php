@@ -22,7 +22,7 @@
         <ul class="navbar-nav ml-auto">
             @php
                 $user = auth()->user();
-                $workplace = $user->primaryWorkplace()
+                $workplace = $user->ratingWorkplace()
                     ->with(['academic_degree', 'academic_rank'])
                     ->first();
                 $degreeName = optional(optional($workplace)->academic_degree)->name;

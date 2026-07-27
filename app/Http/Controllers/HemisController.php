@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\SyncHemisWorkplaces;
+use App\Actions\SyncHemisWorkplacesForLogin;
 use App\Models\User;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -17,7 +17,7 @@ use UnexpectedValueException;
 
 class HemisController extends Controller
 {
-    public function index(Request $request, SyncHemisWorkplaces $syncHemisWorkplaces): RedirectResponse
+    public function index(Request $request, SyncHemisWorkplacesForLogin $syncHemisWorkplacesForLogin): RedirectResponse
     {
         $provider = $this->provider();
 
@@ -43,7 +43,7 @@ class HemisController extends Controller
             $hemisUser = $provider->getResourceOwner($accessToken)->toArray();
 
             $user = $this->storeUser($hemisUser);
-            $user = $syncHemisWorkplaces->handle($user);
+            $user = $syncHemisWorkplacesForLogin->handle($user);
 
             Auth::login($user);
             $request->session()->regenerate();

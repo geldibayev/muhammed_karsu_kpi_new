@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\PaginateRatingUsers;
 use App\Actions\RecalculateReportPoints;
 use App\Actions\SyncHemisWorkplaces;
+use App\Actions\SyncHemisWorkplacesForLogin;
 use App\Models\AcademicDegree;
 use App\Models\AcademicRank;
 use App\Models\Department;
@@ -57,11 +58,14 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
             ]),
         ]);
 
-        app(SyncHemisWorkplaces::class)->handle($user);
+        $result = app(SyncHemisWorkplaces::class)->handle($user);
 
         $this->assertDatabaseCount('workplaces', 2);
+        $this->assertTrue($result->degreeChanged);
+        $this->assertSame(1, $result->primaryWorkplaceCount);
         $this->assertSame('no_degrees', $user->fresh()->degree);
         $this->assertSame(101, $user->fresh()->primaryWorkplace?->staff_position_id);
+        $this->assertSame(101, $user->fresh()->ratingWorkplace?->staff_position_id);
         $this->assertSame('Dekan', $user->fresh()->primaryWorkplace?->position?->name);
 
         Http::assertSent(fn (Request $request): bool => str_starts_with($request->url(), 'https://hemis.test/employees')
@@ -92,7 +96,36 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
         $this->assertSame('no_degrees', $user->fresh()->degree);
     }
 
-    public function test_user_without_primary_workplace_is_not_included_in_rating(): void
+    public function test_login_sync_recalculates_active_reports_when_category_changes(): void
+    {
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Faol hisobot'],
+            'status' => '1',
+        ]);
+        $this->mock(
+            RecalculateReportPoints::class,
+            fn (MockInterface $mock) => $mock
+                ->shouldReceive('handle')
+                ->once()
+                ->withArgs(fn (Report $activeReport): bool => $activeReport->is($report)),
+        );
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response([
+                'data' => [
+                    'items' => [
+                        $this->employee(201, 11, 10, 101, 'Dekan'),
+                    ],
+                ],
+            ]),
+        ]);
+
+        $syncedUser = app(SyncHemisWorkplacesForLogin::class)->handle($user);
+
+        $this->assertSame('no_degrees', $syncedUser->degree);
+    }
+
+    public function test_user_without_primary_workplace_uses_additional_workplace_in_rating(): void
     {
         $user = User::factory()->create(['degree' => 'hold_degrees']);
 
@@ -109,12 +142,24 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
         app(SyncHemisWorkplaces::class)->handle($user);
 
         $users = app(PaginateRatingUsers::class)->handle(null, [
-            'degree_group' => 'without_degree',
+            'degree_group' => 'with_degree',
         ]);
 
-        $this->assertSame('no_degrees', $user->fresh()->degree);
+        $this->assertSame('hold_degrees', $user->fresh()->degree);
         $this->assertNull($user->fresh()->primaryWorkplace);
-        $this->assertSame(0, $users->total());
+        $this->assertSame(12, $user->fresh()->ratingWorkplace?->form_id);
+        $this->assertSame(1, $users->total());
+    }
+
+    public function test_lowest_additional_employment_form_is_used_when_primary_is_missing(): void
+    {
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        $this->createStoredWorkplace($user, 201, 13, 11, 101);
+        $this->createStoredWorkplace($user, 202, 12, 11, 102);
+
+        $this->assertNull($user->fresh()->primaryWorkplace);
+        $this->assertSame(12, $user->fresh()->ratingWorkplace?->form_id);
+        $this->assertSame(202, $user->fresh()->ratingWorkplace?->department_id);
     }
 
     public function test_multiple_primary_workplaces_are_rejected_without_losing_existing_data(): void
@@ -142,6 +187,47 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
 
         $this->assertSame(1, $user->fresh()->workplaces()->count());
         $this->assertSame(101, $user->fresh()->primaryWorkplace?->staff_position_id);
+    }
+
+    public function test_user_with_multiple_primary_workplaces_is_hidden_until_repaired(): void
+    {
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        $this->createStoredWorkplace($user, 201, EmploymentForm::PRIMARY_WORKPLACE_ID, 10, 101);
+        $this->createStoredWorkplace($user, 202, EmploymentForm::PRIMARY_WORKPLACE_ID, 11, 102);
+
+        $users = app(PaginateRatingUsers::class)->handle(null, [
+            'degree_group' => 'with_degree',
+        ]);
+
+        $this->assertSame(0, $users->total());
+    }
+
+    public function test_empty_hemis_result_does_not_delete_existing_workplaces(): void
+    {
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        $workplace = $this->createStoredWorkplace(
+            $user,
+            201,
+            EmploymentForm::PRIMARY_WORKPLACE_ID,
+            11,
+            101,
+        );
+
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response([
+                'data' => ['items' => []],
+            ]),
+        ]);
+
+        try {
+            app(SyncHemisWorkplaces::class)->handle($user);
+            $this->fail('Bo‘sh HEMIS javobi qabul qilindi.');
+        } catch (UnexpectedValueException $exception) {
+            $this->assertStringContainsString('ish joyi ma’lumotini qaytarmadi', $exception->getMessage());
+        }
+
+        $this->assertModelExists($workplace);
+        $this->assertSame('hold_degrees', $user->fresh()->degree);
     }
 
     public function test_backfill_command_supports_dry_run_and_updates_existing_users(): void
@@ -175,6 +261,189 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame('no_degrees', $user->fresh()->degree);
+    }
+
+    public function test_backfill_uses_additional_workplace_when_primary_is_missing(): void
+    {
+        $user = User::factory()->create([
+            'hemis_id' => 3172011004,
+            'degree' => 'no_degrees',
+        ]);
+        $this->createStoredWorkplace($user, 202, 12, 11, 102);
+
+        $this->artisan('kpi:ratings:backfill-primary-workplaces')
+            ->expectsOutputToContain('Qo‘shimcha ish joyidan baholanadi')
+            ->assertSuccessful();
+
+        $this->assertSame('hold_degrees', $user->fresh()->degree);
+        $this->assertSame(12, $user->fresh()->ratingWorkplace?->form_id);
+    }
+
+    public function test_sync_hemis_option_repairs_only_problematic_users_and_recalculates_once(): void
+    {
+        $problematicUser = User::factory()->create([
+            'hemis_id' => 3172011004,
+            'degree' => 'hold_degrees',
+        ]);
+        $correctUser = User::factory()->create([
+            'hemis_id' => 3172011005,
+            'degree' => 'no_degrees',
+        ]);
+        $this->createStoredWorkplace(
+            $problematicUser,
+            201,
+            EmploymentForm::PRIMARY_WORKPLACE_ID,
+            10,
+            101,
+        );
+        $this->createStoredWorkplace(
+            $problematicUser,
+            202,
+            EmploymentForm::PRIMARY_WORKPLACE_ID,
+            11,
+            102,
+        );
+        $this->createStoredWorkplace(
+            $correctUser,
+            201,
+            EmploymentForm::PRIMARY_WORKPLACE_ID,
+            10,
+            101,
+        );
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Faol hisobot'],
+            'status' => '1',
+        ]);
+        $this->mock(
+            RecalculateReportPoints::class,
+            fn (MockInterface $mock) => $mock
+                ->shouldReceive('handle')
+                ->once()
+                ->withArgs(fn (Report $activeReport): bool => $activeReport->is($report)),
+        );
+
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response([
+                'data' => [
+                    'items' => [
+                        $this->employee(202, 12, 11, 102, 'O‘qituvchi'),
+                        $this->employee(201, 11, 10, 101, 'Dekan'),
+                    ],
+                ],
+            ]),
+        ]);
+
+        $this->artisan('kpi:ratings:backfill-primary-workplaces', [
+            '--sync-hemis' => true,
+            '--delay' => 0,
+        ])
+            ->expectsOutputToContain('HEMISdan qayta sinxronlanadigan foydalanuvchilar: 1')
+            ->expectsOutputToContain('faol hisobot ballari qayta hisoblandi')
+            ->assertSuccessful();
+
+        $this->assertSame(2, $problematicUser->fresh()->workplaces()->count());
+        $this->assertSame(1, $problematicUser->fresh()->primaryWorkplaces()->count());
+        $this->assertSame('no_degrees', $problematicUser->fresh()->degree);
+        Http::assertSentCount(1);
+        Http::assertSent(fn (Request $request): bool => $request['search'] === 3172011004);
+    }
+
+    public function test_sync_hemis_dry_run_makes_no_http_request_or_database_change(): void
+    {
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        $firstWorkplace = $this->createStoredWorkplace(
+            $user,
+            201,
+            EmploymentForm::PRIMARY_WORKPLACE_ID,
+            10,
+            101,
+        );
+        $secondWorkplace = $this->createStoredWorkplace(
+            $user,
+            202,
+            EmploymentForm::PRIMARY_WORKPLACE_ID,
+            11,
+            102,
+        );
+        Http::fake();
+
+        $this->artisan('kpi:ratings:backfill-primary-workplaces', [
+            '--dry-run' => true,
+            '--sync-hemis' => true,
+        ])
+            ->expectsOutputToContain('HEMISdan qayta sinxronlanadigan foydalanuvchilar: 1')
+            ->expectsOutputToContain('HEMISga so‘rov yuborilmadi')
+            ->assertFailed();
+
+        Http::assertNothingSent();
+        $this->assertModelExists($firstWorkplace);
+        $this->assertModelExists($secondWorkplace);
+        $this->assertSame('hold_degrees', $user->fresh()->degree);
+    }
+
+    public function test_default_sync_does_not_refresh_valid_additional_workplace_fallback(): void
+    {
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        $this->createStoredWorkplace($user, 202, 12, 11, 102);
+        Http::fake();
+
+        $this->artisan('kpi:ratings:backfill-primary-workplaces', [
+            '--sync-hemis' => true,
+            '--delay' => 0,
+        ])
+            ->expectsOutputToContain('HEMISdan qayta sinxronlanadigan foydalanuvchilar: 0')
+            ->assertSuccessful();
+
+        Http::assertNothingSent();
+        $this->assertSame(12, $user->fresh()->ratingWorkplace?->form_id);
+    }
+
+    public function test_all_users_option_refreshes_users_that_already_have_a_primary_workplace(): void
+    {
+        $firstUser = User::factory()->create([
+            'hemis_id' => 3172011004,
+            'degree' => 'no_degrees',
+        ]);
+        $secondUser = User::factory()->create([
+            'hemis_id' => 3172011005,
+            'degree' => 'no_degrees',
+        ]);
+        $this->createStoredWorkplace(
+            $firstUser,
+            201,
+            EmploymentForm::PRIMARY_WORKPLACE_ID,
+            10,
+            101,
+        );
+        $this->createStoredWorkplace(
+            $secondUser,
+            202,
+            EmploymentForm::PRIMARY_WORKPLACE_ID,
+            10,
+            102,
+        );
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response([
+                'data' => [
+                    'items' => [
+                        $this->employee(201, 11, 10, 101, 'Dekan'),
+                        $this->employee(202, 12, 11, 102, 'O‘qituvchi'),
+                    ],
+                ],
+            ]),
+        ]);
+
+        $this->artisan('kpi:ratings:backfill-primary-workplaces', [
+            '--sync-hemis' => true,
+            '--all-users' => true,
+            '--delay' => 0,
+        ])
+            ->expectsOutputToContain('HEMISdan qayta sinxronlanadigan foydalanuvchilar: 2')
+            ->assertSuccessful();
+
+        Http::assertSentCount(2);
+        $this->assertSame(1, $firstUser->fresh()->primaryWorkplaces()->count());
+        $this->assertSame(1, $secondUser->fresh()->primaryWorkplaces()->count());
     }
 
     /** @return array<string, mixed> */

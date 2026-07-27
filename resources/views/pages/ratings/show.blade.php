@@ -4,7 +4,7 @@
     <section class="content">
         <div class="container-fluid">
             @php
-                $workplace = $user->primaryWorkplace;
+                $workplace = $user->ratingWorkplace;
                 $department = $workplace?->department;
                 $faculty = $department?->parent ?? ($department?->parent_id === null ? $department : null);
             @endphp

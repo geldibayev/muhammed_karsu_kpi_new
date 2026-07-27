@@ -14,7 +14,7 @@ class UserRoleController extends Controller
         $this->authorizeSuperAdmin($request);
 
         $users = User::query()
-            ->with('workplaces.department')
+            ->with('ratingWorkplace.department')
             ->orderBy('name->full')
             ->paginate(25);
 

@@ -126,6 +126,15 @@ class User extends Authenticatable
             );
     }
 
+    public function ratingWorkplace(): HasOne
+    {
+        return $this->hasOne(Workplace::class)
+            ->ofMany([
+                'form_id' => 'min',
+                'id' => 'min',
+            ]);
+    }
+
     public function points(): HasMany
     {
         return $this->hasMany(Point::class);

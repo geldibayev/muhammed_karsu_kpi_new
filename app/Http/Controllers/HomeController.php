@@ -45,8 +45,8 @@ class HomeController extends Controller
         ];
 
         $user = auth()->user()->load([
-            'primaryWorkplace.academic_degree',
-            'primaryWorkplace.academic_rank',
+            'ratingWorkplace.academic_degree',
+            'ratingWorkplace.academic_rank',
             'workplaces.department',
             'workplaces.staff',
             'workplaces.form',
@@ -54,7 +54,7 @@ class HomeController extends Controller
             'workplaces.status',
         ]);
 
-        $workpl = $user->primaryWorkplace;
+        $workpl = $user->ratingWorkplace;
 
         return view('pages.users.profile', compact(['breadcrumbs', 'workpl', 'user']));
     }

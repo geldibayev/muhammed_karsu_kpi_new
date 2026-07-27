@@ -31,8 +31,8 @@ class GetUserRatingDetails
             ->first(['id', 'name']);
 
         $user->load([
-            'primaryWorkplace.position',
-            'primaryWorkplace.department.parent',
+            'ratingWorkplace.position',
+            'ratingWorkplace.department.parent',
         ]);
 
         $points = $this->points($user, $report);

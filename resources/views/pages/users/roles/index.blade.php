@@ -26,7 +26,7 @@
                                     <div class="small text-muted">HEMIS ID: {{ $user->hemis_id ?? '—' }}</div>
                                 </td>
                                 <td class="align-middle small">
-                                    {{ $user->workplaces->first()?->department?->name['uz'] ?? 'Biriktirilmagan' }}
+                                    {{ $user->ratingWorkplace?->department?->name['uz'] ?? 'Biriktirilmagan' }}
                                 </td>
                                 <td class="align-middle">
                                     @if($user->isSuperAdmin())

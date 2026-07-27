@@ -118,7 +118,7 @@
                         <tbody>
                         @forelse($users as $user)
                             @php
-                                $workplace = $user->primaryWorkplace;
+                                $workplace = $user->ratingWorkplace;
                                 $department = $workplace?->department;
                                 $faculty = $department?->parent ?? ($department?->parent_id === null ? $department : null);
                             @endphp
