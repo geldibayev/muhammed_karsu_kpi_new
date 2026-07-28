@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\RecalculateReportPoints;
 use App\Data\AiEvaluationResult;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
@@ -43,8 +44,12 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $evaluator->shouldReceive('evaluate')
             ->once()
             ->andReturn(new AiEvaluationResult('accepted', 8.5, 'Talablar bajarilgan.'));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(Report::class));
 
-        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator);
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
 
         $datum->refresh();
         $this->assertSame('accepted', $datum->status);
@@ -63,11 +68,35 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $datum = $this->createDatum(['status' => 'accepted', 'point' => 4]);
         $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
         $evaluator->shouldNotReceive('evaluate');
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
 
-        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator);
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
 
         $this->assertSame(4.0, $datum->fresh()->point);
         $this->assertDatabaseCount('datum_histories', 0);
+    }
+
+    public function test_job_retry_recalculates_points_for_an_already_persisted_ai_result(): void
+    {
+        $datum = $this->createDatum(['status' => 'accepted', 'point' => 4]);
+        $datum->histories()->create([
+            'user_id' => $datum->user_id,
+            'type' => 'success',
+            'message' => 'AI tekshiruvi yakunlangan.',
+            'message_type' => 'ai_evaluation',
+        ]);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldNotReceive('evaluate');
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(Report::class));
+
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+
+        $this->assertSame(4.0, $datum->fresh()->point);
+        $this->assertDatabaseCount('datum_histories', 1);
     }
 
     public function test_job_does_not_write_an_old_criterion_result_after_a_transfer(): void
@@ -91,8 +120,11 @@ class ProcessAiDatumEvaluationTest extends TestCase
 
                 return new AiEvaluationResult('accepted', 8.5, 'Eski mezon natijasi.');
             });
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
 
-        (new ProcessAiDatumEvaluation($datum->id, $originalCriterionId))->handle($evaluator);
+        (new ProcessAiDatumEvaluation($datum->id, $originalCriterionId))
+            ->handle($evaluator, $recalculateReportPoints);
 
         $datum->refresh();
         $this->assertSame($targetCriterion->id, $datum->criterion_id);

@@ -30,16 +30,23 @@ class ApproveDatumRequest extends FormRequest
     {
         $datum = $this->route('datum');
         $criterion = $datum instanceof Datum
-            ? $datum->loadMissing('criterion:id,checking')->criterion
+            ? $datum->loadMissing(['criterion.criterionEvaluations', 'user'])->criterion
             : null;
         $criterionId = $datum instanceof Datum ? $datum->criterion_id : 0;
         $isManualCriterion = $criterion?->checking === 'manual';
+        $isAiCriterion = $criterion?->checking === 'ai';
         $activeScoreOptionCount = $isManualCriterion
             ? CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterionId)
                 ->where('active', true)
                 ->count()
             : 0;
+        $evaluationCategory = $datum instanceof Datum ? $datum->user?->degree : null;
+        $evaluationMaximum = $criterion?->criterionEvaluations
+            ->firstWhere('evaluation', $evaluationCategory)?->score;
+        $reviewerPointMaximum = $criterion?->formula_id === 3
+            ? max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1))
+            : max(0, (float) $evaluationMaximum);
 
         return [
             'score_option_id' => [
@@ -52,6 +59,14 @@ class ApproveDatumRequest extends FormRequest
                         ->where('criterion_id', $criterionId)
                         ->where('active', true)),
             ],
+            'point' => [
+                Rule::requiredIf($isAiCriterion),
+                Rule::prohibitedIf(! $isAiCriterion),
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:'.$reviewerPointMaximum,
+            ],
         ];
     }
 
@@ -62,6 +77,9 @@ class ApproveDatumRequest extends FormRequest
             'score_option_id.required' => 'Tasdiqlash uchun tavsifdagi baholash variantini tanlang.',
             'score_option_id.prohibited' => 'Bu mezon uchun manual baholash varianti yuborilmaydi.',
             'score_option_id.exists' => 'Tanlangan baholash varianti ushbu mezonga tegishli emas.',
+            'point.required' => 'AI tekshiruvidan qolgan resurs uchun aniq ballni kiriting.',
+            'point.prohibited' => 'Bu mezon uchun alohida ball yuborilmaydi.',
+            'point.max' => 'Kiritilgan ball ushbu submission uchun ruxsat etilgan chegaradan oshdi.',
         ];
     }
 }

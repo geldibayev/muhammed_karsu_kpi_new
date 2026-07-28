@@ -20,7 +20,12 @@
         );
         $criterionDescription = trim(strip_tags($criterionDescription));
         $isManualCriterion = $datum->criterion?->checking === 'manual';
+        $isAiCriterion = $datum->criterion?->checking === 'ai';
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
+        $reviewerPointMaximum = $datum->criterion?->formula_id === 3
+            ? max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1))
+            : max(0, (float) $datum->criterion?->criterionEvaluations
+                ->firstWhere('evaluation', $datum->user?->degree)?->score);
     @endphp
 
     <section class="content">
@@ -101,6 +106,11 @@
                                         <i class="fas fa-check mr-1"></i> Tasdiqlash
                                     </button>
                                 </form>
+                            @elseif($isAiCriterion)
+                                <button type="button" class="btn btn-success btn-sm mr-2"
+                                        data-toggle="modal" data-target="#ai-approve-modal">
+                                    <i class="fas fa-check mr-1"></i> Ball bilan tasdiqlash
+                                </button>
                             @elseif($isManualCriterion && $scoreOptions->isEmpty())
                                 <button type="button" class="btn btn-success btn-sm mr-2" disabled
                                         title="Baholash qoidasi sozlanmagan">
@@ -229,6 +239,41 @@
         </div>
     @endif
 
+    @if($isAiCriterion)
+        <div class="modal fade" id="ai-approve-modal" tabindex="-1" role="dialog"
+             aria-labelledby="ai-approve-modal-title" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="modal-content">
+                    @csrf
+                    @method('PATCH')
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="ai-approve-modal-title">AI tekshiruvidan qolgan resursni baholash</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <label for="reviewer-point">Tasdiqlangan ball</label>
+                        <input id="reviewer-point" name="point" type="number" min="0"
+                               max="{{ $reviewerPointMaximum }}" step="0.01" required
+                               value="{{ old('point') }}"
+                               class="form-control @error('point') is-invalid @enderror">
+                        @error('point')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="small text-muted mt-2">
+                            Ruxsat etilgan oraliq: 0–{{ number_format($reviewerPointMaximum, 2) }} ball.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                        <button type="submit" class="btn btn-success">Tasdiqlash</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
     @if($transferCriteria->isNotEmpty())
         <div class="modal fade" id="transfer-criterion-modal" tabindex="-1" role="dialog"
              aria-labelledby="transfer-criterion-modal-title" aria-hidden="true">
@@ -298,7 +343,9 @@
 @endsection
 
 @section('script')
-    @if($errors->has('criterion_id'))
+    @if($errors->has('point'))
+        <script>$('#ai-approve-modal').modal('show');</script>
+    @elseif($errors->has('criterion_id'))
         <script>$('#transfer-criterion-modal').modal('show');</script>
     @elseif($errors->has('score_option_id'))
         <script>$('#approve-modal').modal('show');</script>

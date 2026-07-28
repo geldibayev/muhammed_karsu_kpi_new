@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\DescribeAiFailure;
+use App\Actions\RecalculateReportPoints;
 use App\Models\Datum;
 use App\Services\AiSubmissionEvaluator;
 use DateTimeInterface;
@@ -34,17 +35,27 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
         $this->onQueue('ai-evaluations');
     }
 
-    public function handle(AiSubmissionEvaluator $evaluator): void
-    {
+    public function handle(
+        AiSubmissionEvaluator $evaluator,
+        RecalculateReportPoints $recalculateReportPoints,
+    ): void {
         $datum = Datum::query()
-            ->with(['criterion.criterionEvaluations', 'user'])
+            ->with(['criterion.criterionEvaluations', 'criterion.report', 'user'])
             ->find($this->datumId);
         $expectedCriterionId = $this->criterionId ?? $datum?->criterion_id;
 
         if ($datum === null
-            || $datum->status !== 'checking'
             || $datum->criterion?->checking !== 'ai'
             || $datum->criterion_id !== $expectedCriterionId) {
+            return;
+        }
+
+        if ($datum->status !== 'checking') {
+            if (in_array($datum->status, ['accepted', 'cancelled'], true)
+                && $datum->histories()->where('message_type', 'ai_evaluation')->exists()) {
+                $recalculateReportPoints->handle($datum->criterion->report);
+            }
+
             return;
         }
 
@@ -81,6 +92,10 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
         if ($resultPersisted) {
             Cache::put('kpi:ai-worker:last-success-at', now()->toIso8601String(), now()->addDays(30));
+
+            if (in_array($result->status, ['accepted', 'cancelled'], true)) {
+                $recalculateReportPoints->handle($datum->criterion->report);
+            }
         }
     }
 

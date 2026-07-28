@@ -11,6 +11,7 @@ use App\Models\Year;
 use Database\Seeders\Criterion16EvaluationSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -64,6 +65,12 @@ class HomeCriteriaVisibilityTest extends TestCase
             'id' => 2026,
             'name' => '2026',
             'status' => '1',
+        ]);
+        DB::table('criterion_years')->insert([
+            'criterion_id' => $criterionWithoutEvaluation->id,
+            'year_id' => $year->id,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
         $this->actingAs($user)

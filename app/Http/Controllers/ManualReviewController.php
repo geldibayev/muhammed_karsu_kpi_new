@@ -48,7 +48,8 @@ class ManualReviewController extends Controller
 
         $datum->load([
             'user:id,name,hemis_id,degree',
-            'criterion:id,name,desc,checking,report_id',
+            'criterion:id,name,desc,checking,formula_id,report_id',
+            'criterion.criterionEvaluations:id,criterion_id,evaluation,has,score',
             'criterion.manualScoreOptions',
             'year:id,name',
             'histories' => fn ($query) => $query->with('user:id,name')->latest(),
@@ -80,6 +81,7 @@ class ManualReviewController extends Controller
             $request->user(),
             $datum,
             $request->validated('score_option_id'),
+            $request->filled('point') ? $request->float('point') : null,
         );
 
         return redirect()->route('reviews.index')->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');

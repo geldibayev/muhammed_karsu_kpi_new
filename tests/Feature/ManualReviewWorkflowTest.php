@@ -676,6 +676,53 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_assigned_reviewer_enters_exact_point_for_ai_submission_left_for_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $criterion = $this->createCriterion();
+        $criterion->update(['checking' => 'ai']);
+        $this->assign($reviewer, $criterion, '1/'.$criterion->id);
+        Evaluation::query()->create([
+            'code' => 'no_degrees',
+            'name' => ['uz' => 'Darajasiz'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 3,
+        ]);
+        $datum = $this->createDatum($owner, $criterion, ['status' => 'checking']);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $datum))
+            ->assertOk()
+            ->assertSee('Ball bilan tasdiqlash')
+            ->assertSee('Ruxsat etilgan oraliq: 0–3.00 ball');
+
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $datum))
+            ->patch(route('reviews.approve', $datum), ['point' => 3.5])
+            ->assertSessionHasErrors('point');
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $datum), ['point' => 1.25])
+            ->assertRedirect(route('reviews.index'));
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'status' => 'accepted',
+            'point' => 1.25,
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'user_id' => $reviewer->id,
+            'message_type' => 'manual_review_approved',
+        ]);
+    }
+
     public function test_rejection_requires_reason_and_records_reviewer_decision(): void
     {
         $reviewer = User::factory()->create();

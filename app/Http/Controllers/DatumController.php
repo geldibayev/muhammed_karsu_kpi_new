@@ -8,7 +8,6 @@ use App\Http\Requests\StoreDatumRequest;
 use App\Models\Criterion;
 use App\Models\Datum;
 use App\Models\Language;
-use App\Models\Year;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +20,10 @@ class DatumController extends Controller
     {
         $this->authorize('submit', $upload);
 
-        $years = Year::query()->where('status', '1')->get();
+        $years = $upload->years()
+            ->where('status', '1')
+            ->orderBy('name')
+            ->get();
         $breadcrumbs = [
             [
                 'url' => route('home'),

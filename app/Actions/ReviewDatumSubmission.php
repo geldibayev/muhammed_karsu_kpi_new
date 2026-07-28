@@ -18,9 +18,18 @@ class ReviewDatumSubmission
         private HIndexScoreCalculator $hIndexScoreCalculator,
     ) {}
 
-    public function approve(User $reviewer, Datum $datum, ?int $scoreOptionId = null): Datum
-    {
-        $reviewedDatum = DB::transaction(function () use ($reviewer, $datum, $scoreOptionId): Datum {
+    public function approve(
+        User $reviewer,
+        Datum $datum,
+        ?int $scoreOptionId = null,
+        ?float $reviewerPoint = null,
+    ): Datum {
+        $reviewedDatum = DB::transaction(function () use (
+            $reviewer,
+            $datum,
+            $scoreOptionId,
+            $reviewerPoint,
+        ): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'user'])
                 ->lockForUpdate()
@@ -66,6 +75,7 @@ class ReviewDatumSubmission
                 $lockedDatum,
                 $evaluation,
                 $scoreOptionId,
+                $reviewerPoint,
             );
             $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
                 .'. Avtomatik xom ball: '.number_format($point, 2, '.', '').'.';
@@ -95,8 +105,26 @@ class ReviewDatumSubmission
         Datum $datum,
         CriterionEvaluation $evaluation,
         ?int $scoreOptionId,
+        ?float $reviewerPoint,
     ): array {
         $maximumPoint = max(0, (float) $evaluation->score);
+
+        if ($datum->criterion->checking === 'ai') {
+            $submissionMaximum = $datum->criterion->formula_id === 3
+                ? max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1))
+                : $maximumPoint;
+
+            if ($reviewerPoint === null || $reviewerPoint < 0 || $reviewerPoint > $submissionMaximum) {
+                throw ValidationException::withMessages([
+                    'point' => "Ball 0 dan {$submissionMaximum} gacha bo‘lishi kerak.",
+                ]);
+            }
+
+            return [
+                'point' => $reviewerPoint,
+                'rule' => 'mas’ul kiritgan ball',
+            ];
+        }
 
         if ($datum->criterion->checking !== 'manual') {
             return [

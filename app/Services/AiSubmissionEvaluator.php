@@ -18,6 +18,8 @@ use UnexpectedValueException;
 
 class AiSubmissionEvaluator
 {
+    public function __construct(private AiAuthorPointDistributor $aiAuthorPointDistributor) {}
+
     public function evaluate(Datum $datum): AiEvaluationResult
     {
         $datum->loadMissing(['criterion.criterionEvaluations', 'user']);
@@ -30,9 +32,16 @@ class AiSubmissionEvaluator
         }
 
         $maximumPoint = $this->maximumPoint($datum);
+        $requiresAuthorCount = str_contains((string) $criterion->ai_prompt, 'author_count');
 
         if ($maximumPoint === null) {
             return AiEvaluationResult::checking('Foydalanuvchi uchun mezon ball chegarasi topilmadi.');
+        }
+
+        if (data_get($datum->material, 'type') === 'url') {
+            return AiEvaluationResult::checking(
+                'URL mazmuni xavfsiz va ishonchli tarzda yuklab olinmagani sababli inson tekshiruvi zarur.',
+            );
         }
 
         $model = Gemini::generativeModel($criterion->ai_model)
@@ -42,24 +51,24 @@ class AiSubmissionEvaluator
             ->withGenerationConfig(new GenerationConfig(
                 temperature: 0.1,
                 responseMimeType: ResponseMimeType::APPLICATION_JSON,
-                responseSchema: $this->responseSchema($maximumPoint),
+                responseSchema: $this->responseSchema($maximumPoint, $requiresAuthorCount),
             ));
 
-        $contentParts = [$this->buildPrompt($datum, $maximumPoint)];
+        $contentParts = [$this->buildPrompt($datum, $maximumPoint, $requiresAuthorCount)];
 
         if ($datum->storagePath() !== null) {
             $contentParts[] = new Blob(
                 mimeType: $this->mimeType((string) data_get($datum->material, 'mime')),
                 data: base64_encode(Storage::disk($datum->storageDisk())->get($datum->storagePath())),
             );
-        } elseif (data_get($datum->material, 'type') === 'url') {
-            $contentParts[] = 'Tahlil qilinadigan havola: '.data_get($datum->material, 'link');
         }
 
         $responseText = $model->generateContent($contentParts)->text();
 
         try {
-            return AiEvaluationResult::fromJson($responseText, $maximumPoint);
+            $result = AiEvaluationResult::fromJson($responseText, $maximumPoint);
+
+            return $this->aiAuthorPointDistributor->handle($result, (string) $criterion->ai_prompt);
         } catch (JsonException|UnexpectedValueException) {
             return AiEvaluationResult::checking(
                 'AI javobi belgilangan format yoki ball chegarasiga mos kelmadi. Inson tekshiruvi zarur.',
@@ -70,7 +79,7 @@ class AiSubmissionEvaluator
     private function maximumPoint(Datum $datum): ?float
     {
         if ($datum->criterion?->formula_id === 3) {
-            return (float) config('kpi.ai_unlimited_max_point', 1000);
+            return max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1));
         }
 
         $evaluation = $datum->criterion?->criterionEvaluations
@@ -83,14 +92,24 @@ class AiSubmissionEvaluator
         return max(0, (float) $evaluation->score);
     }
 
-    private function buildPrompt(Datum $datum, float $maximumPoint): string
-    {
+    private function buildPrompt(
+        Datum $datum,
+        float $maximumPoint,
+        bool $requiresAuthorCount,
+    ): string {
         $criterionPrompt = trim((string) preg_replace('/[ \t]+/', ' ', (string) $datum->criterion?->ai_prompt));
         $criterionPrompt = str_replace('%pointing%', (string) $maximumPoint, $criterionPrompt);
         $metadata = json_encode([
             'author_full_name' => $datum->user?->full,
             'submitted_metadata' => data_get($datum->material, 'article', data_get($datum->material, 'data', [])),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $responseExample = $requiresAuthorCount
+            ? '{"status":"accepted|cancelled|checking","point":0,"author_count":1,"reason":"qisqa asos"}'
+            : '{"status":"accepted|cancelled|checking","point":0,"reason":"qisqa asos"}';
+        $authorInstruction = $requiresAuthorCount
+            ? 'Accepted holatida author_count hujjatdagi jami mualliflar soni bo‘lishi va kamida 1 bo‘lishi shart.'
+            : '';
 
         return <<<PROMPT
 {$criterionPrompt}
@@ -100,8 +119,9 @@ Maksimal ruxsat etilgan ball: {$maximumPoint}.
 Foydalanuvchi ma'lumoti: {$metadata}
 
 Faqat quyidagi kalitlarga ega JSON obyekt qaytaring:
-{"status":"accepted|cancelled|checking","point":0,"reason":"qisqa asos"}
+{$responseExample}
 Status accepted bo'lmasa point 0 bo'lishi shart. Ishonch yetarli bo'lmasa checking qaytaring.
+{$authorInstruction}
 PROMPT;
     }
 
@@ -114,28 +134,42 @@ PROMPT;
         };
     }
 
-    private function responseSchema(float $maximumPoint): Schema
+    private function responseSchema(float $maximumPoint, bool $requiresAuthorCount): Schema
     {
+        $properties = [
+            'status' => new Schema(
+                type: DataType::STRING,
+                enum: ['accepted', 'cancelled', 'checking'],
+            ),
+            'point' => new Schema(
+                type: DataType::NUMBER,
+                minimum: 0,
+                maximum: $maximumPoint,
+            ),
+            'reason' => new Schema(
+                type: DataType::STRING,
+                minLength: '1',
+                maxLength: '5000',
+            ),
+        ];
+
+        if ($requiresAuthorCount) {
+            $properties['author_count'] = new Schema(
+                type: DataType::INTEGER,
+                minimum: 0,
+                maximum: 1000,
+            );
+        }
+
         return new Schema(
             type: DataType::OBJECT,
-            properties: [
-                'status' => new Schema(
-                    type: DataType::STRING,
-                    enum: ['accepted', 'cancelled', 'checking'],
-                ),
-                'point' => new Schema(
-                    type: DataType::NUMBER,
-                    minimum: 0,
-                    maximum: $maximumPoint,
-                ),
-                'reason' => new Schema(
-                    type: DataType::STRING,
-                    minLength: '1',
-                    maxLength: '5000',
-                ),
-            ],
-            required: ['status', 'point', 'reason'],
-            propertyOrdering: ['status', 'point', 'reason'],
+            properties: $properties,
+            required: $requiresAuthorCount
+                ? ['status', 'point', 'author_count', 'reason']
+                : ['status', 'point', 'reason'],
+            propertyOrdering: $requiresAuthorCount
+                ? ['status', 'point', 'author_count', 'reason']
+                : ['status', 'point', 'reason'],
         );
     }
 }

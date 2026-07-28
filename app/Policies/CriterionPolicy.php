@@ -13,7 +13,11 @@ class CriterionPolicy
 
         return ($hasTeacherRole || $user->isSuperAdmin())
             && ($criterion->upload === '1' || $criterion->isHIndexCriterion())
-            && $criterion->status === '1';
+            && $criterion->status === '1'
+            && $criterion->criterionEvaluations()
+                ->where('evaluation', $user->degree)
+                ->where('has', '1')
+                ->exists();
     }
 
     public function update(User $user, Criterion $criterion): bool

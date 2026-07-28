@@ -37,10 +37,7 @@ class StoreDatumRequest extends FormRequest
         if ($criterion instanceof Criterion && $criterion->isHIndexCriterion()) {
             return [
                 'uploadResourceType' => ['required', Rule::in(['h_index'])],
-                'year' => [
-                    'required',
-                    Rule::exists('years', 'id')->where(fn (Builder $query): Builder => $query->where('status', '1')),
-                ],
+                'year' => $this->yearRules($criterion),
                 'h_index' => ['required', 'array:scopus,web_of_science,research_gate'],
                 'h_index.scopus' => ['required', 'array:link,value'],
                 'h_index.scopus.link' => ['required', 'url:http,https', 'max:255'],
@@ -56,10 +53,7 @@ class StoreDatumRequest extends FormRequest
 
         $rules = [
             'uploadResourceType' => ['required', Rule::in($allowedResourceTypes)],
-            'year' => [
-                'required',
-                Rule::exists('years', 'id')->where(fn (Builder $query): Builder => $query->where('status', '1')),
-            ],
+            'year' => $this->yearRules($criterion),
             'uploadResourceFile' => [
                 'nullable',
                 Rule::requiredIf($this->input('uploadResourceType') === 'file'),
@@ -140,6 +134,20 @@ class StoreDatumRequest extends FormRequest
         };
     }
 
+    /** @return array<int, ValidationRule|string> */
+    private function yearRules(mixed $criterion): array
+    {
+        $criterionId = $criterion instanceof Criterion ? $criterion->getKey() : 0;
+
+        return [
+            'required',
+            Rule::exists('years', 'id')
+                ->where(fn (Builder $query): Builder => $query->where('status', '1')),
+            Rule::exists('criterion_years', 'year_id')
+                ->where(fn (Builder $query): Builder => $query->where('criterion_id', $criterionId)),
+        ];
+    }
+
     /** @return array<string, string> */
     public function messages(): array
     {
@@ -149,7 +157,7 @@ class StoreDatumRequest extends FormRequest
             'uploadResourceFile.mimes' => 'Faqat PDF, JPG, JPEG yoki PNG fayl yuklash mumkin.',
             'uploadResourceFile.max' => 'Fayl hajmi 2 MB dan oshmasligi kerak.',
             'uploadResourceUrl.required' => 'Resurs havolasini kiriting.',
-            'year.exists' => 'Faqat faol yilni tanlash mumkin.',
+            'year.exists' => 'Faqat ushbu mezonga biriktirilgan faol yilni tanlash mumkin.',
         ];
     }
 }

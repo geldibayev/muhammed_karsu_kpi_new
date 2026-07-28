@@ -67,7 +67,7 @@
                                            title="Kriteriya reytingini ko‘rish">
                                             <i class="fa fa-eye"></i>
                                         </a>
-                                        @if($value->upload == '1' || $value->isHIndexCriterion())
+                                        @if(($value->upload == '1' || $value->isHIndexCriterion()) && $evaluation)
                                             <a href="{{ route('upload.show', $value->id) }}"
                                                class="btn btn-outline-primary btn-sm"
                                                title="Ma’lumot kiritish">

@@ -89,6 +89,16 @@ class AuthorizationBoundariesTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_teacher_cannot_submit_without_an_enabled_evaluation_category(): void
+    {
+        $criterion = $this->createCriterion();
+        $teacher = User::factory()->create(['degree' => 'no_degrees']);
+
+        $this->actingAs($teacher)
+            ->get(route('upload.show', $criterion))
+            ->assertForbidden();
+    }
+
     /** @param array<string, mixed> $attributes */
     private function createCriterion(array $attributes = []): Criterion
     {

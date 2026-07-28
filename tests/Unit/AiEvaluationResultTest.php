@@ -33,6 +33,18 @@ class AiEvaluationResultTest extends TestCase
         $this->assertSame(0.0, $result->point);
     }
 
+    public function test_valid_author_count_is_preserved_for_accepted_result(): void
+    {
+        $result = AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 1,
+            'author_count' => 3,
+            'reason' => 'Maqola tasdiqlandi.',
+        ], 1);
+
+        $this->assertSame(3, $result->authorCount);
+    }
+
     /** @param array<string, mixed> $payload */
     #[DataProvider('invalidPayloads')]
     public function test_invalid_payloads_are_rejected(array $payload, float $maximumPoint): void
@@ -87,6 +99,13 @@ class AiEvaluationResultTest extends TestCase
             'point' => 1,
             'reason' => 'Xulosa',
             'html' => '<script>alert(1)</script>',
+        ], 10];
+
+        yield 'invalid accepted author count' => [[
+            'status' => 'accepted',
+            'point' => 1,
+            'author_count' => 0,
+            'reason' => 'Xulosa',
         ], 10];
 
         yield 'cancelled point over cap' => [[

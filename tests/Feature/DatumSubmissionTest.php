@@ -4,12 +4,15 @@ namespace Tests\Feature;
 
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
+use App\Models\CriterionEvaluation;
 use App\Models\Datum;
+use App\Models\Evaluation;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\Year;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -80,6 +83,35 @@ class DatumSubmissionTest extends TestCase
             ->assertSessionHasErrors(['uploadResourceType', 'year']);
 
         $this->assertDatabaseCount('data', 0);
+    }
+
+    public function test_submission_year_must_be_assigned_to_the_criterion(): void
+    {
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion(['res_type' => 'url']);
+        $assignedYear = $this->createActiveYear();
+        $otherYear = Year::query()->create([
+            'id' => 2027,
+            'name' => '2027',
+            'status' => '1',
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'url',
+                'uploadResourceUrl' => 'https://example.com/resource',
+                'year' => $otherYear->id,
+            ])
+            ->assertSessionHasErrors('year');
+
+        $this->assertDatabaseMissing('data', [
+            'criterion_id' => $criterion->id,
+            'year_id' => $otherYear->id,
+        ]);
+        $this->assertDatabaseHas('criterion_years', [
+            'criterion_id' => $criterion->id,
+            'year_id' => $assignedYear->id,
+        ]);
     }
 
     public function test_ai_queue_dispatch_failure_is_recorded_for_status_monitoring(): void
@@ -212,12 +244,16 @@ class DatumSubmissionTest extends TestCase
     /** @param array<string, mixed> $attributes */
     private function createCriterion(array $attributes = []): Criterion
     {
+        Evaluation::query()->firstOrCreate(
+            ['code' => 'no_degrees'],
+            ['name' => ['uz' => 'Ilmiy darajasiz'], 'status' => '1'],
+        );
         $report = Report::query()->create([
             'name' => ['uz' => 'Test hisoboti'],
             'status' => '1',
         ]);
 
-        return Criterion::query()->create(array_merge([
+        $criterion = Criterion::query()->create(array_merge([
             'name' => ['uz' => 'Test mezoni'],
             'desc' => ['uz' => 'Test mezoni tavsifi'],
             'report_id' => $report->id,
@@ -227,14 +263,32 @@ class DatumSubmissionTest extends TestCase
             'checking' => 'manual',
             'template' => '0',
         ], $attributes));
+
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 10,
+        ]);
+
+        return $criterion;
     }
 
     private function createActiveYear(): Year
     {
-        return Year::query()->create([
+        $year = Year::query()->create([
             'id' => 2026,
             'name' => '2026',
             'status' => '1',
         ]);
+
+        DB::table('criterion_years')->insert([
+            'criterion_id' => Criterion::query()->latest('id')->value('id'),
+            'year_id' => $year->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $year;
     }
 }

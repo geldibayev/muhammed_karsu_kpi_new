@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -60,6 +61,11 @@ class Criterion extends Model
     public function reviewerAssignment(): HasOne
     {
         return $this->hasOne(CriterionReviewerAssignment::class);
+    }
+
+    public function years(): BelongsToMany
+    {
+        return $this->belongsToMany(Year::class, 'criterion_years');
     }
 
     public function isHIndexCriterion(): bool
