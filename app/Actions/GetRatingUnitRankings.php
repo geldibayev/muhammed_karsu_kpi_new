@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Enums\RatingMode;
+use App\Models\Department;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -63,7 +64,7 @@ class GetRatingUnitRankings
                 ),
             )
             ->sort(function (array $first, array $second): int {
-                $pointsComparison = $second['total_points'] <=> $first['total_points'];
+                $pointsComparison = $second['average_points'] <=> $first['average_points'];
 
                 if ($pointsComparison !== 0) {
                     return $pointsComparison;
@@ -80,13 +81,21 @@ class GetRatingUnitRankings
      */
     private function facultyRows(Collection $users): Collection
     {
+        $facultyIds = Department::query()
+            ->faculties()
+            ->pluck('id')
+            ->mapWithKeys(fn (int|string $id): array => [(int) $id => true]);
+
         return $users
-            ->mapToGroups(function (User $user): array {
+            ->map(function (User $user): array {
                 $department = $user->ratingWorkplace?->department;
                 $faculty = $department?->parent ?? ($department?->parent_id === null ? $department : null);
 
-                return $faculty === null ? [] : [$faculty->getKey() => [$user, $faculty]];
+                return [$user, $faculty];
             })
+            ->filter(fn (array $item): bool => $item[1] instanceof Department
+                && $facultyIds->has((int) $item[1]->getKey()))
+            ->mapToGroups(fn (array $item): array => [$item[1]->getKey() => $item])
             ->map(fn (Collection $items, int|string $facultyId): array => $this->row(
                 (int) $facultyId,
                 (string) data_get($items->first()[1]->name, 'uz', 'Nomsiz fakultet'),

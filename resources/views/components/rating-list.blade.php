@@ -246,9 +246,21 @@
                                     </td>
                                     <td class="align-middle">
                                         <div class="d-flex align-items-center">
-                                            <img src="{{ $user->image_url ?: asset('dist/img/default-150x150.png') }}"
-                                                 alt="{{ $user->full ?: 'Foydalanuvchi' }}"
-                                                 class="img-circle elevation-1 img-size-50 mr-3" loading="lazy">
+                                            @php($avatarUrl = $user->image_url)
+                                            @if($avatarUrl)
+                                                <img src="{{ $avatarUrl }}"
+                                                     alt="{{ $user->full ?: 'Foydalanuvchi' }}"
+                                                     class="img-circle elevation-1 img-size-50 mr-3 flex-shrink-0"
+                                                     loading="lazy" data-rating-avatar-image>
+                                            @endif
+                                            <span data-rating-avatar-fallback
+                                                  role="img"
+                                                  aria-label="{{ $user->full ?: 'Foydalanuvchi' }}"
+                                                  class="{{ $avatarUrl ? 'd-none' : 'd-inline-flex' }}
+                                                      size-50 img-circle bg-light border text-secondary
+                                                      align-items-center justify-content-center flex-shrink-0 mr-3">
+                                                <i class="fas fa-user fa-lg" aria-hidden="true"></i>
+                                            </span>
                                             <span class="font-weight-bold">
                                                 {{ $user->full ?: ($user->short ?: 'Noma’lum foydalanuvchi') }}
                                             </span>

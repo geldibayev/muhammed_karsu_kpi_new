@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Models\Workplace;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 use ZipArchive;
@@ -53,6 +54,10 @@ class RatingPageTest extends TestCase
         $matchingUser = User::factory()->create([
             'name' => $this->userName('Ommaviy Reyting'),
             'degree' => 'hold_degrees',
+            'image' => json_encode(
+                ['min' => 'https://hemis.example/unavailable-avatar.jpg'],
+                JSON_THROW_ON_ERROR,
+            ),
         ]);
         $otherUser = User::factory()->create([
             'name' => $this->userName('Boshqa O‘qituvchi'),
@@ -70,6 +75,11 @@ class RatingPageTest extends TestCase
             ->assertSee('Kirish')
             ->assertSee(route('login.user'))
             ->assertSee('Ommaviy Reyting')
+            ->assertSee('https://hemis.example/unavailable-avatar.jpg')
+            ->assertSee('data-rating-avatar-image', false)
+            ->assertSee('data-rating-avatar-fallback', false)
+            ->assertSee('fas fa-user fa-lg', false)
+            ->assertSee(asset('dist/js/rating-avatar-fallback.js'))
             ->assertDontSee('Boshqa O‘qituvchi')
             ->assertDontSee('Excelga yuklash')
             ->assertDontSee('Ko‘rish')
@@ -130,6 +140,10 @@ class RatingPageTest extends TestCase
             ->assertSee('Algebra kafedrasi')
             ->assertSee('Dotsent')
             ->assertSee('https://hemis.example/first.jpg')
+            ->assertSee('data-rating-avatar-image', false)
+            ->assertSee('data-rating-avatar-fallback', false)
+            ->assertSee('d-inline-flex', false)
+            ->assertSee(asset('dist/js/rating-avatar-fallback.js'))
             ->assertSee('12.00')
             ->assertSee('5.00')
             ->assertSee(route('ratings.show', $firstUser))
@@ -222,6 +236,56 @@ class RatingPageTest extends TestCase
             ->assertSessionHasErrors('degree_group');
     }
 
+    public function test_faculty_rankings_and_filters_exclude_non_faculty_root_units(): void
+    {
+        $viewer = User::factory()->create();
+        $faculty = $this->createDepartment('Haqiqiy fakultet');
+        $department = $this->createDepartment('Fakultet kafedrasi', $faculty);
+        $administrativeDepartment = $this->createDepartment('Kadrlar bo‘limi');
+        $registrarOffice = $this->createDepartment('Registrator ofis');
+        $facultyUser = User::factory()->create();
+        $administrativeUser = User::factory()->create();
+        $registrarUser = User::factory()->create();
+        $this->createWorkplace($facultyUser, $department, 'Dotsent');
+        $this->createWorkplace($administrativeUser, $administrativeDepartment, 'Bo‘lim boshlig‘i');
+        $this->createWorkplace($registrarUser, $registrarOffice, 'Registrator');
+        $report = $this->createReport('Tuzilmalar hisoboti', '1');
+        $criterion = $this->createCriterion($report, 'Umumiy mezon');
+        $this->createPoint($facultyUser, $criterion, $report, 5);
+        $this->createPoint($administrativeUser, $criterion, $report, 100);
+        $this->createPoint($registrarUser, $criterion, $report, 200);
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', ['mode' => 'faculties']))
+            ->assertOk()
+            ->assertSee('Haqiqiy fakultet')
+            ->assertDontSee('Kadrlar bo‘limi')
+            ->assertDontSee('Registrator ofis')
+            ->assertViewHas(
+                'faculties',
+                fn (Collection $faculties): bool => $faculties->modelKeys() === [$faculty->getKey()],
+            )
+            ->assertViewHas(
+                'unitRankings',
+                fn (LengthAwarePaginator $rankings): bool => $rankings->total() === 1
+                    && $rankings->items()[0]['id'] === $faculty->getKey(),
+            );
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'faculties',
+                'faculty' => $administrativeDepartment->getKey(),
+            ]))
+            ->assertSessionHasErrors('faculty');
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'faculties',
+                'faculty' => $registrarOffice->getKey(),
+            ]))
+            ->assertSessionHasErrors('faculty');
+    }
+
     public function test_faculty_and_department_modes_rank_units_and_show_internal_user_rankings(): void
     {
         $viewer = User::factory()->create();
@@ -248,7 +312,7 @@ class RatingPageTest extends TestCase
         $criterion = $this->createCriterion($report, 'Umumiy mezon');
         $this->createPoint($firstUser, $criterion, $report, 10);
         $this->createPoint($secondUser, $criterion, $report, 5);
-        $this->createPoint($thirdUser, $criterion, $report, 20);
+        $this->createPoint($thirdUser, $criterion, $report, 10);
 
         $this->actingAs($viewer)
             ->get(route('ratings.index', ['mode' => 'faculties']))
@@ -264,8 +328,11 @@ class RatingPageTest extends TestCase
             ): bool {
                 return $rankings->total() === 2
                     && $rankings->items()[0]['id'] === $secondFaculty->getKey()
-                    && (float) $rankings->items()[0]['total_points'] === 20.0
+                    && (float) $rankings->items()[0]['total_points'] === 10.0
+                    && (float) $rankings->items()[0]['average_points'] === 10.0
                     && $rankings->items()[1]['id'] === $firstFaculty->getKey()
+                    && (float) $rankings->items()[1]['total_points'] === 15.0
+                    && (float) $rankings->items()[1]['average_points'] === 7.5
                     && $rankings->items()[1]['users_count'] === 2
                     && $rankings->items()[1]['with_degree_count'] === 1
                     && $rankings->items()[1]['without_degree_count'] === 1;
@@ -281,6 +348,20 @@ class RatingPageTest extends TestCase
             ->assertSeeInOrder(['Birinchi Fakultet Yetakchisi', 'Birinchi Fakultet Ikkinchisi'])
             ->assertDontSee('Ikkinchi Fakultet Yetakchisi')
             ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 2);
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', ['mode' => 'departments']))
+            ->assertOk()
+            ->assertViewHas(
+                'unitRankings',
+                fn (LengthAwarePaginator $rankings): bool => $rankings->total() === 2
+                    && $rankings->items()[0]['id'] === $secondDepartment->getKey()
+                    && (float) $rankings->items()[0]['total_points'] === 10.0
+                    && (float) $rankings->items()[0]['average_points'] === 10.0
+                    && $rankings->items()[1]['id'] === $firstDepartment->getKey()
+                    && (float) $rankings->items()[1]['total_points'] === 15.0
+                    && (float) $rankings->items()[1]['average_points'] === 7.5,
+            );
 
         $this->actingAs($viewer)
             ->get(route('ratings.index', [

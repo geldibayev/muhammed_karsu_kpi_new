@@ -45,6 +45,16 @@ class RatingFilterRequest extends FormRequest
                 $departmentId = $this->integer('department');
 
                 if ($facultyId === 0 || $departmentId === 0) {
+                    if ($facultyId !== 0 && ! Department::query()->faculties()->whereKey($facultyId)->exists()) {
+                        $validator->errors()->add('faculty', 'Tanlangan tuzilma fakultet emas.');
+                    }
+
+                    return;
+                }
+
+                if (! Department::query()->faculties()->whereKey($facultyId)->exists()) {
+                    $validator->errors()->add('faculty', 'Tanlangan tuzilma fakultet emas.');
+
                     return;
                 }
 

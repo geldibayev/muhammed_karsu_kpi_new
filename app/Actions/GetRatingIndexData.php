@@ -35,7 +35,7 @@ class GetRatingIndexData
 
         $faculties = Department::query()
             ->select(['id', 'name'])
-            ->whereNull('parent_id')
+            ->faculties()
             ->orderBy('name->uz')
             ->get();
 
