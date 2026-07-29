@@ -6,6 +6,7 @@ use App\Actions\RecalculateReportPoints;
 use App\Data\AiEvaluationResult;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
+use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\DatumHistory;
 use App\Models\Report;
@@ -61,6 +62,39 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'message_type' => 'ai_evaluation',
         ]);
         $this->assertNotNull(Cache::get('kpi:ai-worker:last-success-at'));
+    }
+
+    public function test_job_assigns_ai_human_review_result_to_criterion_reviewer(): void
+    {
+        $datum = $this->createDatum();
+        CriterionReviewerAssignment::query()->create([
+            'criterion_id' => $datum->criterion_id,
+            'hemis_id' => 3172011004,
+            'criterion_code' => '1/'.$datum->criterion_id,
+        ]);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturn(AiEvaluationResult::checking('Hujjatni inson tekshirishi kerak.'));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+
+        $datum->refresh();
+        $this->assertSame('checking', $datum->status);
+        $this->assertSame(0.0, $datum->point);
+        $this->assertSame(3172011004, $datum->reviewer_hemis_id);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'type' => 'warning',
+            'message_type' => 'ai_evaluation',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'type' => 'info',
+            'message_type' => 'ai_human_review_assigned',
+        ]);
     }
 
     public function test_job_does_not_overwrite_a_submission_already_reviewed(): void
@@ -144,15 +178,16 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertInstanceOf(RateLimited::class, $middleware[0]);
     }
 
-    public function test_failed_job_leaves_submission_for_human_review(): void
+    public function test_failed_job_leaves_submission_checking_without_human_reviewer_assignment(): void
     {
-        $datum = $this->createDatum();
+        $datum = $this->createDatum(['reviewer_hemis_id' => 3172011004]);
 
         (new ProcessAiDatumEvaluation($datum->id))->failed(new RuntimeException('Network error'));
 
         $datum->refresh();
         $this->assertSame('checking', $datum->status);
         $this->assertSame(0.0, $datum->point);
+        $this->assertNull($datum->reviewer_hemis_id);
         $this->assertStringContainsString('tarmoq orqali', $datum->reason);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,

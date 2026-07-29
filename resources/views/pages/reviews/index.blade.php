@@ -13,6 +13,9 @@
                 </div>
                 <div class="card-body border-bottom">
                     <div class="small text-muted mb-2">Biriktirilgan mezonlar</div>
+                    @if($handlesAiHumanReviews)
+                        <span class="badge badge-info mr-2 mb-1">AI — inson tekshiruvi</span>
+                    @endif
                     @forelse($assignments as $assignment)
                         <span class="badge badge-light border mr-2 mb-1">
                             {{ $assignment->criterion_code }} — {{ data_get($assignment->criterion?->name, 'uz', 'Mezon topilmadi') }}

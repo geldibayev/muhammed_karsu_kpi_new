@@ -10,6 +10,7 @@ use App\Http\Requests\RejectDatumRequest;
 use App\Http\Requests\TransferDatumCriterionRequest;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -27,9 +28,21 @@ class ManualReviewController extends Controller
             ->orderBy('criterion_code');
 
         $assignments = $assignmentsQuery->get();
+        $handlesAiHumanReviews = $assignments->contains(
+            fn (CriterionReviewerAssignment $assignment): bool => $assignment->criterion?->checking === 'ai',
+        );
+        $directCriterionIds = $assignments
+            ->reject(
+                fn (CriterionReviewerAssignment $assignment): bool => $assignment->criterion?->checking === 'ai',
+            )
+            ->pluck('criterion_id');
         $pendingSubmissions = Datum::query()
-            ->whereIn('criterion_id', $assignments->pluck('criterion_id'))
             ->whereIn('status', [DatumStatus::Received->value, DatumStatus::Checking->value])
+            ->where(function (Builder $query) use ($directCriterionIds, $user): void {
+                $query
+                    ->whereIn('criterion_id', $directCriterionIds)
+                    ->orWhere('reviewer_hemis_id', $user->hemis_id);
+            })
             ->with(['user:id,name,hemis_id,degree', 'criterion:id,name', 'year:id,name'])
             ->latest()
             ->paginate(20);
@@ -39,7 +52,12 @@ class ManualReviewController extends Controller
             ['url' => '#', 'name' => 'Baholash'],
         ];
 
-        return view('pages.reviews.index', compact('assignments', 'pendingSubmissions', 'breadcrumbs'));
+        return view('pages.reviews.index', compact(
+            'assignments',
+            'handlesAiHumanReviews',
+            'pendingSubmissions',
+            'breadcrumbs',
+        ));
     }
 
     public function show(Datum $datum, TransferDatumCriterion $transferDatumCriterion): View

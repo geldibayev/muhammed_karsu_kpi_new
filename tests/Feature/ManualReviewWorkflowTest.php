@@ -245,7 +245,7 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertDontSee((string) $superAdmin->hemis_id);
     }
 
-    public function test_assigned_ai_criterion_pending_resources_are_added_to_reviewer_queue(): void
+    public function test_assigned_ai_criterion_only_exposes_ai_human_review_results(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
         $owner = User::factory()->create();
@@ -264,6 +264,11 @@ class ManualReviewWorkflowTest extends TestCase
             'name' => 'Tekshirilayotgan OAV resursi',
             'status' => 'checking',
         ]);
+        $humanReview = $this->createDatum($owner, $criterion, [
+            'name' => 'Inson tekshiradigan OAV resursi',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
         $this->createDatum($owner, $criterion, [
             'name' => 'Yakunlangan OAV resursi',
             'status' => 'accepted',
@@ -272,16 +277,150 @@ class ManualReviewWorkflowTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('reviews.index'))
             ->assertOk()
-            ->assertSee($received->name)
-            ->assertSee($checking->name)
+            ->assertSee($humanReview->name)
+            ->assertDontSee($received->name)
+            ->assertDontSee($checking->name)
             ->assertDontSee('Yakunlangan OAV resursi');
 
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $received))
-            ->assertOk();
+            ->assertForbidden();
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $checking))
+            ->assertForbidden();
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $humanReview))
             ->assertOk();
+    }
+
+    public function test_database_assigned_ai_reviewer_only_receives_ai_human_review_assignments(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $otherUser = User::factory()->create();
+        $owner = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $criterion->update(['checking' => 'ai']);
+        $this->assign($reviewer, $criterion, '1/'.$criterion->id);
+
+        $humanReview = $this->createDatum($owner, $criterion, [
+            'name' => 'AI inson tekshiruvi',
+            'status' => 'checking',
+            'reviewer_hemis_id' => 3172011004,
+        ]);
+        $processing = $this->createDatum($owner, $criterion, [
+            'name' => 'AI hali ishlayapti',
+            'status' => 'checking',
+        ]);
+        $failed = $this->createDatum($owner, $criterion, [
+            'name' => 'AI texnik xatosi',
+            'status' => 'checking',
+        ]);
+        $failed->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'AI xizmatida texnik xato.',
+            'message_type' => 'ai_failed',
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.index'))
+            ->assertOk()
+            ->assertSee('AI — inson tekshiruvi')
+            ->assertSee($humanReview->name)
+            ->assertDontSee($processing->name)
+            ->assertDontSee($failed->name);
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $humanReview))
+            ->assertOk();
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $processing))
+            ->assertForbidden();
+        $this->actingAs($otherUser)
+            ->get(route('reviews.show', $humanReview))
+            ->assertForbidden();
+    }
+
+    public function test_command_assigns_legacy_ai_human_reviews_but_skips_failures_and_transfers(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $owner = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $criterion->update(['checking' => 'ai']);
+        $this->assign($reviewer, $criterion, '1/'.$criterion->id);
+        $humanReview = $this->createDatum($owner, $criterion, [
+            'name' => 'Eski AI inson tekshiruvi',
+            'status' => 'checking',
+        ]);
+        $humanReview->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'Inson tekshiruvi kerak.',
+            'message_type' => 'ai_evaluation',
+        ]);
+        $failed = $this->createDatum($owner, $criterion, [
+            'name' => 'Eski AI xatosi',
+            'status' => 'checking',
+        ]);
+        $failed->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'Texnik xato.',
+            'message_type' => 'ai_failed',
+        ]);
+        $transferred = $this->createDatum($owner, $criterion, [
+            'name' => 'Kriteriyasi almashtirilgan',
+            'status' => 'checking',
+        ]);
+        $transferred->histories()->createMany([
+            [
+                'user_id' => $owner->id,
+                'type' => 'warning',
+                'message' => 'Eski AI bahosi.',
+                'message_type' => 'ai_evaluation',
+            ],
+            [
+                'user_id' => $owner->id,
+                'type' => 'info',
+                'message' => 'Kriteriya almashtirildi.',
+                'message_type' => 'criterion_transferred',
+            ],
+        ]);
+
+        $this->artisan('kpi:ai:assign-human-reviews', ['--dry-run' => true])
+            ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 1')
+            ->assertSuccessful();
+        $this->assertNull($humanReview->fresh()->reviewer_hemis_id);
+
+        $this->artisan('kpi:ai:assign-human-reviews')
+            ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 1')
+            ->assertSuccessful();
+
+        $this->assertSame(3172011004, $humanReview->fresh()->reviewer_hemis_id);
+        $this->assertNull($failed->fresh()->reviewer_hemis_id);
+        $this->assertNull($transferred->fresh()->reviewer_hemis_id);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $humanReview->id,
+            'message_type' => 'ai_human_review_assigned',
+        ]);
+    }
+
+    public function test_ai_human_review_assignment_command_skips_criteria_without_reviewer(): void
+    {
+        $owner = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $criterion->update(['checking' => 'ai']);
+        $humanReview = $this->createDatum($owner, $criterion, ['status' => 'checking']);
+        $humanReview->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'Inson tekshiruvi kerak.',
+            'message_type' => 'ai_evaluation',
+        ]);
+
+        $this->artisan('kpi:ai:assign-human-reviews', ['--dry-run' => true])
+            ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 0')
+            ->assertSuccessful();
+        $this->assertNull($humanReview->fresh()->reviewer_hemis_id);
     }
 
     public function test_reviewer_queue_contains_only_assigned_pending_submissions(): void
@@ -397,6 +536,7 @@ class ManualReviewWorkflowTest extends TestCase
             'material' => ['type' => 'file', 'path' => 'uploads/proof.pdf'],
             'status' => 'checking',
             'point' => 4.5,
+            'reviewer_hemis_id' => $reviewer->hemis_id,
             'reason' => 'Eski baholash sababi',
         ]);
 
@@ -419,6 +559,7 @@ class ManualReviewWorkflowTest extends TestCase
             'criterion_id' => $targetCriterion->id,
             'status' => 'checking',
             'point' => 0,
+            'reviewer_hemis_id' => null,
             'reason' => 'Kriteriya o‘zgartirildi. Inson tekshiruvi kutilmoqda.',
         ]);
         $this->assertDatabaseHas('datum_histories', [
@@ -694,7 +835,10 @@ class ManualReviewWorkflowTest extends TestCase
             'has' => '1',
             'score' => 3,
         ]);
-        $datum = $this->createDatum($owner, $criterion, ['status' => 'checking']);
+        $datum = $this->createDatum($owner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
 
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $datum))
@@ -715,6 +859,7 @@ class ManualReviewWorkflowTest extends TestCase
             'id' => $datum->id,
             'status' => 'accepted',
             'point' => 1.25,
+            'reviewer_hemis_id' => null,
         ]);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,

@@ -97,6 +97,7 @@ class TransferDatumCriterion
                 'criterion_id' => $targetCriterion->getKey(),
                 'status' => 'checking',
                 'point' => 0,
+                'reviewer_hemis_id' => null,
                 'reason' => 'Kriteriya o‘zgartirildi. Inson tekshiruvi kutilmoqda.',
             ]);
             $lockedDatum->histories()->create([

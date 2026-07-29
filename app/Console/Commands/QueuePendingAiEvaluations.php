@@ -145,6 +145,7 @@ class QueuePendingAiEvaluations extends Command
 
             $datum->update([
                 'status' => 'checking',
+                'reviewer_hemis_id' => null,
                 'reason' => 'AI tahlili navbatga qo‘yildi.',
             ]);
             $datum->histories()->create([

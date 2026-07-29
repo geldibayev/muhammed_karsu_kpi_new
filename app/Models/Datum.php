@@ -13,7 +13,8 @@ class Datum extends Model
     protected $table = 'data';
 
     protected $fillable = [
-        'id', 'name', 'material', 'user_id', 'criterion_id', 'status', 'year_id', 'language_id', 'point', 'reason',
+        'id', 'name', 'material', 'user_id', 'criterion_id', 'reviewer_hemis_id', 'status', 'year_id', 'language_id',
+        'point', 'reason',
     ];
 
     /** @return array<int, string> */
@@ -29,6 +30,15 @@ class Datum extends Model
     public function scopeCountsTowardsUploadLimit(Builder $query): Builder
     {
         return $query->whereIn('status', self::statusesCountingTowardsUploadLimit());
+    }
+
+    public function usesAiChecking(): bool
+    {
+        $criterion = $this->relationLoaded('criterion')
+            ? $this->criterion
+            : $this->criterion()->first(['id', 'checking']);
+
+        return $criterion?->checking === 'ai';
     }
 
     public function criterion(): BelongsTo
@@ -109,6 +119,7 @@ class Datum extends Model
         return [
             'material' => 'array',
             'point' => 'float',
+            'reviewer_hemis_id' => 'integer',
         ];
     }
 }

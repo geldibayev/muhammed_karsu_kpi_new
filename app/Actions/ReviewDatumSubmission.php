@@ -60,6 +60,7 @@ class ReviewDatumSubmission
                     'status' => 'accepted',
                     'point' => $calculation['total'],
                     'reason' => $message,
+                    'reviewer_hemis_id' => null,
                 ]);
                 $lockedDatum->histories()->create([
                     'user_id' => $reviewer->getKey(),
@@ -84,6 +85,7 @@ class ReviewDatumSubmission
                 'status' => 'accepted',
                 'point' => $point,
                 'reason' => $message,
+                'reviewer_hemis_id' => null,
             ]);
             $lockedDatum->histories()->create([
                 'user_id' => $reviewer->getKey(),
@@ -180,6 +182,7 @@ class ReviewDatumSubmission
                 'status' => 'cancelled',
                 'point' => 0,
                 'reason' => $reason,
+                'reviewer_hemis_id' => null,
             ]);
             $lockedDatum->histories()->create([
                 'user_id' => $reviewer->getKey(),

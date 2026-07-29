@@ -40,7 +40,12 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
         RecalculateReportPoints $recalculateReportPoints,
     ): void {
         $datum = Datum::query()
-            ->with(['criterion.criterionEvaluations', 'criterion.report', 'user'])
+            ->with([
+                'criterion.criterionEvaluations',
+                'criterion.report',
+                'criterion.reviewerAssignment',
+                'user',
+            ])
             ->find($this->datumId);
         $expectedCriterionId = $this->criterionId ?? $datum?->criterion_id;
 
@@ -60,8 +65,15 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
         }
 
         $result = $evaluator->evaluate($datum);
+        $reviewerHemisId = $result->status === 'checking'
+            ? $datum->criterion?->reviewerAssignment?->hemis_id
+            : null;
 
-        $resultPersisted = DB::transaction(function () use ($expectedCriterionId, $result): bool {
+        $resultPersisted = DB::transaction(function () use (
+            $expectedCriterionId,
+            $result,
+            $reviewerHemisId,
+        ): bool {
             $lockedDatum = Datum::query()->lockForUpdate()->find($this->datumId);
 
             if ($lockedDatum === null
@@ -74,6 +86,7 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 'status' => $result->status,
                 'point' => $result->point,
                 'reason' => $result->reason,
+                'reviewer_hemis_id' => $reviewerHemisId,
             ]);
 
             $lockedDatum->histories()->create([
@@ -86,6 +99,15 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 'message' => $result->reason,
                 'message_type' => 'ai_evaluation',
             ]);
+
+            if ($reviewerHemisId !== null) {
+                $lockedDatum->histories()->create([
+                    'user_id' => $lockedDatum->user_id,
+                    'type' => 'info',
+                    'message' => "AI inson tekshiruvi HEMIS ID {$reviewerHemisId} mas’ulga biriktirildi.",
+                    'message_type' => 'ai_human_review_assigned',
+                ]);
+            }
 
             return true;
         }, 3);
@@ -135,7 +157,10 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                     return;
                 }
 
-                $datum->update(['reason' => $reason]);
+                $datum->update([
+                    'reason' => $reason,
+                    'reviewer_hemis_id' => null,
+                ]);
                 $datum->histories()->create([
                     'user_id' => $datum->user_id,
                     'type' => 'warning',

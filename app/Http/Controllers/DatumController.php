@@ -119,6 +119,7 @@ class DatumController extends Controller
             $lockedDatum->update([
                 'status' => 'deleted',
                 'point' => 0,
+                'reviewer_hemis_id' => null,
                 'reason' => 'Resurs foydalanuvchi tomonidan o\'chirildi.',
             ]);
             $lockedDatum->histories()->create([

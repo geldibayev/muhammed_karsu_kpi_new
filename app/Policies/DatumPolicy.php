@@ -50,6 +50,11 @@ class DatumPolicy
 
     private function isAssignedReviewer(User $user, Datum $datum): bool
     {
+        if ($datum->usesAiChecking()) {
+            return $datum->reviewer_hemis_id !== null
+                && (string) $datum->reviewer_hemis_id === (string) $user->hemis_id;
+        }
+
         return CriterionReviewerAssignment::query()
             ->where('hemis_id', $user->hemis_id)
             ->where('criterion_id', $datum->criterion_id)

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\DescribeAiFailure;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\CriterionReviewerAssignment;
+use App\Models\Datum;
 use App\Models\User;
 use App\View\Composers\AiStatusMenuComposer;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -100,7 +101,11 @@ class AppServiceProvider extends ServiceProvider
             'access-manual-reviews',
             fn (User $user): bool => CriterionReviewerAssignment::query()
                 ->where('hemis_id', $user->hemis_id)
-                ->exists(),
+                ->exists()
+                || Datum::query()
+                    ->where('reviewer_hemis_id', $user->hemis_id)
+                    ->whereIn('status', ['received', 'checking'])
+                    ->exists(),
         );
         View::composer('layouts.app', AiStatusMenuComposer::class);
     }
