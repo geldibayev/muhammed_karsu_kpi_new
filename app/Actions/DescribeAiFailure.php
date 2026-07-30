@@ -7,8 +7,14 @@ use Throwable;
 
 class DescribeAiFailure
 {
+    public const DOCUMENT_WITHOUT_PAGES_REASON = 'Yuklangan hujjatda AI o‘qiy oladigan sahifa topilmadi. Inson tekshiruvi zarur.';
+
     public function handle(Throwable|string|null $failure): string
     {
+        if ($this->isDocumentWithoutPages($failure)) {
+            return self::DOCUMENT_WITHOUT_PAGES_REASON;
+        }
+
         if ($failure instanceof ErrorException) {
             return $this->geminiErrorReason($failure);
         }
@@ -62,6 +68,15 @@ class DescribeAiFailure
 
             default => 'AI tekshiruvi kutilmagan xato sabab yakunlanmadi. Inson tekshiruvi zarur.',
         };
+    }
+
+    public function isDocumentWithoutPages(Throwable|string|null $failure): bool
+    {
+        $message = $failure instanceof Throwable
+            ? $this->exceptionMessages($failure)
+            : (string) $failure;
+
+        return str_contains(mb_strtolower($message, 'UTF-8'), 'document has no pages');
     }
 
     private function geminiErrorReason(ErrorException $exception): string

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\DescribeAiFailure;
 use App\Data\AiEvaluationResult;
 use App\Models\Datum;
 use Gemini\Data\Blob;
@@ -11,6 +12,7 @@ use Gemini\Data\Schema;
 use Gemini\Enums\DataType;
 use Gemini\Enums\MimeType;
 use Gemini\Enums\ResponseMimeType;
+use Gemini\Exceptions\ErrorException;
 use Gemini\Laravel\Facades\Gemini;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
@@ -18,7 +20,10 @@ use UnexpectedValueException;
 
 class AiSubmissionEvaluator
 {
-    public function __construct(private AiAuthorPointDistributor $aiAuthorPointDistributor) {}
+    public function __construct(
+        private AiAuthorPointDistributor $aiAuthorPointDistributor,
+        private DescribeAiFailure $describeAiFailure,
+    ) {}
 
     public function evaluate(Datum $datum): AiEvaluationResult
     {
@@ -68,7 +73,17 @@ class AiSubmissionEvaluator
             );
         }
 
-        $responseText = $model->generateContent($contentParts)->text();
+        try {
+            $responseText = $model->generateContent($contentParts)->text();
+        } catch (ErrorException $exception) {
+            if (! $this->describeAiFailure->isDocumentWithoutPages($exception)) {
+                throw $exception;
+            }
+
+            return AiEvaluationResult::checking(
+                $this->describeAiFailure->handle($exception),
+            );
+        }
 
         try {
             $result = AiEvaluationResult::fromJson($responseText, $maximumPoint);

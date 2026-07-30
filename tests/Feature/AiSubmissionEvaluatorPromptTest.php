@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\DescribeAiFailure;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Datum;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Models\Year;
 use App\Services\AiAuthorPointDistributor;
 use App\Services\AiSubmissionEvaluator;
+use Gemini\Exceptions\ErrorException;
 use Gemini\Laravel\Facades\Gemini;
 use Gemini\Resources\GenerativeModel;
 use Gemini\Responses\GenerativeModel\GenerateContentResponse;
@@ -96,7 +98,10 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             ]),
         ]);
 
-        $result = (new AiSubmissionEvaluator(new AiAuthorPointDistributor))->evaluate($datum);
+        $result = (new AiSubmissionEvaluator(
+            new AiAuthorPointDistributor,
+            new DescribeAiFailure,
+        ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);
         Gemini::assertSent(
@@ -121,5 +126,67 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
                     && str_contains($prompt, 'cancelled emas, checking statusini');
             },
         );
+    }
+
+    public function test_document_without_pages_is_sent_to_human_review_without_throwing(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('empty.pdf', 'invalid-or-empty-pdf');
+
+        $user = User::factory()->create();
+        Evaluation::query()->create([
+            'code' => $user->degree,
+            'name' => ['uz' => 'Test toifasi'],
+            'status' => '1',
+        ]);
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Test hisoboti'],
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'name' => ['uz' => 'AI mezoni'],
+            'report_id' => $report->id,
+            'upload' => '1',
+            'status' => '1',
+            'checking' => 'ai',
+            'ai_prompt' => 'Hujjatni tekshiring.',
+            'ai_model' => 'gemini-test',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => $user->degree,
+            'has' => '1',
+            'score' => 10,
+        ]);
+        $datum = Datum::query()->create([
+            'name' => 'empty.pdf',
+            'material' => [
+                'type' => 'file',
+                'disk' => 'local',
+                'path' => 'empty.pdf',
+                'mime' => 'application/pdf',
+            ],
+            'user_id' => $user->id,
+            'criterion_id' => $criterion->id,
+            'status' => 'checking',
+            'point' => 0,
+        ]);
+
+        Gemini::fake([
+            new ErrorException([
+                'code' => 400,
+                'message' => 'The document has no pages.',
+                'status' => 'INVALID_ARGUMENT',
+            ]),
+        ]);
+
+        $result = (new AiSubmissionEvaluator(
+            new AiAuthorPointDistributor,
+            new DescribeAiFailure,
+        ))->evaluate($datum);
+
+        $this->assertSame('checking', $result->status);
+        $this->assertSame(0.0, $result->point);
+        $this->assertSame(DescribeAiFailure::DOCUMENT_WITHOUT_PAGES_REASON, $result->reason);
     }
 }

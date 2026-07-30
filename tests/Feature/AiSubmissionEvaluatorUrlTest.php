@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\DescribeAiFailure;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Datum;
@@ -56,7 +57,10 @@ class AiSubmissionEvaluatorUrlTest extends TestCase
             'point' => 0,
         ]);
 
-        $result = (new AiSubmissionEvaluator(new AiAuthorPointDistributor))->evaluate($datum);
+        $result = (new AiSubmissionEvaluator(
+            new AiAuthorPointDistributor,
+            new DescribeAiFailure,
+        ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);
         $this->assertSame(0.0, $result->point);
