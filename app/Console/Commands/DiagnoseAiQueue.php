@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\DescribeAiFailure;
+use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\Datum;
 use Carbon\CarbonImmutable;
@@ -11,6 +12,7 @@ use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 
 class DiagnoseAiQueue extends Command
@@ -23,6 +25,7 @@ class DiagnoseAiQueue extends Command
     {
         $connection = (string) config('queue.default');
         $driver = (string) config("queue.connections.{$connection}.driver", 'unknown');
+        $isQueuePaused = Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE);
         $unprocessedResources = Datum::query()
             ->whereIn('status', ['received', 'checking'])
             ->whereHas(
@@ -54,6 +57,7 @@ class DiagnoseAiQueue extends Command
             ['Muhit', app()->environment()],
             ['Queue connection', $connection],
             ['Queue driver', $driver],
+            ['AI queue holati', $isQueuePaused ? 'PAUZA' : 'Faol'],
             ['Gemini API kaliti', $hasGeminiKey ? 'Mavjud' : 'Mavjud emas yoki placeholder'],
             ['Gemini timeout', config('gemini.request_timeout').' soniya'],
             ['Gemini rate-limit', config('kpi.ai_requests_per_minute').' so‘rov/daqiqa'],
@@ -87,6 +91,8 @@ class DiagnoseAiQueue extends Command
             $workerLastSeenAt,
             $hasUnresolvedAttemptFailure,
             is_string($lastAttemptFailureReason) ? $lastAttemptFailureReason : null,
+            $isQueuePaused,
+            $connection,
         ));
 
         return self::SUCCESS;
@@ -125,7 +131,7 @@ class DiagnoseAiQueue extends Command
 
         $query = DB::connection(is_string($database) ? $database : null)
             ->table($table)
-            ->where('queue', 'ai-evaluations');
+            ->where('queue', ProcessAiDatumEvaluation::QUEUE);
         $oldestTimestamp = (clone $query)->min('created_at');
 
         return [
@@ -154,7 +160,7 @@ class DiagnoseAiQueue extends Command
 
         $query = DB::connection(is_string($database) ? $database : null)
             ->table($table)
-            ->where('queue', 'ai-evaluations');
+            ->where('queue', ProcessAiDatumEvaluation::QUEUE);
         $latest = (clone $query)->latest('failed_at')->first(['exception', 'failed_at']);
 
         return [
@@ -180,7 +186,15 @@ class DiagnoseAiQueue extends Command
         ?CarbonInterface $workerLastSeenAt,
         bool $hasUnresolvedAttemptFailure,
         ?string $lastAttemptFailureReason,
+        bool $isQueuePaused,
+        string $connection,
     ): string {
+        if ($isQueuePaused) {
+            $resumeCommand = "php artisan queue:continue {$connection}:".ProcessAiDatumEvaluation::QUEUE;
+
+            return "Xulosa: Gemini krediti tugagani sabab AI queue pauzada. Kredit qo‘shilgach `{$resumeCommand}` komandasini bajaring.";
+        }
+
         if (! $hasGeminiKey) {
             return 'Xulosa: joriy muhit konfiguratsiyasida GEMINI_API_KEY mavjud emas yoki placeholder qiymat ishlatilgan.';
         }

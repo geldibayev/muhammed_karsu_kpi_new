@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Actions\DescribeAiFailure;
+use App\Actions\IsGeminiCreditDepleted;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\AiHumanReviewAssignment;
 use App\Models\CriterionReviewerAssignment;
@@ -18,6 +19,7 @@ use Illuminate\Queue\Events\JobTimedOut;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
@@ -57,14 +59,33 @@ class AppServiceProvider extends ServiceProvider
             }
 
             try {
+                $reason = app(DescribeAiFailure::class)->handle($event->exception);
+
                 Cache::putMany([
                     'kpi:ai-worker:last-failure-at' => now()->toIso8601String(),
-                    'kpi:ai-worker:last-failure-reason' => app(DescribeAiFailure::class)
-                        ->handle($event->exception),
+                    'kpi:ai-worker:last-failure-reason' => $reason,
                     'kpi:ai-worker:last-failure-attempt' => $event->job->attempts(),
                 ], now()->addDays(30));
-            } catch (Throwable) {
+
+                if (app(IsGeminiCreditDepleted::class)->handle($event->exception)) {
+                    $queueName = (string) $event->job->getQueue();
+
+                    Queue::pause($event->connectionName, $queueName);
+                    Cache::putMany([
+                        'kpi:ai-worker:paused-at' => now()->toIso8601String(),
+                        'kpi:ai-worker:paused-reason' => $reason,
+                    ], now()->addDays(30));
+
+                    Log::critical('Gemini krediti tugagani uchun AI queue pauza qilindi.', [
+                        'connection' => $event->connectionName,
+                        'queue' => $queueName,
+                    ]);
+                }
+            } catch (Throwable $monitoringException) {
                 // Queue exception handling must not be interrupted by monitoring.
+                Log::error('AI queue xatosi monitoringida nosozlik yuz berdi.', [
+                    'exception' => $monitoringException,
+                ]);
             }
         });
         Event::listen(JobTimedOut::class, function (JobTimedOut $event): void {

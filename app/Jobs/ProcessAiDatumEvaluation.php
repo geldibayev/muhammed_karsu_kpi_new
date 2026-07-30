@@ -21,6 +21,8 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
+    public const QUEUE = 'ai-evaluations';
+
     public int $tries = 0;
 
     public int $timeout = 60;
@@ -33,7 +35,7 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
         public int $datumId,
         public ?int $criterionId = null,
     ) {
-        $this->onQueue('ai-evaluations');
+        $this->onQueue(self::QUEUE);
     }
 
     public function handle(

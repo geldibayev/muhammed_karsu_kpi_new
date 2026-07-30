@@ -155,6 +155,76 @@ class AiQueueCommandsTest extends TestCase
         $this->assertSame(1, Cache::get('kpi:ai-worker:last-failure-attempt'));
     }
 
+    public function test_depleted_gemini_credit_pauses_the_ai_queue(): void
+    {
+        $connection = (string) config('queue.default');
+        $queueJob = Mockery::mock(QueueJob::class);
+        $queueJob->shouldReceive('resolveName')
+            ->once()
+            ->andReturn(ProcessAiDatumEvaluation::class);
+        $queueJob->shouldReceive('attempts')
+            ->once()
+            ->andReturn(1);
+        $queueJob->shouldReceive('getQueue')
+            ->once()
+            ->andReturn(ProcessAiDatumEvaluation::QUEUE);
+
+        event(new JobExceptionOccurred(
+            $connection,
+            $queueJob,
+            new ErrorException([
+                'code' => 429,
+                'message' => 'Your prepayment credits are depleted. Add funds to continue.',
+                'status' => 'RESOURCE_EXHAUSTED',
+            ]),
+        ));
+
+        $this->assertTrue(Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE));
+        $this->assertSame(
+            'Gemini API oldindan to‘lov krediti tugagan. AI Studio billing hisobiga kredit qo‘shish kerak.',
+            Cache::get('kpi:ai-worker:paused-reason'),
+        );
+        $this->assertNotNull(Cache::get('kpi:ai-worker:paused-at'));
+    }
+
+    public function test_temporary_gemini_rate_limit_does_not_pause_the_ai_queue(): void
+    {
+        $connection = (string) config('queue.default');
+        $queueJob = Mockery::mock(QueueJob::class);
+        $queueJob->shouldReceive('resolveName')
+            ->once()
+            ->andReturn(ProcessAiDatumEvaluation::class);
+        $queueJob->shouldReceive('attempts')
+            ->once()
+            ->andReturn(1);
+
+        event(new JobExceptionOccurred(
+            $connection,
+            $queueJob,
+            new ErrorException([
+                'code' => 429,
+                'message' => 'Quota exceeded for requests per minute. Retry later.',
+                'status' => 'RESOURCE_EXHAUSTED',
+            ]),
+        ));
+
+        $this->assertFalse(Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE));
+    }
+
+    public function test_diagnostic_command_reports_a_paused_ai_queue_and_resume_command(): void
+    {
+        $connection = (string) config('queue.default');
+        config()->set('gemini.api_key', 'configured-key');
+        Queue::pause($connection, ProcessAiDatumEvaluation::QUEUE);
+
+        $this->artisan('kpi:ai:diagnose')
+            ->expectsOutputToContain('PAUZA')
+            ->expectsOutputToContain(
+                "php artisan queue:continue {$connection}:".ProcessAiDatumEvaluation::QUEUE,
+            )
+            ->assertSuccessful();
+    }
+
     public function test_gemini_error_codes_are_mapped_without_exposing_raw_details(): void
     {
         $reason = app(DescribeAiFailure::class)->handle(new ErrorException([
@@ -203,9 +273,13 @@ class AiQueueCommandsTest extends TestCase
             'kpi:ai-worker:last-failure-at',
             'kpi:ai-worker:last-failure-reason',
             'kpi:ai-worker:last-failure-attempt',
+            'kpi:ai-worker:paused-at',
+            'kpi:ai-worker:paused-reason',
         ] as $key) {
             Cache::forget($key);
         }
+
+        Queue::resume((string) config('queue.default'), ProcessAiDatumEvaluation::QUEUE);
     }
 
     /** @param array<string, mixed> $attributes */
