@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Actions\DescribeAiFailure;
 use App\Jobs\ProcessAiDatumEvaluation;
+use App\Models\AiHumanReviewAssignment;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\User;
@@ -110,12 +111,9 @@ class AppServiceProvider extends ServiceProvider
         );
         Gate::define(
             'access-ai-human-reviews',
-            fn (User $user): bool => CriterionReviewerAssignment::query()
+            fn (User $user): bool => AiHumanReviewAssignment::query()
+                ->active()
                 ->where('hemis_id', $user->hemis_id)
-                ->whereHas(
-                    'criterion',
-                    fn (Builder $query): Builder => $query->where('checking', 'ai'),
-                )
                 ->exists()
                 || Datum::query()
                     ->where('reviewer_hemis_id', $user->hemis_id)

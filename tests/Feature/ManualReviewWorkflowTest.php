@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\CriterionManualScoreOption;
@@ -256,7 +257,7 @@ class ManualReviewWorkflowTest extends TestCase
             'name' => ['uz' => '4/36 OAV kriteriyasi'],
             'checking' => 'ai',
         ]);
-        $this->assign($reviewer, $criterion, '4/36');
+        $this->assignAiHumanReviewer($reviewer);
 
         $received = $this->createDatum($owner, $criterion, [
             'name' => 'Yuborilgan OAV resursi',
@@ -323,7 +324,7 @@ class ManualReviewWorkflowTest extends TestCase
         $owner = User::factory()->create();
         $criterion = $this->createCriterion();
         $criterion->update(['checking' => 'ai']);
-        $this->assign($reviewer, $criterion, '1/'.$criterion->id);
+        $this->assignAiHumanReviewer($reviewer);
 
         $humanReview = $this->createDatum($owner, $criterion, [
             'name' => 'AI inson tekshiruvi',
@@ -372,15 +373,27 @@ class ManualReviewWorkflowTest extends TestCase
     public function test_command_assigns_legacy_ai_human_reviews_but_skips_failures_and_transfers(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $oldReviewer = User::factory()->create();
         $owner = User::factory()->create();
         $criterion = $this->createCriterion();
         $criterion->update(['checking' => 'ai']);
-        $this->assign($reviewer, $criterion, '1/'.$criterion->id);
+        $this->assignAiHumanReviewer($reviewer);
         $humanReview = $this->createDatum($owner, $criterion, [
             'name' => 'Eski AI inson tekshiruvi',
             'status' => 'checking',
         ]);
         $humanReview->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'Inson tekshiruvi kerak.',
+            'message_type' => 'ai_evaluation',
+        ]);
+        $previouslyAssigned = $this->createDatum($owner, $criterion, [
+            'name' => 'Eski mas’ulga biriktirilgan',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $oldReviewer->hemis_id,
+        ]);
+        $previouslyAssigned->histories()->create([
             'user_id' => $owner->id,
             'type' => 'warning',
             'message' => 'Inson tekshiruvi kerak.',
@@ -425,15 +438,27 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertSuccessful();
 
         $this->assertSame(3172011004, $humanReview->fresh()->reviewer_hemis_id);
+        $this->assertSame($oldReviewer->hemis_id, $previouslyAssigned->fresh()->reviewer_hemis_id);
         $this->assertNull($failed->fresh()->reviewer_hemis_id);
         $this->assertNull($transferred->fresh()->reviewer_hemis_id);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $humanReview->id,
             'message_type' => 'ai_human_review_assigned',
         ]);
+
+        $this->artisan('kpi:ai:assign-human-reviews', [
+            '--reassign' => true,
+            '--dry-run' => true,
+        ])
+            ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 1')
+            ->assertSuccessful();
+        $this->artisan('kpi:ai:assign-human-reviews', ['--reassign' => true])
+            ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 1')
+            ->assertSuccessful();
+        $this->assertSame(3172011004, $previouslyAssigned->fresh()->reviewer_hemis_id);
     }
 
-    public function test_ai_human_review_assignment_command_skips_criteria_without_reviewer(): void
+    public function test_ai_human_review_assignment_command_fails_without_global_reviewer(): void
     {
         $owner = User::factory()->create();
         $criterion = $this->createCriterion();
@@ -447,9 +472,49 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
 
         $this->artisan('kpi:ai:assign-human-reviews', ['--dry-run' => true])
-            ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 0')
-            ->assertSuccessful();
+            ->expectsOutput('Global AI inson tekshiruvchisi sozlanmagan.')
+            ->assertFailed();
         $this->assertNull($humanReview->fresh()->reviewer_hemis_id);
+    }
+
+    public function test_global_ai_human_reviewer_can_be_configured_and_changed_by_hemis_id(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $nextReviewer = User::factory()->create();
+
+        $this->artisan('kpi:ai:set-human-reviewer', ['hemis_id' => $reviewer->hemis_id])
+            ->expectsOutput("AI inson tekshiruvchisi HEMIS ID {$reviewer->hemis_id} ga o‘zgartirildi.")
+            ->assertSuccessful();
+        $this->assertSame($reviewer->hemis_id, AiHumanReviewAssignment::activeHemisId());
+
+        $this->actingAs($reviewer)
+            ->get(route('ai-human-reviews.index'))
+            ->assertOk()
+            ->assertSee('Inson tekshiruvi uchun AI resurslari yo‘q.');
+
+        $this->artisan('kpi:ai:set-human-reviewer', ['hemis_id' => $reviewer->hemis_id])
+            ->expectsOutput("AI inson tekshiruvchisi allaqachon HEMIS ID {$reviewer->hemis_id}.")
+            ->assertSuccessful();
+        $this->assertDatabaseCount('ai_human_review_assignments', 1);
+
+        $this->artisan('kpi:ai:set-human-reviewer', ['hemis_id' => $nextReviewer->hemis_id])
+            ->assertSuccessful();
+
+        $this->assertSame($nextReviewer->hemis_id, AiHumanReviewAssignment::activeHemisId());
+        $this->assertDatabaseCount('ai_human_review_assignments', 2);
+        $this->assertDatabaseHas('ai_human_review_assignments', [
+            'hemis_id' => $reviewer->hemis_id,
+            'active_slot' => null,
+        ]);
+    }
+
+    public function test_global_ai_human_reviewer_command_rejects_unknown_hemis_id(): void
+    {
+        $this->artisan('kpi:ai:set-human-reviewer', ['hemis_id' => 3172011004])
+            ->expectsOutput('HEMIS ID 3172011004 bo‘lgan foydalanuvchi topilmadi.')
+            ->assertFailed();
+
+        $this->assertDatabaseCount('ai_human_review_assignments', 0);
     }
 
     public function test_reviewer_queue_contains_only_assigned_pending_submissions(): void
@@ -852,7 +917,7 @@ class ManualReviewWorkflowTest extends TestCase
         $owner = User::factory()->create(['degree' => 'no_degrees']);
         $criterion = $this->createCriterion();
         $criterion->update(['checking' => 'ai']);
-        $this->assign($reviewer, $criterion, '1/'.$criterion->id);
+        $this->assignAiHumanReviewer($reviewer);
         Evaluation::query()->create([
             'code' => 'no_degrees',
             'name' => ['uz' => 'Darajasiz'],
@@ -989,6 +1054,15 @@ class ManualReviewWorkflowTest extends TestCase
             'criterion_id' => $criterion->id,
             'hemis_id' => $reviewer->hemis_id,
             'criterion_code' => $code,
+        ]);
+    }
+
+    private function assignAiHumanReviewer(User $reviewer): AiHumanReviewAssignment
+    {
+        return AiHumanReviewAssignment::query()->create([
+            'hemis_id' => $reviewer->hemis_id,
+            'active_slot' => 1,
+            'assigned_at' => now(),
         ]);
     }
 

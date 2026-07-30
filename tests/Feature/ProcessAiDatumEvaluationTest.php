@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Actions\RecalculateReportPoints;
 use App\Data\AiEvaluationResult;
 use App\Jobs\ProcessAiDatumEvaluation;
+use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
@@ -64,12 +65,18 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertNotNull(Cache::get('kpi:ai-worker:last-success-at'));
     }
 
-    public function test_job_assigns_ai_human_review_result_to_criterion_reviewer(): void
+    public function test_job_assigns_ai_human_review_result_to_global_reviewer_regardless_of_criterion(): void
     {
         $datum = $this->createDatum();
+        User::factory()->create(['hemis_id' => 3172011004]);
+        AiHumanReviewAssignment::query()->create([
+            'hemis_id' => 3172011004,
+            'active_slot' => 1,
+            'assigned_at' => now(),
+        ]);
         CriterionReviewerAssignment::query()->create([
             'criterion_id' => $datum->criterion_id,
-            'hemis_id' => 3172011004,
+            'hemis_id' => User::factory()->create()->hemis_id,
             'criterion_code' => '1/'.$datum->criterion_id,
         ]);
         $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
@@ -94,6 +101,26 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'datum_id' => $datum->id,
             'type' => 'info',
             'message_type' => 'ai_human_review_assigned',
+        ]);
+    }
+
+    public function test_job_keeps_human_review_result_unassigned_when_global_reviewer_is_not_configured(): void
+    {
+        $datum = $this->createDatum();
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturn(AiEvaluationResult::checking('Hujjatni inson tekshirishi kerak.'));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+
+        $this->assertNull($datum->fresh()->reviewer_hemis_id);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'type' => 'warning',
+            'message_type' => 'ai_human_review_unassigned',
         ]);
     }
 

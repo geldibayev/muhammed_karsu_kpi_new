@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\DescribeAiFailure;
 use App\Actions\RecalculateReportPoints;
+use App\Models\AiHumanReviewAssignment;
 use App\Models\Datum;
 use App\Services\AiSubmissionEvaluator;
 use DateTimeInterface;
@@ -43,7 +44,6 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
             ->with([
                 'criterion.criterionEvaluations',
                 'criterion.report',
-                'criterion.reviewerAssignment',
                 'user',
             ])
             ->find($this->datumId);
@@ -65,14 +65,10 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
         }
 
         $result = $evaluator->evaluate($datum);
-        $reviewerHemisId = $result->status === 'checking'
-            ? $datum->criterion?->reviewerAssignment?->hemis_id
-            : null;
 
         $resultPersisted = DB::transaction(function () use (
             $expectedCriterionId,
             $result,
-            $reviewerHemisId,
         ): bool {
             $lockedDatum = Datum::query()->lockForUpdate()->find($this->datumId);
 
@@ -81,6 +77,14 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 || $lockedDatum->criterion_id !== $expectedCriterionId) {
                 return false;
             }
+
+            $reviewerHemisId = $result->status === 'checking'
+                ? AiHumanReviewAssignment::query()
+                    ->active()
+                    ->sharedLock()
+                    ->value('hemis_id')
+                : null;
+            $reviewerHemisId = is_numeric($reviewerHemisId) ? (int) $reviewerHemisId : null;
 
             $lockedDatum->update([
                 'status' => $result->status,
@@ -106,6 +110,13 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                     'type' => 'info',
                     'message' => "AI inson tekshiruvi HEMIS ID {$reviewerHemisId} mas’ulga biriktirildi.",
                     'message_type' => 'ai_human_review_assigned',
+                ]);
+            } elseif ($result->status === 'checking') {
+                $lockedDatum->histories()->create([
+                    'user_id' => $lockedDatum->user_id,
+                    'type' => 'warning',
+                    'message' => 'AI inson tekshiruvchisi hali sozlanmagan.',
+                    'message_type' => 'ai_human_review_unassigned',
                 ]);
             }
 
