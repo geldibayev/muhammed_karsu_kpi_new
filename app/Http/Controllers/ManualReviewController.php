@@ -25,24 +25,16 @@ class ManualReviewController extends Controller
         $assignmentsQuery = CriterionReviewerAssignment::query()
             ->with('criterion:id,name,checking,status')
             ->where('hemis_id', $user->hemis_id)
+            ->whereHas(
+                'criterion',
+                fn (Builder $query): Builder => $query->where('checking', '!=', 'ai'),
+            )
             ->orderBy('criterion_code');
 
         $assignments = $assignmentsQuery->get();
-        $handlesAiHumanReviews = $assignments->contains(
-            fn (CriterionReviewerAssignment $assignment): bool => $assignment->criterion?->checking === 'ai',
-        );
-        $directCriterionIds = $assignments
-            ->reject(
-                fn (CriterionReviewerAssignment $assignment): bool => $assignment->criterion?->checking === 'ai',
-            )
-            ->pluck('criterion_id');
         $pendingSubmissions = Datum::query()
+            ->whereIn('criterion_id', $assignments->pluck('criterion_id'))
             ->whereIn('status', [DatumStatus::Received->value, DatumStatus::Checking->value])
-            ->where(function (Builder $query) use ($directCriterionIds, $user): void {
-                $query
-                    ->whereIn('criterion_id', $directCriterionIds)
-                    ->orWhere('reviewer_hemis_id', $user->hemis_id);
-            })
             ->with(['user:id,name,hemis_id,degree', 'criterion:id,name', 'year:id,name'])
             ->latest()
             ->paginate(20);
@@ -54,7 +46,6 @@ class ManualReviewController extends Controller
 
         return view('pages.reviews.index', compact(
             'assignments',
-            'handlesAiHumanReviews',
             'pendingSubmissions',
             'breadcrumbs',
         ));
@@ -64,6 +55,8 @@ class ManualReviewController extends Controller
     {
         $this->authorize('review', $datum);
 
+        $reviewIndexRoute = $this->reviewIndexRoute($datum);
+        $reviewQueue = $datum->usesAiChecking() ? 'ai' : 'manual';
         $datum->load([
             'user:id,name,hemis_id,degree',
             'criterion:id,name,desc,checking,formula_id,report_id',
@@ -77,7 +70,10 @@ class ManualReviewController extends Controller
         $transferCriteria = $transferDatumCriterion->destinations($datum);
         $breadcrumbs = [
             ['url' => route('home'), 'name' => 'Asosiy sahifa'],
-            ['url' => route('reviews.index'), 'name' => 'Baholash'],
+            [
+                'url' => route($reviewIndexRoute),
+                'name' => $reviewQueue === 'ai' ? 'AI inson tekshiruvi' : 'Baholash',
+            ],
             ['url' => '#', 'name' => 'Resurs #'.$datum->id],
         ];
 
@@ -87,6 +83,8 @@ class ManualReviewController extends Controller
             'scoreOptions',
             'transferCriteria',
             'breadcrumbs',
+            'reviewIndexRoute',
+            'reviewQueue',
         ));
     }
 
@@ -95,6 +93,8 @@ class ManualReviewController extends Controller
         Datum $datum,
         ReviewDatumSubmission $action,
     ): RedirectResponse {
+        $reviewIndexRoute = $this->reviewIndexRoute($datum);
+
         $action->approve(
             $request->user(),
             $datum,
@@ -102,7 +102,7 @@ class ManualReviewController extends Controller
             $request->filled('point') ? $request->float('point') : null,
         );
 
-        return redirect()->route('reviews.index')->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
+        return redirect()->route($reviewIndexRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
     }
 
     public function reject(
@@ -110,9 +110,11 @@ class ManualReviewController extends Controller
         Datum $datum,
         ReviewDatumSubmission $action,
     ): RedirectResponse {
+        $reviewIndexRoute = $this->reviewIndexRoute($datum);
+
         $action->reject($request->user(), $datum, $request->validated('reason'));
 
-        return redirect()->route('reviews.index')->with('success', 'Resurs sabab ko‘rsatilgan holda qaytarildi.');
+        return redirect()->route($reviewIndexRoute)->with('success', 'Resurs sabab ko‘rsatilgan holda qaytarildi.');
     }
 
     public function transferCriterion(
@@ -120,8 +122,17 @@ class ManualReviewController extends Controller
         Datum $datum,
         TransferDatumCriterion $action,
     ): RedirectResponse {
+        $reviewIndexRoute = $this->reviewIndexRoute($datum);
+
         $action->handle($request->user(), $datum, $request->integer('criterion_id'));
 
-        return redirect()->route('reviews.index')->with('success', 'Resurs boshqa kriteriyaga o‘tkazildi.');
+        return redirect()->route($reviewIndexRoute)->with('success', 'Resurs boshqa kriteriyaga o‘tkazildi.');
+    }
+
+    private function reviewIndexRoute(Datum $datum): string
+    {
+        return $datum->usesAiChecking()
+            ? 'ai-human-reviews.index'
+            : 'reviews.index';
     }
 }

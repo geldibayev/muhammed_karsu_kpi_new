@@ -248,6 +248,8 @@ class ManualReviewWorkflowTest extends TestCase
     public function test_assigned_ai_criterion_only_exposes_ai_human_review_results(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $otherReviewer = User::factory()->create();
+        $unassignedUser = User::factory()->create();
         $owner = User::factory()->create();
         $criterion = $this->createCriterion();
         $criterion->update([
@@ -273,14 +275,26 @@ class ManualReviewWorkflowTest extends TestCase
             'name' => 'Yakunlangan OAV resursi',
             'status' => 'accepted',
         ]);
+        $otherHumanReview = $this->createDatum($owner, $criterion, [
+            'name' => 'Boshqa tekshiruvchining OAV resursi',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $otherReviewer->hemis_id,
+        ]);
 
         $this->actingAs($reviewer)
-            ->get(route('reviews.index'))
+            ->get(route('ai-human-reviews.index'))
             ->assertOk()
+            ->assertSee('AI inson tekshiruvi')
+            ->assertSee(route('ai-human-reviews.index'))
+            ->assertDontSee('href="'.route('reviews.index').'"', false)
             ->assertSee($humanReview->name)
             ->assertDontSee($received->name)
             ->assertDontSee($checking->name)
+            ->assertDontSee($otherHumanReview->name)
             ->assertDontSee('Yakunlangan OAV resursi');
+        $this->actingAs($reviewer)
+            ->get(route('reviews.index'))
+            ->assertForbidden();
 
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $received))
@@ -290,7 +304,16 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertForbidden();
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $humanReview))
-            ->assertOk();
+            ->assertOk()
+            ->assertSee(route('ai-human-reviews.index'));
+        $this->actingAs($otherReviewer)
+            ->get(route('ai-human-reviews.index'))
+            ->assertOk()
+            ->assertSee($otherHumanReview->name)
+            ->assertDontSee($humanReview->name);
+        $this->actingAs($unassignedUser)
+            ->get(route('ai-human-reviews.index'))
+            ->assertForbidden();
     }
 
     public function test_database_assigned_ai_reviewer_only_receives_ai_human_review_assignments(): void
@@ -323,17 +346,23 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
 
         $this->actingAs($reviewer)
-            ->get(route('reviews.index'))
+            ->get(route('ai-human-reviews.index'))
             ->assertOk()
-            ->assertSee('AI — inson tekshiruvi')
+            ->assertSee('AI inson tekshiruvi')
             ->assertSee($humanReview->name)
             ->assertDontSee($processing->name)
             ->assertDontSee($failed->name);
+        $this->actingAs($reviewer)
+            ->get(route('reviews.index'))
+            ->assertForbidden();
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $humanReview))
             ->assertOk();
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $processing))
+            ->assertForbidden();
+        $this->actingAs($otherUser)
+            ->get(route('ai-human-reviews.index'))
             ->assertForbidden();
         $this->actingAs($otherUser)
             ->get(route('reviews.show', $humanReview))
@@ -436,7 +465,7 @@ class ManualReviewWorkflowTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('reviews.index'))
             ->assertOk()
-            ->assertSee('Admin')
+            ->assertSee('Baholash')
             ->assertSee(route('reviews.index'))
             ->assertSee('Biriktirilgan resurs')
             ->assertDontSee('Boshqa resurs');
@@ -853,7 +882,7 @@ class ManualReviewWorkflowTest extends TestCase
 
         $this->actingAs($reviewer)
             ->patch(route('reviews.approve', $datum), ['point' => 1.25])
-            ->assertRedirect(route('reviews.index'));
+            ->assertRedirect(route('ai-human-reviews.index'));
 
         $this->assertDatabaseHas('data', [
             'id' => $datum->id,

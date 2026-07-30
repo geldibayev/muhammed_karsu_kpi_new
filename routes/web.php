@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiHumanReviewController;
 use App\Http\Controllers\AiReviewerStatusController;
 use App\Http\Controllers\CriterionController;
 use App\Http\Controllers\CriterionPointController;
@@ -49,6 +50,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/reviews', [ManualReviewController::class, 'index'])
         ->middleware('can:access-manual-reviews')
         ->name('reviews.index');
+    Route::get('/ai-human-reviews', AiHumanReviewController::class)
+        ->middleware('can:access-ai-human-reviews')
+        ->name('ai-human-reviews.index');
     Route::get('/reviews/{datum}', [ManualReviewController::class, 'show'])->name('reviews.show');
     Route::patch('/reviews/{datum}/approve', [ManualReviewController::class, 'approve'])->name('reviews.approve');
     Route::patch('/reviews/{datum}/reject', [ManualReviewController::class, 'reject'])->name('reviews.reject');

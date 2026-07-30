@@ -69,7 +69,7 @@
                             </dl>
                         </div>
                         <div class="card-footer d-flex flex-wrap align-items-center">
-                            <a href="{{ route('reviews.index') }}" class="btn btn-default btn-sm mr-2">
+                            <a href="{{ route($reviewIndexRoute ?? 'reviews.index') }}" class="btn btn-default btn-sm mr-2">
                                 <i class="fas fa-arrow-left mr-1"></i> Ro‘yxatga qaytish
                             </a>
                             @if($isHIndexCriterion)

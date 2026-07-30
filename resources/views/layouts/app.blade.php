@@ -27,7 +27,6 @@
                     ->first();
                 $degreeName = optional(optional($workplace)->academic_degree)->name;
                 $rankName = optional(optional($workplace)->academic_rank)->name;
-                $isCriterionReviewer = $user->criterionReviewerAssignments()->exists();
             @endphp
             <li class="nav-item dropdown">
                 <a class="nav-link d-flex align-items-center text-right py-1" data-toggle="dropdown" href="#"
@@ -76,12 +75,18 @@
                     <a href="{{ route('profile') }}" class="dropdown-item small">
                         Mening profilim
                     </a>
-                    @if($isCriterionReviewer)
+                    @can('access-manual-reviews')
                         <div class="dropdown-divider"></div>
                         <a href="{{ route('reviews.index') }}" class="dropdown-item small font-weight-bold text-primary">
-                            <i class="fas fa-clipboard-check mr-2"></i> Admin
+                            <i class="fas fa-clipboard-check mr-2"></i> Baholash
                         </a>
-                    @endif
+                    @endcan
+                    @can('access-ai-human-reviews')
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ route('ai-human-reviews.index') }}" class="dropdown-item small font-weight-bold text-info">
+                            <i class="fas fa-user-check mr-2"></i> AI inson tekshiruvi
+                        </a>
+                    @endcan
                 </div>
             </li>
         </ul>
@@ -168,9 +173,18 @@
                     @can('access-manual-reviews')
                         <li class="nav-item">
                             <a href="{{ route('reviews.index') }}"
-                               class="nav-link @if(request()->routeIs('reviews.*')) active @endif">
+                               class="nav-link @if(request()->routeIs('reviews.*') && (($reviewQueue ?? 'manual') !== 'ai')) active @endif">
                                 <i class="nav-icon fas fa-clipboard-check"></i>
                                 <p>Baholash</p>
+                            </a>
+                        </li>
+                    @endcan
+                    @can('access-ai-human-reviews')
+                        <li class="nav-item">
+                            <a href="{{ route('ai-human-reviews.index') }}"
+                               class="nav-link @if(request()->routeIs('ai-human-reviews.*') || (($reviewQueue ?? null) === 'ai')) active @endif">
+                                <i class="nav-icon fas fa-user-check"></i>
+                                <p>AI inson tekshiruvi</p>
                             </a>
                         </li>
                     @endcan

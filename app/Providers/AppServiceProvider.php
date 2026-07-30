@@ -9,6 +9,7 @@ use App\Models\Datum;
 use App\Models\User;
 use App\View\Composers\AiStatusMenuComposer;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessing;
@@ -101,10 +102,28 @@ class AppServiceProvider extends ServiceProvider
             'access-manual-reviews',
             fn (User $user): bool => CriterionReviewerAssignment::query()
                 ->where('hemis_id', $user->hemis_id)
+                ->whereHas(
+                    'criterion',
+                    fn (Builder $query): Builder => $query->where('checking', '!=', 'ai'),
+                )
+                ->exists(),
+        );
+        Gate::define(
+            'access-ai-human-reviews',
+            fn (User $user): bool => CriterionReviewerAssignment::query()
+                ->where('hemis_id', $user->hemis_id)
+                ->whereHas(
+                    'criterion',
+                    fn (Builder $query): Builder => $query->where('checking', 'ai'),
+                )
                 ->exists()
                 || Datum::query()
                     ->where('reviewer_hemis_id', $user->hemis_id)
-                    ->whereIn('status', ['received', 'checking'])
+                    ->where('status', 'checking')
+                    ->whereHas(
+                        'criterion',
+                        fn (Builder $query): Builder => $query->where('checking', 'ai'),
+                    )
                     ->exists(),
         );
         View::composer('layouts.app', AiStatusMenuComposer::class);
