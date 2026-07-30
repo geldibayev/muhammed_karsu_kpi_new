@@ -2,23 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DescribeHemisLoginFailure;
 use App\Actions\SyncHemisWorkplacesForLogin;
 use App\Models\User;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 use League\OAuth2\Client\Provider\GenericProvider;
 use Throwable;
 use UnexpectedValueException;
 
 class HemisController extends Controller
 {
-    public function index(Request $request, SyncHemisWorkplacesForLogin $syncHemisWorkplacesForLogin): RedirectResponse
-    {
+    public function index(
+        Request $request,
+        SyncHemisWorkplacesForLogin $syncHemisWorkplacesForLogin,
+        DescribeHemisLoginFailure $describeHemisLoginFailure,
+    ): RedirectResponse {
         $provider = $this->provider();
 
         if (! $request->filled('code')) {
@@ -54,7 +55,7 @@ class HemisController extends Controller
                 'exception' => $exception,
             ]);
 
-            return to_route('login')->with('error', $this->loginErrorMessage($exception));
+            return to_route('login')->with('error', $describeHemisLoginFailure->handle($exception));
         }
     }
 
@@ -65,17 +66,6 @@ class HemisController extends Controller
             'temporarily_unavailable' => 'HEMIS avtorizatsiya xizmati vaqtincha ishlamayapti. Keyinroq qayta urinib ko‘ring.',
             'server_error' => 'HEMIS avtorizatsiya xizmatida ichki xatolik yuz berdi. Keyinroq qayta urinib ko‘ring.',
             default => 'HEMIS avtorizatsiya xizmati kirishni tasdiqlamadi. Qaytadan urinib ko‘ring.',
-        };
-    }
-
-    private function loginErrorMessage(Throwable $exception): string
-    {
-        return match (true) {
-            $exception instanceof IdentityProviderException => 'HEMIS avtorizatsiya xizmati so‘rovni rad etdi. Qaytadan urinib ko‘ring.',
-            $exception instanceof ConnectionException => 'HEMIS xizmatiga ulanib bo‘lmadi. Internet yoki HEMIS xizmati holatini tekshirib, qayta urinib ko‘ring.',
-            $exception instanceof RequestException => 'HEMIS xizmati foydalanuvchi ma’lumotlarini olishda xatolik qaytardi.',
-            $exception instanceof UnexpectedValueException => 'HEMIS profilingizdagi tizimga kirish uchun zarur ma’lumotlar to‘liq emas.',
-            default => 'HEMIS orqali kirishda kutilmagan xatolik yuz berdi. Keyinroq qayta urinib ko‘ring.',
         };
     }
 

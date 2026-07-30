@@ -162,9 +162,9 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
         $this->assertSame(202, $user->fresh()->ratingWorkplace?->department_id);
     }
 
-    public function test_multiple_primary_workplaces_are_rejected_without_losing_existing_data(): void
+    public function test_multiple_primary_workplaces_are_preserved_with_a_deterministic_rating_workplace(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
         $this->createStoredWorkplace($user, 201, EmploymentForm::PRIMARY_WORKPLACE_ID, 10, 101);
 
         Http::fake([
@@ -178,18 +178,32 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
             ]),
         ]);
 
-        try {
-            app(SyncHemisWorkplaces::class)->handle($user);
-            $this->fail('Bir nechta asosiy ish joyi qabul qilindi.');
-        } catch (UnexpectedValueException $exception) {
-            $this->assertStringContainsString('bir nechta asosiy ish joyi', $exception->getMessage());
-        }
+        $result = app(SyncHemisWorkplaces::class)->handle($user);
 
-        $this->assertSame(1, $user->fresh()->workplaces()->count());
+        $this->assertSame(2, $result->primaryWorkplaceCount);
+        $this->assertSame(2, $user->fresh()->workplaces()->count());
         $this->assertSame(101, $user->fresh()->primaryWorkplace?->staff_position_id);
+        $this->assertSame(101, $user->fresh()->ratingWorkplace?->staff_position_id);
+        $this->assertSame('no_degrees', $user->fresh()->degree);
+
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response([
+                'data' => [
+                    'items' => [
+                        $this->employee(202, 11, 11, 102, 'O‘qituvchi'),
+                        $this->employee(201, 11, 10, 101, 'Dekan'),
+                    ],
+                ],
+            ]),
+        ]);
+
+        app(SyncHemisWorkplaces::class)->handle($user);
+
+        $this->assertSame(101, $user->fresh()->ratingWorkplace?->staff_position_id);
+        $this->assertSame('no_degrees', $user->fresh()->degree);
     }
 
-    public function test_user_with_multiple_primary_workplaces_is_hidden_until_repaired(): void
+    public function test_user_with_multiple_primary_workplaces_remains_visible_in_rating(): void
     {
         $user = User::factory()->create(['degree' => 'hold_degrees']);
         $this->createStoredWorkplace($user, 201, EmploymentForm::PRIMARY_WORKPLACE_ID, 10, 101);
@@ -199,7 +213,7 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
             'degree_group' => 'with_degree',
         ]);
 
-        $this->assertSame(0, $users->total());
+        $this->assertSame(1, $users->total());
     }
 
     public function test_empty_hemis_result_does_not_delete_existing_workplaces(): void
@@ -290,20 +304,6 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
             'degree' => 'no_degrees',
         ]);
         $this->createStoredWorkplace(
-            $problematicUser,
-            201,
-            EmploymentForm::PRIMARY_WORKPLACE_ID,
-            10,
-            101,
-        );
-        $this->createStoredWorkplace(
-            $problematicUser,
-            202,
-            EmploymentForm::PRIMARY_WORKPLACE_ID,
-            11,
-            102,
-        );
-        $this->createStoredWorkplace(
             $correctUser,
             201,
             EmploymentForm::PRIMARY_WORKPLACE_ID,
@@ -371,9 +371,9 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
             '--dry-run' => true,
             '--sync-hemis' => true,
         ])
-            ->expectsOutputToContain('HEMISdan qayta sinxronlanadigan foydalanuvchilar: 1')
+            ->expectsOutputToContain('HEMISdan qayta sinxronlanadigan foydalanuvchilar: 0')
             ->expectsOutputToContain('HEMISga so‘rov yuborilmadi')
-            ->assertFailed();
+            ->assertSuccessful();
 
         Http::assertNothingSent();
         $this->assertModelExists($firstWorkplace);

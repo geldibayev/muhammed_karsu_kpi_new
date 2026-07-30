@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use UnexpectedValueException;
 
 class SyncHemisWorkplaces
@@ -61,15 +62,13 @@ class SyncHemisWorkplaces
                 ->firstOrFail();
 
             $workplaces = collect($employees)
-                ->map(fn (mixed $employee): array => $this->workplaceAttributes($lockedUser, $employee));
+                ->map(fn (mixed $employee): array => $this->workplaceAttributes($lockedUser, $employee))
+                ->sortBy(fn (array $attributes): string => $this->workplaceSortKey($attributes))
+                ->values();
 
             $primaryWorkplaceCount = $workplaces
                 ->where('form_id', EmploymentForm::PRIMARY_WORKPLACE_ID)
                 ->count();
-
-            if ($primaryWorkplaceCount > 1) {
-                throw new UnexpectedValueException('HEMIS bir nechta asosiy ish joyini qaytardi.');
-            }
 
             $lockedUser->workplaces()->delete();
 
@@ -87,6 +86,14 @@ class SyncHemisWorkplaces
             return [$degreeChanged, $primaryWorkplaceCount];
         }, attempts: 5);
 
+        if ($primaryWorkplaceCount > 1) {
+            Log::warning('HEMIS bir nechta asosiy ish joyini qaytardi.', [
+                'user_id' => $user->getKey(),
+                'hemis_id' => $user->hemis_id,
+                'primary_workplace_count' => $primaryWorkplaceCount,
+            ]);
+        }
+
         $syncedUser = User::query()
             ->with(['ratingWorkplace.department', 'ratingWorkplace.position'])
             ->findOrFail($user->getKey());
@@ -96,6 +103,27 @@ class SyncHemisWorkplaces
             degreeChanged: $degreeChanged,
             primaryWorkplaceCount: $primaryWorkplaceCount,
         );
+    }
+
+    /** @param  array<string, int>  $attributes */
+    private function workplaceSortKey(array $attributes): string
+    {
+        $priority = $attributes['form_id'] === EmploymentForm::PRIMARY_WORKPLACE_ID ? 0 : 1;
+
+        return implode(':', array_map(
+            static fn (int $value): string => str_pad((string) $value, 20, '0', STR_PAD_LEFT),
+            [
+                $priority,
+                $attributes['form_id'],
+                $attributes['department_id'],
+                $attributes['staff_position_id'],
+                $attributes['staff_id'],
+                $attributes['academic_degree_id'],
+                $attributes['academic_rank_id'],
+                $attributes['status_id'],
+                $attributes['type_id'],
+            ],
+        ));
     }
 
     /** @return array<string, int> */

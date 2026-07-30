@@ -99,16 +99,20 @@ class BackfillPrimaryWorkplaceRatings extends Command
             return self::FAILURE;
         }
 
-        $unresolved = $statistics['missing'] + $statistics['duplicate'];
+        $unresolved = $statistics['missing'];
 
         if ($dryRun) {
             $this->info('Dry-run yakunlandi: HEMISga so‘rov yuborilmadi va bazaga o‘zgarish yozilmadi.');
         } elseif ($unresolved > 0 || $statistics['sync_failed'] > 0) {
             $this->warn(
                 "{$unresolved} ta foydalanuvchining reyting ish joyi hal qilinmadi: "
-                ."{$statistics['missing']} tasida ish joyi umuman yo‘q, "
-                ."{$statistics['duplicate']} tasida bir nechta asosiy ish joyi bor. "
+                ."{$statistics['missing']} tasida ish joyi umuman yo‘q. "
                 ."HEMIS sinxronlash xatolari: {$statistics['sync_failed']}.",
+            );
+        } elseif ($statistics['duplicate'] > 0) {
+            $this->warn(
+                "{$statistics['duplicate']} ta foydalanuvchida bir nechta asosiy ish joyi bor. "
+                .'Reyting uchun deterministik ravishda bittasi tanlandi.',
             );
         } elseif ($statistics['changed'] > 0) {
             $this->info('Reyting kategoriyalari yangilandi va faol hisobot ballari qayta hisoblandi.');
@@ -159,8 +163,7 @@ class BackfillPrimaryWorkplaceRatings extends Command
             ->when(
                 ! $hasExplicitUsers,
                 fn (Builder $query): Builder => $query->where(function (Builder $query): void {
-                    $query->whereDoesntHave('workplaces')
-                        ->orHas('primaryWorkplaces', '>', 1);
+                    $query->whereDoesntHave('workplaces');
                 }),
             )
             ->when(
@@ -257,11 +260,7 @@ class BackfillPrimaryWorkplaceRatings extends Command
 
                     if ($user->primary_workplaces_count > 1) {
                         $statistics['duplicate']++;
-
-                        continue;
-                    }
-
-                    if ($user->primary_workplaces_count === 0) {
+                    } elseif ($user->primary_workplaces_count === 0) {
                         $statistics['fallback']++;
                     } else {
                         $statistics['primary']++;

@@ -14,6 +14,10 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    public $incrementing = false;
+
+    protected $keyType = 'int';
+
     public static function make_short_name(string $firstname, string $surname, string $patronymic): string
     {
         $firstname = mb_strtoupper(trim($firstname), 'UTF-8');
