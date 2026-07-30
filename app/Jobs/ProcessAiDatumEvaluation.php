@@ -143,7 +143,7 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
     /** @return array<int, object> */
     public function middleware(): array
     {
-        return [(new RateLimited('gemini-api'))->releaseAfter(10)];
+        return [new RateLimited('gemini-api')];
     }
 
     public function retryUntil(): DateTimeInterface

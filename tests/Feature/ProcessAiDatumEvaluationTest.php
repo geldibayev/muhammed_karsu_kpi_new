@@ -203,6 +203,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
 
         $this->assertCount(1, $middleware);
         $this->assertInstanceOf(RateLimited::class, $middleware[0]);
+        $this->assertNull($middleware[0]->releaseAfter);
     }
 
     public function test_failed_job_leaves_submission_checking_without_human_reviewer_assignment(): void
