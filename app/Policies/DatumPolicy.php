@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\CriterionManualScoreOption;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\User;
@@ -40,7 +41,12 @@ class DatumPolicy
 
     public function transferCriterion(User $user, Datum $datum): bool
     {
-        return $this->review($user, $datum);
+        return $this->review($user, $datum)
+            && ! CriterionManualScoreOption::query()
+                ->where('criterion_id', $datum->criterion_id)
+                ->where('code', CriterionManualScoreOption::FIXED_APPROVAL_CODE)
+                ->where('active', true)
+                ->exists();
     }
 
     private function ownsDatumOrIsSuperAdmin(User $user, Datum $datum): bool

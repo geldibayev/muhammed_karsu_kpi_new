@@ -22,6 +22,10 @@
         $isManualCriterion = $datum->criterion?->checking === 'manual';
         $isAiCriterion = $datum->criterion?->checking === 'ai';
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
+        $fixedApprovalOption = $isManualCriterion && $scoreOptions->count() === 1
+            && $scoreOptions->first()?->code === \App\Models\CriterionManualScoreOption::FIXED_APPROVAL_CODE
+                ? $scoreOptions->first()
+                : null;
         $reviewerPointMaximum = $datum->criterion?->formula_id === 3
             ? max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1))
             : max(0, (float) $datum->criterion?->criterionEvaluations
@@ -86,17 +90,19 @@
                                 <span class="mr-auto"></span>
                             @endif
 
-                            @if($transferCriteria->isNotEmpty())
-                                <button type="button" class="btn btn-warning btn-sm mr-2"
-                                        data-toggle="modal" data-target="#transfer-criterion-modal">
-                                    <i class="fas fa-exchange-alt mr-1"></i> Boshqa kriteriyaga o‘tkazish
-                                </button>
-                            @else
-                                <button type="button" class="btn btn-warning btn-sm mr-2" disabled
-                                        title="O‘tkazish uchun mos kriteriya topilmadi">
-                                    <i class="fas fa-exchange-alt mr-1"></i> Boshqa kriteriyaga o‘tkazish
-                                </button>
-                            @endif
+                            @can('transferCriterion', $datum)
+                                @if($transferCriteria->isNotEmpty())
+                                    <button type="button" class="btn btn-warning btn-sm mr-2"
+                                            data-toggle="modal" data-target="#transfer-criterion-modal">
+                                        <i class="fas fa-exchange-alt mr-1"></i> Boshqa kriteriyaga o‘tkazish
+                                    </button>
+                                @else
+                                    <button type="button" class="btn btn-warning btn-sm mr-2" disabled
+                                            title="O‘tkazish uchun mos kriteriya topilmadi">
+                                        <i class="fas fa-exchange-alt mr-1"></i> Boshqa kriteriyaga o‘tkazish
+                                    </button>
+                                @endif
+                            @endcan
 
                             @if($isHIndexCriterion)
                                 <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
@@ -126,7 +132,11 @@
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="fas fa-check mr-1"></i> Tasdiqlash
+                                        <i class="fas fa-check mr-1"></i>
+                                        Tasdiqlash
+                                        @if($fixedApprovalOption !== null)
+                                            — {{ number_format($fixedApprovalOption->point, 2) }} ball
+                                        @endif
                                     </button>
                                 </form>
                             @endif
@@ -274,6 +284,7 @@
         </div>
     @endif
 
+    @can('transferCriterion', $datum)
     @if($transferCriteria->isNotEmpty())
         <div class="modal fade" id="transfer-criterion-modal" tabindex="-1" role="dialog"
              aria-labelledby="transfer-criterion-modal-title" aria-hidden="true">
@@ -317,6 +328,7 @@
             </div>
         </div>
     @endif
+    @endcan
 
     <div class="modal fade" id="reject-modal" tabindex="-1" role="dialog" aria-labelledby="reject-modal-title" aria-hidden="true">
         <div class="modal-dialog" role="document">

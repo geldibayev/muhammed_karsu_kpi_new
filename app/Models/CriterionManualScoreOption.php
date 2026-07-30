@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CriterionManualScoreOption extends Model
 {
+    public const FIXED_APPROVAL_CODE = 'fixed_approval';
+
     protected $fillable = [
         'criterion_id',
         'code',
