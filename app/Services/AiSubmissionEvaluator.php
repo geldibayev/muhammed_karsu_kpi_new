@@ -230,8 +230,6 @@ PROMPT;
             ),
             'reason' => new Schema(
                 type: DataType::STRING,
-                minLength: '1',
-                maxLength: '5000',
             ),
         ];
 

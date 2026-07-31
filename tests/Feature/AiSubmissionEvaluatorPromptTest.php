@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Year;
 use App\Services\AiAuthorPointDistributor;
 use App\Services\AiSubmissionEvaluator;
+use Gemini\Data\GenerationConfig;
 use Gemini\Exceptions\ErrorException;
 use Gemini\Laravel\Facades\Gemini;
 use Gemini\Resources\GenerativeModel;
@@ -82,7 +83,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             'point' => 0,
         ]);
 
-        Gemini::fake([
+        $gemini = Gemini::fake([
             GenerateContentResponse::fake([
                 'candidates' => [[
                     'content' => [
@@ -124,6 +125,21 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
                     && str_contains($prompt, '"criterion_period_rule":{"code":"last3years"')
                     && str_contains($prompt, "tugash sanasi current_date_iso ga teng yoki undan oldin bo'lsa")
                     && str_contains($prompt, 'cancelled emas, checking statusini');
+            },
+        );
+        $gemini->assertFunctionCalled(
+            resource: GenerativeModel::class,
+            model: 'gemini-test',
+            callback: function (string $method, array $parameters): bool {
+                $generationConfig = $parameters[0] ?? null;
+                $responseSchema = $generationConfig instanceof GenerationConfig
+                    ? $generationConfig->responseSchema?->toArray()
+                    : null;
+                $reasonSchema = data_get($responseSchema, 'properties.reason');
+
+                return $method === 'withGenerationConfig'
+                    && is_array($reasonSchema)
+                    && $reasonSchema === ['type' => 'STRING'];
             },
         );
     }
