@@ -235,7 +235,7 @@ class GetUserRatingDetails
         }
 
         return Datum::query()
-            ->select(['id', 'name', 'user_id', 'criterion_id', 'status', 'point'])
+            ->select(['id', 'user_id', 'criterion_id', 'status', 'point'])
             ->whereBelongsTo($user)
             ->where('status', '!=', 'deleted')
             ->whereHas('criterion', fn (Builder $query): Builder => $query->whereBelongsTo($report))

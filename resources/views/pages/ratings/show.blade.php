@@ -97,7 +97,7 @@
                                                 <div class="d-flex align-items-center justify-content-between border-bottom py-2">
                                                     <a href="{{ route('upload.details', $submission) }}"
                                                        class="text-break pr-3">
-                                                        #{{ $submission->id }} — {{ $submission->name }}
+                                                        #{{ $submission->id }}
                                                     </a>
                                                     <span class="badge badge-success px-2 py-1 text-nowrap">
                                                         {{ number_format($submission->point, 2) }} ball
