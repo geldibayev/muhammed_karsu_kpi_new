@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Datum extends Model
 {
+    public const PUBLIC_CHECKING_REASON = 'Resurs bo‘yicha yakuniy qaror kutilmoqda.';
+
     protected $table = 'data';
 
     protected $fillable = [

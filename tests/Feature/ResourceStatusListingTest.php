@@ -138,6 +138,42 @@ class ResourceStatusListingTest extends TestCase
             ->assertDontSee('javascript:alert(1)', false);
     }
 
+    public function test_submitter_does_not_see_internal_ai_human_review_messages(): void
+    {
+        $owner = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $criterion->update(['checking' => 'ai']);
+        $datum = $this->createDatum(
+            $owner,
+            $criterion,
+            DatumStatus::Checking,
+            'AI review resource',
+            ['reason' => Datum::PUBLIC_CHECKING_REASON],
+        );
+        $datum->histories()->createMany([
+            [
+                'user_id' => $owner->id,
+                'type' => 'warning',
+                'message' => 'Majburiy hujjat topilmadi. Administrator tekshiruvi zarur.',
+                'message_type' => 'ai_evaluation',
+            ],
+            [
+                'user_id' => $owner->id,
+                'type' => 'info',
+                'message' => 'AI inson tekshiruvi HEMIS ID 3172011004 mas’ulga biriktirildi.',
+                'message_type' => 'ai_human_review_assigned',
+            ],
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('upload.details', $datum))
+            ->assertOk()
+            ->assertSee(Datum::PUBLIC_CHECKING_REASON)
+            ->assertDontSee('Administrator tekshiruvi zarur.')
+            ->assertDontSee('AI inson tekshiruvi HEMIS ID')
+            ->assertDontSee('3172011004');
+    }
+
     private function createCriterion(): Criterion
     {
         $report = Report::query()->create([

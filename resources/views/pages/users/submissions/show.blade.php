@@ -112,7 +112,7 @@
                                         </span>
                                         <small class="text-muted">{{ $history->created_at->format('d.m.Y H:i') }}</small>
                                     </div>
-                                    <div class="small mt-2 text-break">{{ $history->message }}</div>
+                                    <div class="small mt-2 text-break">{{ $history->messageForSubmitter() }}</div>
                                 </div>
                             @empty
                                 <div class="text-muted text-center py-3">Tarix yozuvlari mavjud emas.</div>

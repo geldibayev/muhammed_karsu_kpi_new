@@ -88,6 +88,12 @@ class DatumController extends Controller
             'year:id,name',
             'histories' => fn ($query) => $query->latest(),
         ]);
+        $datum->setRelation(
+            'histories',
+            $datum->histories
+                ->filter(fn ($history): bool => $history->isVisibleToSubmitter())
+                ->values(),
+        );
         $status = DatumStatus::from($datum->status);
         $breadcrumbs = [
             [

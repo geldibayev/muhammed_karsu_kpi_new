@@ -95,14 +95,55 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertSame('checking', $datum->status);
         $this->assertSame(0.0, $datum->point);
         $this->assertSame(3172011004, $datum->reviewer_hemis_id);
+        $this->assertSame(Datum::PUBLIC_CHECKING_REASON, $datum->reason);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
             'type' => 'warning',
             'message_type' => 'ai_evaluation',
+            'message' => 'Hujjatni inson tekshirishi kerak.',
         ]);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
             'type' => 'info',
+            'message_type' => 'ai_human_review_assigned',
+        ]);
+    }
+
+    public function test_job_rejects_a_clear_ai_failure_without_assigning_human_review(): void
+    {
+        $datum = $this->createDatum(['reviewer_hemis_id' => 3172011004]);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturn(new AiEvaluationResult(
+                'cancelled',
+                0,
+                'Majburiy nashr ruxsatnomasi hujjatda mavjud emas.',
+            ));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(Report::class));
+
+        (new ProcessAiDatumEvaluation($datum->id))
+            ->handle($evaluator, $recalculateReportPoints);
+
+        $datum->refresh();
+        $this->assertSame('cancelled', $datum->status);
+        $this->assertSame(0.0, $datum->point);
+        $this->assertNull($datum->reviewer_hemis_id);
+        $this->assertSame(
+            'Majburiy nashr ruxsatnomasi hujjatda mavjud emas.',
+            $datum->reason,
+        );
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'type' => 'error',
+            'message_type' => 'ai_evaluation',
+            'message' => 'Majburiy nashr ruxsatnomasi hujjatda mavjud emas.',
+        ]);
+        $this->assertDatabaseMissing('datum_histories', [
+            'datum_id' => $datum->id,
             'message_type' => 'ai_human_review_assigned',
         ]);
     }
@@ -264,7 +305,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertSame('checking', $datum->status);
         $this->assertSame(0.0, $datum->point);
         $this->assertNull($datum->reviewer_hemis_id);
-        $this->assertStringContainsString('tarmoq orqali', $datum->reason);
+        $this->assertSame(Datum::PUBLIC_CHECKING_REASON, $datum->reason);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
             'type' => 'warning',

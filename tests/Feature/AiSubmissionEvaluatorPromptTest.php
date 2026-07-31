@@ -133,7 +133,10 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
                     && str_contains($prompt, '"name":"2025-yil KPI hisoboti"')
                     && str_contains($prompt, '"criterion_period_rule":{"code":"last3years"')
                     && str_contains($prompt, "tugash sanasi current_date_iso ga teng yoki undan oldin bo'lsa")
-                    && str_contains($prompt, 'cancelled emas, checking statusini');
+                    && str_contains($prompt, 'cancelled emas, checking statusini')
+                    && str_contains($prompt, 'QAROR USTUVORLIGI:')
+                    && str_contains($prompt, 'checking emas, cancelled statusini')
+                    && str_contains($prompt, 'checking statusi bilan aniq rad etish sababini birga qaytarmang');
             },
         );
         $gemini->assertFunctionCalled(

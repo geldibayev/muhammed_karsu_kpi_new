@@ -113,7 +113,9 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
             $lockedDatum->update([
                 'status' => $result->status,
                 'point' => $result->point,
-                'reason' => $result->reason,
+                'reason' => $result->status === 'checking'
+                    ? Datum::PUBLIC_CHECKING_REASON
+                    : $result->reason,
                 'reviewer_hemis_id' => $reviewerHemisId,
             ]);
 
@@ -221,7 +223,7 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 }
 
                 $datum->update([
-                    'reason' => $reason,
+                    'reason' => Datum::PUBLIC_CHECKING_REASON,
                     'reviewer_hemis_id' => null,
                 ]);
                 $datum->histories()->create([
