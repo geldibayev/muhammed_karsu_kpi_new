@@ -4,14 +4,18 @@
     <section class="content">
         <div class="container-fluid">
             <div class="card card-outline card-info">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <div>
-                        <h3 class="card-title font-weight-bold mb-1">AI inson tekshiruvi</h3>
-                        <div class="small text-muted">
-                            AI yakuniy qarorni insonga qoldirgan va sizga biriktirilgan resurslar.
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md pr-md-3">
+                            <h3 class="font-weight-bold mb-1">AI inson tekshiruvi</h3>
+                            <div class="small text-muted">
+                                AI yakuniy qarorni insonga qoldirgan va sizga biriktirilgan resurslar.
+                            </div>
+                        </div>
+                        <div class="col-md-auto mt-2 mt-md-0">
+                            <span class="badge badge-info px-3 py-2">Jami: {{ $pendingSubmissions->total() }}</span>
                         </div>
                     </div>
-                    <span class="badge badge-info px-3 py-2">Jami: {{ $pendingSubmissions->total() }}</span>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">

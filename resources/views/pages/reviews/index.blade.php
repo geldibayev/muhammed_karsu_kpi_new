@@ -4,12 +4,16 @@
     <section class="content">
         <div class="container-fluid">
             <div class="card card-outline card-primary">
-                <div class="card-header d-flex align-items-center justify-content-between">
-                    <div>
-                        <h3 class="card-title font-weight-bold mb-1">Baholash navbati</h3>
-                        <div class="small text-muted">Sizga biriktirilgan, qaror kutayotgan resurslar.</div>
+                <div class="card-header">
+                    <div class="row align-items-center">
+                        <div class="col-md pr-md-3">
+                            <h3 class="font-weight-bold mb-1">Baholash navbati</h3>
+                            <div class="small text-muted">Sizga biriktirilgan, qaror kutayotgan resurslar.</div>
+                        </div>
+                        <div class="col-md-auto mt-2 mt-md-0">
+                            <span class="badge badge-primary px-3 py-2">Jami: {{ $pendingSubmissions->total() }}</span>
+                        </div>
                     </div>
-                    <span class="badge badge-primary px-3 py-2">Jami: {{ $pendingSubmissions->total() }}</span>
                 </div>
                 <div class="card-body border-bottom">
                     <div class="small text-muted mb-2">Biriktirilgan mezonlar</div>
