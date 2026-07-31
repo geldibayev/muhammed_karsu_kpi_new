@@ -6,12 +6,15 @@ use App\Actions\DescribeAiFailure;
 use App\Actions\RecalculateReportPoints;
 use App\Models\AiHumanReviewAssignment;
 use App\Models\Datum;
+use App\Models\DatumHistory;
 use App\Services\AiSubmissionEvaluator;
 use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Middleware\RateLimited;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -62,6 +65,15 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 && $datum->histories()->where('message_type', 'ai_evaluation')->exists()) {
                 $recalculateReportPoints->handle($datum->criterion->report);
             }
+
+            return;
+        }
+
+        $oldestWaitingDatum = $this->oldestWaitingDatum();
+
+        if ($oldestWaitingDatum !== null && ! $oldestWaitingDatum->is($datum)) {
+            self::dispatch($oldestWaitingDatum->getKey(), $oldestWaitingDatum->criterion_id);
+            $this->release(1);
 
             return;
         }
@@ -153,7 +165,10 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
     /** @return array<int, object> */
     public function middleware(): array
     {
-        return [new RateLimited('gemini-api')];
+        return [
+            (new WithoutOverlapping(self::QUEUE, 1, $this->timeout + 30))->shared(),
+            new RateLimited('gemini-api'),
+        ];
     }
 
     public function retryUntil(): DateTimeInterface
@@ -164,6 +179,31 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
         return (string) $this->datumId;
+    }
+
+    private function oldestWaitingDatum(): ?Datum
+    {
+        $aiHistorySummary = DatumHistory::query()
+            ->select('datum_id')
+            ->selectRaw("MAX(CASE WHEN message_type = 'ai_evaluation' THEN id ELSE 0 END) AS last_evaluation_id")
+            ->selectRaw("MAX(CASE WHEN message_type = 'ai_failed' THEN id ELSE 0 END) AS last_failure_id")
+            ->selectRaw("MAX(CASE WHEN message_type IN ('submission_created', 'ai_queued') THEN id ELSE 0 END) AS last_queue_id")
+            ->whereIn('message_type', ['ai_evaluation', 'ai_failed', 'submission_created', 'ai_queued'])
+            ->groupBy('datum_id');
+
+        return Datum::query()
+            ->select(['data.id', 'data.criterion_id'])
+            ->join('criteria', 'criteria.id', '=', 'data.criterion_id')
+            ->joinSub($aiHistorySummary->toBase(), 'ai_history', function (Builder $join): void {
+                $join->on('ai_history.datum_id', '=', 'data.id');
+            })
+            ->where('criteria.checking', 'ai')
+            ->whereIn('data.status', ['received', 'checking'])
+            ->whereRaw('ai_history.last_queue_id > ai_history.last_evaluation_id')
+            ->whereRaw('ai_history.last_queue_id > ai_history.last_failure_id')
+            ->orderBy('ai_history.last_queue_id')
+            ->orderBy('data.id')
+            ->first();
     }
 
     public function failed(?Throwable $exception): void
