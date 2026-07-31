@@ -66,7 +66,17 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $result = $evaluator->evaluate($datum);
+        try {
+            $result = $evaluator->evaluate($datum);
+        } catch (Throwable $exception) {
+            Cache::put(
+                'kpi:ai-worker:last-failure-datum-id',
+                $this->datumId,
+                now()->addDays(30),
+            );
+
+            throw $exception;
+        }
 
         $resultPersisted = DB::transaction(function () use (
             $expectedCriterionId,

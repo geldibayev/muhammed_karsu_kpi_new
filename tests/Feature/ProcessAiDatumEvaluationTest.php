@@ -33,6 +33,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'kpi:ai-worker:last-success-at',
             'kpi:ai-worker:last-failure-at',
             'kpi:ai-worker:last-failure-reason',
+            'kpi:ai-worker:last-failure-datum-id',
             'kpi:ai-worker:last-failure-attempt',
         ] as $key) {
             Cache::forget($key);
@@ -225,6 +226,28 @@ class ProcessAiDatumEvaluationTest extends TestCase
         ]);
     }
 
+    public function test_job_caches_the_datum_id_when_evaluation_throws(): void
+    {
+        $datum = $this->createDatum();
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andThrow(new RuntimeException('Gemini request failed.'));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+
+        $this->expectException(RuntimeException::class);
+
+        try {
+            (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+        } finally {
+            $this->assertSame(
+                $datum->id,
+                Cache::get('kpi:ai-worker:last-failure-datum-id'),
+            );
+        }
+    }
+
     public function test_configured_hemis_user_sees_ai_status_dashboard_statistics_and_latest_checks(): void
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
@@ -232,7 +255,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->createAiHistory('ai_evaluation', 'success', 'Birinchi tekshiruv');
         $this->createAiHistory('ai_failed', 'warning', 'Ikkinchi xato');
         $this->createAiHistory('ai_evaluation', 'success', 'Uchinchi tekshiruv');
-        $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
+        $latestFailure = $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
         $this->markAsSubmitted($this->createDatum(['status' => 'received']));
         $this->markAsSubmitted($this->createDatum(['status' => 'checking']));
         $this->createDatum(['status' => 'accepted']);
@@ -258,6 +281,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertSee('AI ishlamayapti')
             ->assertSee('Oxirgi AI xabari')
             ->assertSee('To‘rtinchi xato')
+            ->assertSee('Hujjat ID:')
+            ->assertSee((string) $latestFailure->datum_id)
             ->assertSee('Resurslar holati')
             ->assertSee('TEKSHIRILGAN')
             ->assertSee('NAVBATDA')
@@ -282,6 +307,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $status['reason'] === 'To‘rtinchi xato'
                 && $status['last_message'] === 'To‘rtinchi xato'
                 && $status['last_message_type'] === 'failure'
+                && $status['last_message_datum_id'] === $latestFailure->datum_id
                 && $status['last_message_at'] !== null
                 && $status['pending_resources'] === 4
                 && $status['waiting_resources'] === 2
@@ -347,8 +373,10 @@ class ProcessAiDatumEvaluationTest extends TestCase
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
         $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $datum = $this->createDatum();
         Cache::put('kpi:ai-worker:last-seen-at', now()->toIso8601String(), now()->addHour());
         Cache::put('kpi:ai-worker:last-failure-at', now()->toIso8601String(), now()->addHour());
+        Cache::put('kpi:ai-worker:last-failure-datum-id', $datum->id, now()->addHour());
         Cache::put(
             'kpi:ai-worker:last-failure-reason',
             'AI xizmatidan belgilangan vaqt ichida javob kelmadi.',
@@ -361,7 +389,10 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertSee('AI ishlamayapti')
             ->assertSee('Oxirgi AI xabari')
             ->assertSee('AI xizmatidan belgilangan vaqt ichida javob kelmadi.')
+            ->assertSee('Hujjat ID:')
+            ->assertSee((string) $datum->id)
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
+                && $status['last_message_datum_id'] === $datum->id
                 && str_contains((string) $status['reason'], 'javob kelmadi'));
     }
 

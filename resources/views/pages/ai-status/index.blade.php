@@ -69,6 +69,11 @@
                                 <div class="small text-muted">
                                     {{ $status['last_message_at']?->format('d.m.Y H:i:s') ?? 'Vaqt qayd etilmagan' }}
                                 </div>
+                                @if($status['last_message_datum_id'] !== null)
+                                    <div class="small text-muted mt-1">
+                                        Hujjat ID: <strong>{{ $status['last_message_datum_id'] }}</strong>
+                                    </div>
+                                @endif
                             </div>
                         </div>
                     </div>

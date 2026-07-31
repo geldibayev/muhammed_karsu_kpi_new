@@ -19,6 +19,7 @@ class GetAiReviewerHealth
      *     last_message: string|null,
      *     last_message_at: CarbonInterface|null,
      *     last_message_type: 'success'|'failure'|'status'|null,
+     *     last_message_datum_id: int|null,
      *     pending_resources: int,
      *     waiting_resources: int,
      *     failed_pending_resources: int,
@@ -35,7 +36,7 @@ class GetAiReviewerHealth
             ->where('criteria.checking', 'ai');
 
         $latestCheck = DatumHistory::query()
-            ->select(['message', 'message_type', 'created_at'])
+            ->select(['datum_id', 'message', 'message_type', 'created_at'])
             ->whereIn('datum_id', $aiDatumIds)
             ->whereIn('message_type', ['ai_evaluation', 'ai_failed'])
             ->latest('created_at')
@@ -75,6 +76,7 @@ class GetAiReviewerHealth
         $workerLastSuccessAt = $this->toDate(Cache::get('kpi:ai-worker:last-success-at'));
         $workerLastFailureAt = $this->toDate(Cache::get('kpi:ai-worker:last-failure-at'));
         $workerLastFailureReason = Cache::get('kpi:ai-worker:last-failure-reason');
+        $workerLastFailureDatumId = Cache::get('kpi:ai-worker:last-failure-datum-id');
         $hasUnresolvedAttemptFailure = $workerLastFailureAt !== null
             && ($workerLastSuccessAt === null || $workerLastFailureAt->gt($workerLastSuccessAt));
         $workerLastAttemptAt = match (true) {
@@ -127,6 +129,17 @@ class GetAiReviewerHealth
             $lastMessage !== null => 'status',
             default => null,
         };
+        $lastMessageDatumId = match (true) {
+            $hasUnresolvedAttemptFailure => is_numeric($workerLastFailureDatumId)
+                ? (int) $workerLastFailureDatumId
+                : null,
+            $hasStaleQueue => null,
+            $latestCheck?->message_type === 'ai_failed' => (int) $latestCheck->datum_id,
+            $failedPendingResources > 0,
+            $waitingResources > 0 => null,
+            $latestCheck?->message_type === 'ai_evaluation' => (int) $latestCheck->datum_id,
+            default => null,
+        };
 
         return [
             'state' => $state,
@@ -135,6 +148,7 @@ class GetAiReviewerHealth
             'last_message' => $lastMessage,
             'last_message_at' => $lastMessageAt,
             'last_message_type' => $lastMessageType,
+            'last_message_datum_id' => $lastMessageDatumId,
             'pending_resources' => $pendingResources,
             'waiting_resources' => $waitingResources,
             'failed_pending_resources' => $failedPendingResources,

@@ -272,6 +272,7 @@ class AiQueueCommandsTest extends TestCase
             'kpi:ai-worker:last-success-at',
             'kpi:ai-worker:last-failure-at',
             'kpi:ai-worker:last-failure-reason',
+            'kpi:ai-worker:last-failure-datum-id',
             'kpi:ai-worker:last-failure-attempt',
             'kpi:ai-worker:paused-at',
             'kpi:ai-worker:paused-reason',
