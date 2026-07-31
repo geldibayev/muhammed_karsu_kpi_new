@@ -10,9 +10,16 @@
                             <h3 class="h5 font-weight-bold mb-1">{{ $status->label() }} resurslar</h3>
                             <p class="small text-muted mb-0">{{ $status->description() }}</p>
                         </div>
-                        <span class="badge {{ $status->badgeClass() }} px-3 py-2 mt-3 mt-md-0 align-self-start align-self-md-center">
-                            Jami: {{ $data->total() }}
-                        </span>
+                        <div class="d-flex flex-wrap align-items-center mt-3 mt-md-0">
+                            <span class="badge {{ $status->badgeClass() }} px-3 py-2 mr-2">
+                                Jami: {{ $data->total() }}
+                            </span>
+                            @if($status === \App\Enums\DatumStatus::Accepted)
+                                <span class="badge badge-primary px-3 py-2">
+                                    Jami ball: {{ number_format($totalPoints, 2) }}
+                                </span>
+                            @endif
+                        </div>
                     </div>
                 </div>
 

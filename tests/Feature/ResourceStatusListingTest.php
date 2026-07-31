@@ -81,6 +81,24 @@ class ResourceStatusListingTest extends TestCase
             ->assertSee('class="pagination"', false);
     }
 
+    public function test_accepted_listing_shows_the_authenticated_users_total_points(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $criterion = $this->createCriterion();
+
+        $this->createDatum($owner, $criterion, DatumStatus::Accepted, 'First accepted resource', ['point' => 8.5]);
+        $this->createDatum($owner, $criterion, DatumStatus::Accepted, 'Second accepted resource', ['point' => 4.25]);
+        $this->createDatum($owner, $criterion, DatumStatus::Received, 'Pending resource', ['point' => 100]);
+        $this->createDatum($otherUser, $criterion, DatumStatus::Accepted, 'Foreign accepted resource', ['point' => 50]);
+
+        $this->actingAs($owner)
+            ->get(route('files.show', DatumStatus::Accepted))
+            ->assertOk()
+            ->assertViewHas('totalPoints', fn (mixed $totalPoints): bool => (float) $totalPoints === 12.75)
+            ->assertSee('Jami ball: 12.75');
+    }
+
     public function test_owner_can_view_resource_details_but_another_user_cannot(): void
     {
         $owner = User::factory()->create();

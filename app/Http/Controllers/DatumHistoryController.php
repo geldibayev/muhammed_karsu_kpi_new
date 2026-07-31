@@ -24,17 +24,23 @@ class DatumHistoryController extends Controller
             ],
         ];
 
-        $data = Datum::query()
+        $query = Datum::query()
+            ->whereBelongsTo($request->user())
+            ->where('status', $status->value);
+
+        $totalPoints = $status === DatumStatus::Accepted
+            ? (clone $query)->sum('point')
+            : null;
+
+        $data = $query
             ->with([
                 'criterion:id,name',
                 'year:id,name',
             ])
-            ->whereBelongsTo($request->user())
-            ->where('status', $status->value)
             ->latest()
             ->paginate(20)
             ->withQueryString();
 
-        return view('pages.users.data', compact('data', 'breadcrumbs', 'status'));
+        return view('pages.users.data', compact('data', 'breadcrumbs', 'status', 'totalPoints'));
     }
 }
