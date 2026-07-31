@@ -19,13 +19,17 @@ class DatumPolicy
     public function view(User $user, Datum $datum): bool
     {
         return $datum->status !== 'deleted'
-            && ($this->ownsDatumOrIsSuperAdmin($user, $datum) || $this->isAssignedReviewer($user, $datum));
+            && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
+                || $this->isAssignedReviewer($user, $datum)
+                || $this->isAcceptedRatingSubmissionVisible($user, $datum));
     }
 
     public function download(User $user, Datum $datum): bool
     {
         return $datum->status !== 'deleted'
-            && ($this->ownsDatumOrIsSuperAdmin($user, $datum) || $this->isAssignedReviewer($user, $datum));
+            && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
+                || $this->isAssignedReviewer($user, $datum)
+                || $this->isAcceptedRatingSubmissionVisible($user, $datum));
     }
 
     public function delete(User $user, Datum $datum): bool
@@ -52,6 +56,11 @@ class DatumPolicy
     private function ownsDatumOrIsSuperAdmin(User $user, Datum $datum): bool
     {
         return $user->isSuperAdmin() || $datum->user_id === $user->id;
+    }
+
+    private function isAcceptedRatingSubmissionVisible(User $user, Datum $datum): bool
+    {
+        return $datum->status === 'accepted' && $user->can('view-ratings');
     }
 
     private function isAssignedReviewer(User $user, Datum $datum): bool

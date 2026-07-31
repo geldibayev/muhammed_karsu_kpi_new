@@ -54,6 +54,7 @@
                                 <th class="text-center">#</th>
                                 <th>Kriteriya</th>
                                 <th class="text-center">Ball</th>
+                                <th>Tasdiqlangan resurslar</th>
                                 <th>Baholagan</th>
                             </tr>
                             </thead>
@@ -61,7 +62,7 @@
                             @forelse($criterionSections as $section)
                                 <tr class="bg-light">
                                     <th class="text-center align-middle py-3">#{{ $section['number'] }}</th>
-                                    <th colspan="3" class="align-middle py-3">
+                                    <th colspan="4" class="align-middle py-3">
                                         {{ data_get($section['criterion']->name, 'uz', 'Nomsiz bo‘lim') }}
                                     </th>
                                 </tr>
@@ -92,6 +93,21 @@
                                             @endif
                                         </td>
                                         <td class="align-middle">
+                                            @forelse($score['accepted_submissions'] as $submission)
+                                                <div class="d-flex align-items-center justify-content-between border-bottom py-2">
+                                                    <a href="{{ route('upload.details', $submission) }}"
+                                                       class="text-break pr-3">
+                                                        #{{ $submission->id }} — {{ $submission->name }}
+                                                    </a>
+                                                    <span class="badge badge-success px-2 py-1 text-nowrap">
+                                                        {{ number_format($submission->point, 2) }} ball
+                                                    </span>
+                                                </div>
+                                            @empty
+                                                <span class="text-muted">Tasdiqlangan resurs yo‘q</span>
+                                            @endforelse
+                                        </td>
+                                        <td class="align-middle">
                                             @foreach($score['evaluators'] as $evaluator)
                                                 <span class="badge {{ $evaluator['type'] === 'manual' ? 'badge-primary' : ($evaluator['type'] === 'ai' ? 'badge-info' : ($evaluator['type'] === 'pending' ? 'badge-warning' : 'badge-secondary')) }} mr-1">
                                                     @if($evaluator['type'] === 'ai')
@@ -111,7 +127,7 @@
                                 @endforeach
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-5">
+                                    <td colspan="5" class="text-center text-muted py-5">
                                         Faol hisobot uchun kriteriyalar mavjud emas.
                                     </td>
                                 </tr>

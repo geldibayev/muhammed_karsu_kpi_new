@@ -21,6 +21,7 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -597,6 +598,71 @@ class RatingPageTest extends TestCase
         $this->get(route('ratings.show', PHP_INT_MAX))->assertNotFound();
     }
 
+    public function test_authenticated_user_can_view_and_download_another_users_accepted_rating_resource(): void
+    {
+        Storage::fake('local');
+
+        $viewer = User::factory()->create();
+        $ratedUser = User::factory()->create([
+            'name' => $this->userName('Shaffof Reyting Ustozi'),
+        ]);
+        $activeReport = $this->createReport('Faol hisobot', '1');
+        $oldReport = $this->createReport('Eski hisobot', '2');
+        $section = $this->createCriterion($activeReport, 'Faol bo‘lim');
+        $criterion = $this->createCriterion($activeReport, 'Shaffof mezon', [
+            'parent_id' => $section->getKey(),
+        ]);
+        $oldSection = $this->createCriterion($oldReport, 'Eski bo‘lim');
+        $oldCriterion = $this->createCriterion($oldReport, 'Eski mezon', [
+            'parent_id' => $oldSection->getKey(),
+        ]);
+        $this->createPoint($ratedUser, $criterion, $activeReport, 6.75);
+
+        $path = 'uploads/shaffof-resurs.pdf';
+        Storage::disk('local')->put($path, 'accepted evidence');
+        $acceptedDatum = Datum::query()->create([
+            'name' => 'Shaffof ilmiy maqola.pdf',
+            'material' => ['type' => 'file', 'disk' => 'local', 'path' => $path],
+            'user_id' => $ratedUser->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'accepted',
+            'point' => 6.75,
+        ]);
+        $pendingDatum = $this->createPendingDatum($ratedUser, $criterion, 'checking');
+        $pendingDatum->update(['name' => 'Yopiq tekshiruv resursi']);
+        $oldDatum = $this->createAcceptedDatum($ratedUser, $oldCriterion, 99, 'Eski hisobot resursi');
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.show', $ratedUser))
+            ->assertOk()
+            ->assertSee('Shaffof ilmiy maqola.pdf')
+            ->assertSee('6.75 ball')
+            ->assertSee(route('upload.details', $acceptedDatum))
+            ->assertDontSee('Yopiq tekshiruv resursi')
+            ->assertDontSee('Eski hisobot resursi');
+
+        $this->actingAs($viewer)
+            ->get(route('upload.details', $acceptedDatum))
+            ->assertOk()
+            ->assertSee('Shaffof Reyting Ustozi')
+            ->assertSee('Shaffof ilmiy maqola.pdf')
+            ->assertSee('6.75')
+            ->assertSee(route('upload.file.download', $acceptedDatum));
+
+        $this->actingAs($viewer)
+            ->get(route('upload.file.download', $acceptedDatum))
+            ->assertOk()
+            ->assertDownload('Shaffof ilmiy maqola.pdf');
+
+        $this->actingAs($viewer)->get(route('upload.details', $pendingDatum))->assertForbidden();
+        $this->actingAs($viewer)->get(route('upload.file.download', $pendingDatum))->assertForbidden();
+        $this->actingAs($viewer)->get(route('upload.details', $oldDatum))->assertOk();
+
+        $unknownRole = User::factory()->withRole('unknown')->create();
+        $this->actingAs($unknownRole)->get(route('upload.details', $acceptedDatum))->assertForbidden();
+        $this->actingAs($unknownRole)->get(route('upload.file.download', $acceptedDatum))->assertForbidden();
+    }
+
     public function test_ratings_page_handles_the_absence_of_an_active_report(): void
     {
         $viewer = User::factory()->create(['degree' => 'hold_degrees']);
@@ -680,10 +746,14 @@ class RatingPageTest extends TestCase
         ], $attributes));
     }
 
-    private function createAcceptedDatum(User $user, Criterion $criterion, float $point): Datum
-    {
+    private function createAcceptedDatum(
+        User $user,
+        Criterion $criterion,
+        float $point,
+        string $name = 'Tasdiqlangan resurs',
+    ): Datum {
         return Datum::query()->create([
-            'name' => 'Tasdiqlangan resurs',
+            'name' => $name,
             'material' => [],
             'user_id' => $user->getKey(),
             'criterion_id' => $criterion->getKey(),

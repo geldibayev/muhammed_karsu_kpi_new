@@ -85,6 +85,7 @@ class DatumController extends Controller
 
         $datum->load([
             'criterion:id,name',
+            'user:id,name',
             'year:id,name',
             'histories' => fn ($query) => $query->latest(),
         ]);

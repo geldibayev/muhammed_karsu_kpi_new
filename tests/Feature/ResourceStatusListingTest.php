@@ -99,7 +99,7 @@ class ResourceStatusListingTest extends TestCase
             ->assertSee('Jami ball: 12.75');
     }
 
-    public function test_owner_can_view_resource_details_but_another_user_cannot(): void
+    public function test_owner_and_another_authenticated_rating_user_can_view_accepted_resource_details(): void
     {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
@@ -131,7 +131,9 @@ class ResourceStatusListingTest extends TestCase
 
         $this->actingAs($otherUser)
             ->get(route('upload.details', $datum))
-            ->assertForbidden();
+            ->assertOk()
+            ->assertSee('Detailed resource')
+            ->assertSee('8.50');
     }
 
     public function test_unsafe_legacy_url_is_not_rendered_as_a_link(): void

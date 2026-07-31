@@ -19,7 +19,7 @@ class GetUserRatingDetails
      * @return array{
      *     report: Report|null,
      *     user: User,
-     *     criterionSections: Collection<int, array{criterion: Criterion, number: int, rows: Collection<int, array{criterion: Criterion, code: string, state: string, point: float|null, pending_count: int, evaluators: Collection<int, array{type: string, name: string}>}>}>,
+     *     criterionSections: Collection<int, array{criterion: Criterion, number: int, rows: Collection<int, array{criterion: Criterion, code: string, state: string, point: float|null, pending_count: int, accepted_submissions: Collection<int, Datum>, evaluators: Collection<int, array{type: string, name: string}>}>}>,
      *     totalPoints: float
      * }
      */
@@ -56,7 +56,7 @@ class GetUserRatingDetails
      * @param  Collection<int, Point>  $pointsByCriterion
      * @param  Collection<int, Collection<int, DatumHistory>>  $historiesByCriterion
      * @param  Collection<int, Collection<int, Datum>>  $submissionsByCriterion
-     * @return Collection<int, array{criterion: Criterion, number: int, rows: Collection<int, array{criterion: Criterion, code: string, state: string, point: float|null, pending_count: int, evaluators: Collection<int, array{type: string, name: string}>}>}>
+     * @return Collection<int, array{criterion: Criterion, number: int, rows: Collection<int, array{criterion: Criterion, code: string, state: string, point: float|null, pending_count: int, accepted_submissions: Collection<int, Datum>, evaluators: Collection<int, array{type: string, name: string}>}>}>
      */
     private function criterionSections(
         ?Report $report,
@@ -106,7 +106,7 @@ class GetUserRatingDetails
     /**
      * @param  Collection<int, DatumHistory>  $histories
      * @param  Collection<int, Datum>  $submissions
-     * @return array{criterion: Criterion, code: string, state: string, point: float|null, pending_count: int, evaluators: Collection<int, array{type: string, name: string}>}
+     * @return array{criterion: Criterion, code: string, state: string, point: float|null, pending_count: int, accepted_submissions: Collection<int, Datum>, evaluators: Collection<int, array{type: string, name: string}>}
      */
     private function criterionRow(
         Criterion $criterion,
@@ -118,6 +118,9 @@ class GetUserRatingDetails
         $pendingCount = $submissions
             ->whereIn('status', [DatumStatus::Received->value, DatumStatus::Checking->value])
             ->count();
+        $acceptedSubmissions = $submissions
+            ->where('status', DatumStatus::Accepted->value)
+            ->values();
 
         if ($point !== null) {
             $evaluators = $this->evaluators($criterion, $histories);
@@ -126,7 +129,15 @@ class GetUserRatingDetails
                 $evaluators->push(['type' => 'pending', 'name' => 'Baholash kutilmoqda']);
             }
 
-            return $this->row($criterion, $sectionNumber, 'scored', $point->point, $pendingCount, $evaluators);
+            return $this->row(
+                $criterion,
+                $sectionNumber,
+                'scored',
+                $point->point,
+                $pendingCount,
+                $acceptedSubmissions,
+                $evaluators,
+            );
         }
 
         if ($pendingCount > 0) {
@@ -136,6 +147,7 @@ class GetUserRatingDetails
                 'pending',
                 null,
                 $pendingCount,
+                $acceptedSubmissions,
                 collect([['type' => 'pending', 'name' => 'Baholash kutilmoqda']]),
             );
         }
@@ -147,6 +159,7 @@ class GetUserRatingDetails
                 'accepted',
                 null,
                 0,
+                $acceptedSubmissions,
                 collect([['type' => 'status', 'name' => 'Yakuniy ball hisoblanmoqda']]),
             );
         }
@@ -158,6 +171,7 @@ class GetUserRatingDetails
                 'cancelled',
                 null,
                 0,
+                $acceptedSubmissions,
                 collect([['type' => 'status', 'name' => 'Ma’lumot qaytarilgan']]),
             );
         }
@@ -168,13 +182,15 @@ class GetUserRatingDetails
             'unuploaded',
             null,
             0,
+            $acceptedSubmissions,
             collect([['type' => 'unuploaded', 'name' => 'Ma’lumot yuklanmagan']]),
         );
     }
 
     /**
+     * @param  Collection<int, Datum>  $acceptedSubmissions
      * @param  Collection<int, array{type: string, name: string}>  $evaluators
-     * @return array{criterion: Criterion, code: string, state: string, point: float|null, pending_count: int, evaluators: Collection<int, array{type: string, name: string}>}
+     * @return array{criterion: Criterion, code: string, state: string, point: float|null, pending_count: int, accepted_submissions: Collection<int, Datum>, evaluators: Collection<int, array{type: string, name: string}>}
      */
     private function row(
         Criterion $criterion,
@@ -182,6 +198,7 @@ class GetUserRatingDetails
         string $state,
         ?float $point,
         int $pendingCount,
+        Collection $acceptedSubmissions,
         Collection $evaluators,
     ): array {
         return [
@@ -190,6 +207,7 @@ class GetUserRatingDetails
             'state' => $state,
             'point' => $point,
             'pending_count' => $pendingCount,
+            'accepted_submissions' => $acceptedSubmissions,
             'evaluators' => $evaluators,
         ];
     }
@@ -217,7 +235,7 @@ class GetUserRatingDetails
         }
 
         return Datum::query()
-            ->select(['id', 'user_id', 'criterion_id', 'status'])
+            ->select(['id', 'name', 'user_id', 'criterion_id', 'status', 'point'])
             ->whereBelongsTo($user)
             ->where('status', '!=', 'deleted')
             ->whereHas('criterion', fn (Builder $query): Builder => $query->whereBelongsTo($report))

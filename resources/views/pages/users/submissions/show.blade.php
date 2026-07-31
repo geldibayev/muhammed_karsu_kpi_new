@@ -36,6 +36,11 @@
                                 <dt class="col-sm-4">Resurs nomi</dt>
                                 <dd class="col-sm-8 text-break">{{ $datum->name }}</dd>
 
+                                <dt class="col-sm-4">Yuklagan foydalanuvchi</dt>
+                                <dd class="col-sm-8 text-break">
+                                    {{ $datum->user?->full ?: ($datum->user?->short ?: 'Noma’lum foydalanuvchi') }}
+                                </dd>
+
                                 <dt class="col-sm-4">Mezon</dt>
                                 <dd class="col-sm-8 text-break">
                                     {{ data_get($datum->criterion?->name, 'uz', 'Mezon topilmadi') }}
@@ -57,7 +62,8 @@
                             </dl>
                         </div>
                         <div class="card-footer">
-                            <a href="{{ route('files.show', $status) }}" class="btn btn-default btn-sm">
+                            <a href="{{ $datum->user_id === auth()->id() ? route('files.show', $status) : route('ratings.show', $datum->user_id) }}"
+                               class="btn btn-default btn-sm">
                                 <i class="fas fa-arrow-left mr-1"></i> Ro‘yxatga qaytish
                             </a>
 
