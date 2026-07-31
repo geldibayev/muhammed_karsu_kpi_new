@@ -10,7 +10,6 @@ use Gemini\Data\Content;
 use Gemini\Data\GenerationConfig;
 use Gemini\Data\Schema;
 use Gemini\Enums\DataType;
-use Gemini\Enums\MimeType;
 use Gemini\Enums\ResponseMimeType;
 use Gemini\Exceptions\ErrorException;
 use Gemini\Laravel\Facades\Gemini;
@@ -23,6 +22,7 @@ class AiSubmissionEvaluator
     public function __construct(
         private AiAuthorPointDistributor $aiAuthorPointDistributor,
         private DescribeAiFailure $describeAiFailure,
+        private GeminiFileMimeTypeResolver $geminiFileMimeTypeResolver,
     ) {}
 
     public function evaluate(Datum $datum): AiEvaluationResult
@@ -66,10 +66,36 @@ class AiSubmissionEvaluator
 
         $contentParts = [$this->buildPrompt($datum, $maximumPoint, $requiresAuthorCount)];
 
-        if ($datum->storagePath() !== null) {
+        $storagePath = $datum->storagePath();
+
+        if ($storagePath !== null) {
+            $disk = Storage::disk($datum->storageDisk());
+
+            if (! $disk->exists($storagePath)) {
+                return AiEvaluationResult::checking(
+                    'Tekshiriladigan resurs fayli server storage’ida topilmadi yoki o‘qib bo‘lmadi.',
+                );
+            }
+
+            $mimeType = $this->geminiFileMimeTypeResolver->handle($datum);
+
+            if ($mimeType === null) {
+                return AiEvaluationResult::checking(
+                    'Tekshiriladigan resursning fayl turi AI tomonidan qo‘llab-quvvatlanmaydi.',
+                );
+            }
+
+            $fileContents = $disk->get($storagePath);
+
+            if (! is_string($fileContents) || $fileContents === '') {
+                return AiEvaluationResult::checking(
+                    'Tekshiriladigan resurs fayli server storage’ida topilmadi yoki o‘qib bo‘lmadi.',
+                );
+            }
+
             $contentParts[] = new Blob(
-                mimeType: $this->mimeType((string) data_get($datum->material, 'mime')),
-                data: base64_encode(Storage::disk($datum->storageDisk())->get($datum->storagePath())),
+                mimeType: $mimeType,
+                data: base64_encode($fileContents),
             );
         }
 
@@ -204,15 +230,6 @@ PROMPT;
             'last3years' => 'Hujjatdagi faoliyat joriy sanadan oldingi 3 yil ichida yakunlangan bo‘lishi kerak.',
             'project_finished' => 'Resurs loyiha tugagunga qadar hisobga olinadi.',
             default => null,
-        };
-    }
-
-    private function mimeType(string $mime): MimeType
-    {
-        return match ($mime) {
-            'image/jpeg', 'image/jpg' => MimeType::IMAGE_JPEG,
-            'image/png' => MimeType::IMAGE_PNG,
-            default => MimeType::APPLICATION_PDF,
         };
     }
 

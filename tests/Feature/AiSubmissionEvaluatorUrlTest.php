@@ -11,6 +11,7 @@ use App\Models\Report;
 use App\Models\User;
 use App\Services\AiAuthorPointDistributor;
 use App\Services\AiSubmissionEvaluator;
+use App\Services\GeminiFileMimeTypeResolver;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -60,6 +61,7 @@ class AiSubmissionEvaluatorUrlTest extends TestCase
         $result = (new AiSubmissionEvaluator(
             new AiAuthorPointDistributor,
             new DescribeAiFailure,
+            new GeminiFileMimeTypeResolver,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);

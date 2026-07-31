@@ -13,12 +13,16 @@ use App\Models\User;
 use App\Models\Year;
 use App\Services\AiAuthorPointDistributor;
 use App\Services\AiSubmissionEvaluator;
+use App\Services\GeminiFileMimeTypeResolver;
+use Gemini\Data\Blob;
 use Gemini\Data\GenerationConfig;
+use Gemini\Enums\MimeType;
 use Gemini\Exceptions\ErrorException;
 use Gemini\Laravel\Facades\Gemini;
 use Gemini\Resources\GenerativeModel;
 use Gemini\Responses\GenerativeModel\GenerateContentResponse;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -27,11 +31,12 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_prompt_contains_trusted_date_report_period_and_criterion_period_rule(): void
+    public function test_request_contains_trusted_context_and_detects_jpeg_from_stored_bytes(): void
     {
         $this->travelTo(Carbon::parse('2026-07-30 12:00:00', 'Asia/Tashkent'));
         Storage::fake('local');
-        Storage::disk('local')->put('proof.pdf', 'test-pdf-content');
+        $image = UploadedFile::fake()->image('proof.jpg', 10, 10);
+        Storage::disk('local')->put('proof.jpg', $image->getContent());
 
         $user = User::factory()->create();
         Evaluation::query()->create([
@@ -69,11 +74,11 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             'score' => 10,
         ]);
         $datum = Datum::query()->create([
-            'name' => 'proof.pdf',
+            'name' => 'proof.jpg',
             'material' => [
                 'type' => 'file',
                 'disk' => 'local',
-                'path' => 'proof.pdf',
+                'path' => 'proof.jpg',
                 'mime' => 'application/pdf',
             ],
             'user_id' => $user->id,
@@ -102,6 +107,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
         $result = (new AiSubmissionEvaluator(
             new AiAuthorPointDistributor,
             new DescribeAiFailure,
+            new GeminiFileMimeTypeResolver,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);
@@ -111,9 +117,12 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             callback: function (string $method, array $parameters): bool {
                 $contentParts = $parameters[0] ?? null;
                 $prompt = is_array($contentParts) ? ($contentParts[0] ?? null) : null;
+                $file = is_array($contentParts) ? ($contentParts[1] ?? null) : null;
 
                 return $method === 'generateContent'
                     && is_string($prompt)
+                    && $file instanceof Blob
+                    && $file->mimeType === MimeType::IMAGE_JPEG
                     && str_contains($prompt, '"current_date_iso":"2026-07-30"')
                     && str_contains($prompt, '"current_date_display":"30.07.2026"')
                     && str_contains($prompt, '"last_three_years_start_iso":"2023-07-30"')
@@ -147,7 +156,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
     public function test_document_without_pages_is_sent_to_human_review_without_throwing(): void
     {
         Storage::fake('local');
-        Storage::disk('local')->put('empty.pdf', 'invalid-or-empty-pdf');
+        Storage::disk('local')->put('empty.pdf', "%PDF-1.4\n% empty test document");
 
         $user = User::factory()->create();
         Evaluation::query()->create([
@@ -199,6 +208,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
         $result = (new AiSubmissionEvaluator(
             new AiAuthorPointDistributor,
             new DescribeAiFailure,
+            new GeminiFileMimeTypeResolver,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);

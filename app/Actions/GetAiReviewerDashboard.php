@@ -42,7 +42,7 @@ class GetAiReviewerDashboard
             ->where('criteria.checking', 'ai')
             ->where('data.status', '!=', 'deleted')
             ->selectRaw('COUNT(*) AS total')
-            ->selectRaw("SUM(CASE WHEN data.status IN ('accepted', 'cancelled') OR COALESCE(ai_history.last_evaluation_id, 0) > 0 THEN 1 ELSE 0 END) AS evaluated")
+            ->selectRaw("SUM(CASE WHEN data.status IN ('accepted', 'cancelled') OR (data.status IN ('received', 'checking') AND COALESCE(ai_history.last_evaluation_id, 0) > COALESCE(ai_history.last_queue_id, 0) AND COALESCE(ai_history.last_evaluation_id, 0) > COALESCE(ai_history.last_failure_id, 0)) THEN 1 ELSE 0 END) AS evaluated")
             ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.last_queue_id, 0) > COALESCE(ai_history.last_evaluation_id, 0) AND COALESCE(ai_history.last_queue_id, 0) > COALESCE(ai_history.last_failure_id, 0) THEN 1 ELSE 0 END) AS waiting")
             ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.last_failure_id, 0) > COALESCE(ai_history.last_evaluation_id, 0) AND COALESCE(ai_history.last_failure_id, 0) > COALESCE(ai_history.last_queue_id, 0) THEN 1 ELSE 0 END) AS failed_pending")
             ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.last_evaluation_id, 0) = 0 AND COALESCE(ai_history.last_failure_id, 0) = 0 AND COALESCE(ai_history.last_queue_id, 0) = 0 THEN 1 ELSE 0 END) AS legacy_untracked")

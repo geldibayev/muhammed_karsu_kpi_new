@@ -524,6 +524,22 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ],
         ]);
 
+        $requeuedAfterEvaluation = $this->createDatum(['status' => 'checking']);
+        $requeuedAfterEvaluation->histories()->createMany([
+            [
+                'user_id' => $requeuedAfterEvaluation->user_id,
+                'type' => 'warning',
+                'message' => 'Inson tekshiruviga yuborilgan AI natijasi.',
+                'message_type' => 'ai_evaluation',
+            ],
+            [
+                'user_id' => $requeuedAfterEvaluation->user_id,
+                'type' => 'info',
+                'message' => 'Qayta AI navbatiga qo‘yildi.',
+                'message_type' => 'ai_queued',
+            ],
+        ]);
+
         $this->markAsSubmitted($this->createDatum(['status' => 'received']));
         $this->createAiHistory('ai_failed', 'warning', 'Tekshirishda xato.');
         $this->createDatum(['status' => 'accepted']);
@@ -534,12 +550,12 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 6
+            ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 7
                 && $statistics['evaluated'] === 4
-                && $statistics['waiting'] === 1
+                && $statistics['waiting'] === 2
                 && $statistics['failed_pending'] === 1
                 && $statistics['legacy_untracked'] === 0
-                && $statistics['evaluation_rate'] === 66.7
+                && $statistics['evaluation_rate'] === 57.1
                 && $statistics['total'] === (
                     $statistics['evaluated']
                     + $statistics['waiting']
