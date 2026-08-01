@@ -6,18 +6,16 @@ use App\Actions\DescribeAiFailure;
 use App\Actions\RecalculateReportPoints;
 use App\Models\AiHumanReviewAssignment;
 use App\Models\Datum;
-use App\Models\DatumHistory;
 use App\Services\AiSubmissionEvaluator;
 use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Throwable;
 
 class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
@@ -26,11 +24,13 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
     public const QUEUE = 'ai-evaluations';
 
+    public const RATE_LIMIT_KEY = 'gemini-api';
+
     public int $tries = 0;
 
     public int $timeout = 60;
 
-    public int $uniqueFor = 600;
+    public int $uniqueFor = 604800;
 
     public int $maxExceptions = 3;
 
@@ -69,14 +69,16 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $oldestWaitingDatum = $this->oldestWaitingDatum();
+        $requestsPerMinute = max(1, (int) config('kpi.ai_requests_per_minute', 10));
 
-        if ($oldestWaitingDatum !== null && ! $oldestWaitingDatum->is($datum)) {
-            self::dispatch($oldestWaitingDatum->getKey(), $oldestWaitingDatum->criterion_id);
-            $this->release(1);
+        if (RateLimiter::tooManyAttempts(self::RATE_LIMIT_KEY, $requestsPerMinute)) {
+            $this->release(max(1, RateLimiter::availableIn(self::RATE_LIMIT_KEY) + 3));
 
             return;
         }
+
+        RateLimiter::hit(self::RATE_LIMIT_KEY, 60);
+        Cache::put('kpi:ai-worker:last-seen-at', now()->toIso8601String(), now()->addDays(30));
 
         try {
             $result = $evaluator->evaluate($datum);
@@ -170,7 +172,6 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
     {
         return [
             (new WithoutOverlapping(self::QUEUE, 1, $this->timeout + 30))->shared(),
-            new RateLimited('gemini-api'),
         ];
     }
 
@@ -182,31 +183,6 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
     public function uniqueId(): string
     {
         return (string) $this->datumId;
-    }
-
-    private function oldestWaitingDatum(): ?Datum
-    {
-        $aiHistorySummary = DatumHistory::query()
-            ->select('datum_id')
-            ->selectRaw("MAX(CASE WHEN message_type = 'ai_evaluation' THEN id ELSE 0 END) AS last_evaluation_id")
-            ->selectRaw("MAX(CASE WHEN message_type = 'ai_failed' THEN id ELSE 0 END) AS last_failure_id")
-            ->selectRaw("MAX(CASE WHEN message_type IN ('submission_created', 'ai_queued') THEN id ELSE 0 END) AS last_queue_id")
-            ->whereIn('message_type', ['ai_evaluation', 'ai_failed', 'submission_created', 'ai_queued'])
-            ->groupBy('datum_id');
-
-        return Datum::query()
-            ->select(['data.id', 'data.criterion_id'])
-            ->join('criteria', 'criteria.id', '=', 'data.criterion_id')
-            ->joinSub($aiHistorySummary->toBase(), 'ai_history', function (Builder $join): void {
-                $join->on('ai_history.datum_id', '=', 'data.id');
-            })
-            ->where('criteria.checking', 'ai')
-            ->whereIn('data.status', ['received', 'checking'])
-            ->whereRaw('ai_history.last_queue_id > ai_history.last_evaluation_id')
-            ->whereRaw('ai_history.last_queue_id > ai_history.last_failure_id')
-            ->orderBy('ai_history.last_queue_id')
-            ->orderBy('data.id')
-            ->first();
     }
 
     public function failed(?Throwable $exception): void

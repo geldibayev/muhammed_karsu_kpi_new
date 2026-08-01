@@ -14,10 +14,10 @@ use App\Models\Report;
 use App\Models\User;
 use App\Services\AiSubmissionEvaluator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Illuminate\Queue\Middleware\RateLimited;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Mockery;
 use RuntimeException;
 use Tests\TestCase;
@@ -40,6 +40,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
         ] as $key) {
             Cache::forget($key);
         }
+
+        RateLimiter::clear(ProcessAiDatumEvaluation::RATE_LIMIT_KEY);
     }
 
     public function test_job_persists_a_valid_ai_result_and_history(): void
@@ -66,6 +68,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'type' => 'success',
             'message_type' => 'ai_evaluation',
         ]);
+        $this->assertNotNull(Cache::get('kpi:ai-worker:last-seen-at'));
         $this->assertNotNull(Cache::get('kpi:ai-worker:last-success-at'));
     }
 
@@ -242,7 +245,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         ]);
     }
 
-    public function test_newer_job_waits_until_the_oldest_queued_resource_is_evaluated(): void
+    public function test_job_processes_its_own_eligible_resource_without_dispatching_another_job(): void
     {
         $oldestDatum = $this->createDatum();
         $newerDatum = $this->createDatum();
@@ -253,9 +256,9 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $evaluator->shouldReceive('evaluate')
             ->once()
             ->with(Mockery::on(
-                fn (Datum $datum): bool => $datum->is($oldestDatum),
+                fn (Datum $datum): bool => $datum->is($newerDatum),
             ))
-            ->andReturn(new AiEvaluationResult('accepted', 5, 'Eng eski resurs tekshirildi.'));
+            ->andReturn(new AiEvaluationResult('accepted', 5, 'Jobga tegishli resurs tekshirildi.'));
         $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
         $recalculateReportPoints->shouldReceive('handle')
             ->once()
@@ -265,35 +268,56 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->withFakeQueueInteractions();
         $newerJob->handle($evaluator, $recalculateReportPoints);
 
-        $newerJob->assertReleased(delay: 1);
-        Queue::assertPushed(
-            ProcessAiDatumEvaluation::class,
-            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $oldestDatum->id
-                && $job->criterionId === $oldestDatum->criterion_id,
-        );
-        $this->assertSame('checking', $newerDatum->fresh()->status);
-
-        $oldestJob = (new ProcessAiDatumEvaluation($oldestDatum->id, $oldestDatum->criterion_id))
-            ->withFakeQueueInteractions();
-        $oldestJob->handle($evaluator, $recalculateReportPoints);
-
-        $oldestJob->assertNotReleased();
-        $this->assertSame('accepted', $oldestDatum->fresh()->status);
-        $this->assertSame('checking', $newerDatum->fresh()->status);
+        $newerJob->assertNotReleased();
+        Queue::assertNothingPushed();
+        $this->assertSame('checking', $oldestDatum->fresh()->status);
+        $this->assertSame('accepted', $newerDatum->fresh()->status);
     }
 
-    public function test_ai_job_uses_the_gemini_rate_limiter(): void
+    public function test_ai_job_serializes_gemini_evaluations_without_rate_limiting_stale_jobs(): void
     {
         $middleware = (new ProcessAiDatumEvaluation(1, 1))->middleware();
 
-        $this->assertCount(2, $middleware);
+        $this->assertCount(1, $middleware);
         $this->assertInstanceOf(WithoutOverlapping::class, $middleware[0]);
         $this->assertSame(ProcessAiDatumEvaluation::QUEUE, $middleware[0]->key);
         $this->assertSame(1, $middleware[0]->releaseAfter);
         $this->assertSame(90, $middleware[0]->expiresAfter);
         $this->assertTrue($middleware[0]->shareKey);
-        $this->assertInstanceOf(RateLimited::class, $middleware[1]);
-        $this->assertNull($middleware[1]->releaseAfter);
+    }
+
+    public function test_rate_limited_eligible_job_is_released_without_calling_gemini_or_refreshing_heartbeat(): void
+    {
+        config()->set('kpi.ai_requests_per_minute', 1);
+        $datum = $this->createDatum();
+        RateLimiter::hit(ProcessAiDatumEvaluation::RATE_LIMIT_KEY, 60);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldNotReceive('evaluate');
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+        $job = (new ProcessAiDatumEvaluation($datum->id, $datum->criterion_id))
+            ->withFakeQueueInteractions();
+
+        $job->handle($evaluator, $recalculateReportPoints);
+
+        $job->assertReleased();
+        $this->assertNull(Cache::get('kpi:ai-worker:last-seen-at'));
+        $this->assertSame('checking', $datum->fresh()->status);
+    }
+
+    public function test_completed_duplicate_job_does_not_consume_rate_limit_or_refresh_heartbeat(): void
+    {
+        $datum = $this->createDatum(['status' => 'accepted']);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldNotReceive('evaluate');
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+
+        (new ProcessAiDatumEvaluation($datum->id, $datum->criterion_id))
+            ->handle($evaluator, $recalculateReportPoints);
+
+        $this->assertSame(0, RateLimiter::attempts(ProcessAiDatumEvaluation::RATE_LIMIT_KEY));
+        $this->assertNull(Cache::get('kpi:ai-worker:last-seen-at'));
     }
 
     public function test_failed_job_leaves_submission_checking_without_human_reviewer_assignment(): void
