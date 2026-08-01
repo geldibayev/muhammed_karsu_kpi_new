@@ -31,6 +31,13 @@
                 'label' => 'AI ishlamayapti',
                 'summary' => 'Oxirgi AI urinishida muammo aniqlandi.',
             ],
+            'disabled' => [
+                'card' => 'card-secondary',
+                'badge' => 'badge-secondary',
+                'icon' => 'fa-pause-circle text-secondary',
+                'label' => 'AI oвЂchirilgan',
+                'summary' => 'AI tekshiruvi administrator tomonidan vaqtincha toвЂxtatilgan.',
+            ],
             default => [
                 'card' => 'card-secondary',
                 'badge' => 'badge-secondary',

@@ -38,6 +38,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::put('/settings/uploads', [SystemSettingsController::class, 'updateUploads'])
         ->middleware('can:manage-kpi-settings')
         ->name('settings.uploads.update');
+    Route::put('/settings/ai', [SystemSettingsController::class, 'updateAi'])
+        ->middleware('can:manage-kpi-settings')
+        ->name('settings.ai.update');
     Route::get('/ratings', [RatingController::class, 'index'])
         ->middleware('can:view-ratings')
         ->name('ratings.index');

@@ -214,6 +214,11 @@
                                     'icon' => 'fa-times-circle',
                                     'label' => 'Ishlamayapti',
                                 ],
+                                'disabled' => [
+                                    'badge' => 'badge-secondary',
+                                    'icon' => 'fa-pause-circle',
+                                    'label' => 'OвЂchirilgan',
+                                ],
                                 default => [
                                     'badge' => 'badge-secondary',
                                     'icon' => 'fa-question-circle',

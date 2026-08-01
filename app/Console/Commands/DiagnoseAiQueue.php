@@ -6,6 +6,7 @@ use App\Actions\DescribeAiFailure;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\Datum;
+use App\Models\Option;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
@@ -42,6 +43,7 @@ class DiagnoseAiQueue extends Command
         $failedMetrics = $this->failedMetrics($describeAiFailure);
 
         $hasGeminiKey = $this->hasConfiguredGeminiKey();
+        $aiEvaluationsEnabled = Option::aiEvaluationsEnabled();
         $workerHeartbeat = Cache::get('kpi:ai-worker:last-seen-at');
         $workerLastSeenAt = is_string($workerHeartbeat)
             ? CarbonImmutable::parse($workerHeartbeat)
@@ -58,6 +60,7 @@ class DiagnoseAiQueue extends Command
             ['Queue connection', $connection],
             ['Queue driver', $driver],
             ['AI queue holati', $isQueuePaused ? 'PAUZA' : 'Faol'],
+            ['Global AI sozlamasi', $aiEvaluationsEnabled ? 'Yoqilgan' : 'O\'chirilgan'],
             ['Gemini API kaliti', $hasGeminiKey ? 'Mavjud' : 'Mavjud emas yoki placeholder'],
             ['Gemini timeout', config('gemini.request_timeout').' soniya'],
             ['Gemini rate-limit', config('kpi.ai_requests_per_minute').' so‘rov/daqiqa'],
@@ -93,6 +96,7 @@ class DiagnoseAiQueue extends Command
             is_string($lastAttemptFailureReason) ? $lastAttemptFailureReason : null,
             $isQueuePaused,
             $connection,
+            $aiEvaluationsEnabled,
         ));
 
         return self::SUCCESS;
@@ -188,7 +192,12 @@ class DiagnoseAiQueue extends Command
         ?string $lastAttemptFailureReason,
         bool $isQueuePaused,
         string $connection,
+        bool $aiEvaluationsEnabled,
     ): string {
+        if (! $aiEvaluationsEnabled) {
+            return 'Xulosa: AI tekshiruvi Sozlamalar menyusidan vaqtincha o\'chirilgan. Navbat saqlanadi va AI yoqilganda davom etadi.';
+        }
+
         if ($isQueuePaused) {
             $resumeCommand = "php artisan queue:continue {$connection}:".ProcessAiDatumEvaluation::QUEUE;
 

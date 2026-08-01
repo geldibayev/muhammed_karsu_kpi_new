@@ -52,6 +52,54 @@
                             </div>
                         </form>
                     </div>
+
+                    <div class="card card-outline {{ $aiEvaluationsEnabled ? 'card-success' : 'card-danger' }} shadow-sm">
+                        <div class="card-header">
+                            <h3 class="card-title font-weight-bold">
+                                <i class="fas fa-robot mr-1" aria-hidden="true"></i>
+                                AI tekshiruvi
+                            </h3>
+                        </div>
+                        <form method="POST" action="{{ route('settings.ai.update') }}">
+                            @csrf
+                            @method('PUT')
+                            <div class="card-body">
+                                <div class="alert {{ $aiEvaluationsEnabled ? 'alert-success' : 'alert-danger' }}">
+                                    <div class="font-weight-bold">
+                                        Joriy holat:
+                                        {{ $aiEvaluationsEnabled ? 'AI tekshiruvi yoqilgan' : 'AI tekshiruvi oвЂchirilgan' }}
+                                    </div>
+                                    <div class="small mt-1">
+                                        OвЂchirilganda GeminiвЂ™ga yangi soвЂrov yuborilmaydi. Navbatdagi resurslar oвЂchirilmaydi;
+                                        AI qayta yoqilganda worker ularni davom ettiradi. Hozir ishlanayotgan bitta soвЂrov yakunlanishi mumkin.
+                                    </div>
+                                </div>
+
+                                <div class="form-group mb-0">
+                                    <label for="ai_evaluations_enabled">AI tekshiruv holati</label>
+                                    <select id="ai_evaluations_enabled" name="ai_evaluations_enabled"
+                                            class="form-control @error('ai_evaluations_enabled') is-invalid @enderror"
+                                            required>
+                                        <option value="1" @selected((string) old('ai_evaluations_enabled', (int) $aiEvaluationsEnabled) === '1')>
+                                            AI tekshiruvini yoqish
+                                        </option>
+                                        <option value="0" @selected((string) old('ai_evaluations_enabled', (int) $aiEvaluationsEnabled) === '0')>
+                                            AI tekshiruvini vaqtincha oвЂchirish
+                                        </option>
+                                    </select>
+                                    @error('ai_evaluations_enabled')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save mr-1" aria-hidden="true"></i>
+                                    Saqlash
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

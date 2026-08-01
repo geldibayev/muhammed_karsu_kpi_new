@@ -6,6 +6,7 @@ use App\Actions\DescribeAiFailure;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\Datum;
+use App\Models\Option;
 use App\Models\Report;
 use App\Models\User;
 use Gemini\Exceptions\ErrorException;
@@ -222,6 +223,19 @@ class AiQueueCommandsTest extends TestCase
             ->expectsOutputToContain(
                 "php artisan queue:continue {$connection}:".ProcessAiDatumEvaluation::QUEUE,
             )
+            ->assertSuccessful();
+    }
+
+    public function test_diagnostic_command_reports_intentionally_disabled_ai_before_queue_failure(): void
+    {
+        $connection = (string) config('queue.default');
+        Option::setAiEvaluationsEnabled(false);
+        Queue::pause($connection, ProcessAiDatumEvaluation::QUEUE);
+
+        $this->artisan('kpi:ai:diagnose')
+            ->expectsOutputToContain('Global AI sozlamasi')
+            ->expectsOutputToContain('Sozlamalar menyusidan vaqtincha o\'chirilgan')
+            ->doesntExpectOutputToContain('Gemini krediti tugagani sabab')
             ->assertSuccessful();
     }
 

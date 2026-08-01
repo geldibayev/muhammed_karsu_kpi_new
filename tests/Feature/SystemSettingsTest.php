@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Evaluation;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Models\Year;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class SystemSettingsTest extends TestCase
@@ -31,7 +33,8 @@ class SystemSettingsTest extends TestCase
         $this->actingAs($manager)
             ->get(route('settings.index'))
             ->assertOk()
-            ->assertSee('Yuklashga ruxsat berilgan');
+            ->assertSee('Yuklashga ruxsat berilgan')
+            ->assertSee('AI tekshiruvi yoqilgan');
 
         $this->actingAs($manager)
             ->put(route('settings.uploads.update'), ['resource_uploads_enabled' => '0'])
@@ -50,6 +53,9 @@ class SystemSettingsTest extends TestCase
         $this->actingAs($otherSuperAdmin)->get(route('settings.index'))->assertForbidden();
         $this->actingAs($otherSuperAdmin)
             ->put(route('settings.uploads.update'), ['resource_uploads_enabled' => '1'])
+            ->assertForbidden();
+        $this->actingAs($otherSuperAdmin)
+            ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => '0'])
             ->assertForbidden();
 
         auth()->logout();
@@ -113,6 +119,52 @@ class SystemSettingsTest extends TestCase
             ->assertSessionHasErrors('resource_uploads_enabled');
 
         $this->assertTrue(Option::resourceUploadsEnabled());
+    }
+
+    public function test_manager_can_disable_and_reenable_ai_evaluations(): void
+    {
+        config()->set('kpi.settings_manager_hemis_id', '3172011004');
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $manager = User::factory()->create(['hemis_id' => 3172011004]);
+        $connection = (string) config('queue.default');
+        Queue::resume($connection, ProcessAiDatumEvaluation::QUEUE);
+
+        $this->actingAs($manager)
+            ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => '0'])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'AI tekshiruvi vaqtincha o\'chirildi. Navbatdagi resurslar saqlanib qoladi.');
+
+        $this->assertFalse(Option::aiEvaluationsEnabled());
+        $this->assertTrue(Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE));
+        $this->assertDatabaseHas('options', [
+            'key' => Option::AI_EVALUATIONS_ENABLED,
+            'value' => '0',
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('AI oвЂchirilgan');
+
+        $this->actingAs($manager)
+            ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'AI tekshiruvi qayta yoqildi va navbat davom ettirildi.');
+
+        $this->assertTrue(Option::aiEvaluationsEnabled());
+        $this->assertFalse(Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE));
+    }
+
+    public function test_ai_setting_requires_a_boolean_value(): void
+    {
+        config()->set('kpi.settings_manager_hemis_id', '3172011004');
+        $manager = User::factory()->create(['hemis_id' => 3172011004]);
+
+        $this->actingAs($manager)
+            ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => 'invalid'])
+            ->assertSessionHasErrors('ai_evaluations_enabled');
+
+        $this->assertTrue(Option::aiEvaluationsEnabled());
     }
 
     /** @return array{Criterion, Year} */

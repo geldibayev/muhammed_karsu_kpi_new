@@ -6,6 +6,7 @@ use App\Actions\DescribeAiFailure;
 use App\Actions\RecalculateReportPoints;
 use App\Models\AiHumanReviewAssignment;
 use App\Models\Datum;
+use App\Models\Option;
 use App\Services\AiSubmissionEvaluator;
 use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -65,6 +66,12 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 && $datum->histories()->where('message_type', 'ai_evaluation')->exists()) {
                 $recalculateReportPoints->handle($datum->criterion->report);
             }
+
+            return;
+        }
+
+        if (! Option::aiEvaluationsEnabled()) {
+            $this->release(60);
 
             return;
         }

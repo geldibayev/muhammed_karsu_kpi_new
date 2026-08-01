@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\SetAiEvaluationState;
+use App\Http\Requests\UpdateAiSettingsRequest;
 use App\Http\Requests\UpdateUploadSettingsRequest;
 use App\Models\Option;
 use Illuminate\Http\RedirectResponse;
@@ -17,11 +19,34 @@ class SystemSettingsController extends Controller
 
         return view('pages.settings.index', [
             'resourceUploadsEnabled' => Option::resourceUploadsEnabled(),
+            'aiEvaluationsEnabled' => Option::aiEvaluationsEnabled(),
             'breadcrumbs' => [
                 ['url' => route('home'), 'name' => 'Asosiy sahifa'],
                 ['url' => '#', 'name' => 'Sozlamalar'],
             ],
         ]);
+    }
+
+    public function updateAi(
+        UpdateAiSettingsRequest $request,
+        SetAiEvaluationState $setAiEvaluationState,
+    ): RedirectResponse {
+        $enabled = (bool) $request->validated('ai_evaluations_enabled');
+
+        $setAiEvaluationState->handle($enabled);
+
+        Log::info('Global AI evaluation setting changed.', [
+            'enabled' => $enabled,
+            'user_id' => $request->user()->getKey(),
+            'hemis_id' => $request->user()->hemis_id,
+        ]);
+
+        return back()->with(
+            'success',
+            $enabled
+                ? 'AI tekshiruvi qayta yoqildi va navbat davom ettirildi.'
+                : 'AI tekshiruvi vaqtincha o\'chirildi. Navbatdagi resurslar saqlanib qoladi.',
+        );
     }
 
     public function updateUploads(UpdateUploadSettingsRequest $request): RedirectResponse

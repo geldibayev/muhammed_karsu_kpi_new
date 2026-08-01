@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Datum;
 use App\Models\DatumHistory;
+use App\Models\Option;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Query\Builder;
@@ -13,7 +14,7 @@ class GetAiReviewerHealth
 {
     /**
      * @return array{
-     *     state: 'operational'|'processing'|'degraded'|'unavailable'|'unknown',
+     *     state: 'operational'|'processing'|'degraded'|'unavailable'|'disabled'|'unknown',
      *     checked_at: CarbonInterface|null,
      *     reason: string|null,
      *     last_message: string|null,
@@ -30,6 +31,7 @@ class GetAiReviewerHealth
      */
     public function handle(): array
     {
+        $aiEvaluationsEnabled = Option::aiEvaluationsEnabled();
         $aiDatumIds = Datum::query()
             ->select('data.id')
             ->join('criteria', 'criteria.id', '=', 'data.criterion_id')
@@ -91,6 +93,7 @@ class GetAiReviewerHealth
             && ($workerLastSeenAt?->lte($staleThreshold) ?? true);
 
         $state = match (true) {
+            ! $aiEvaluationsEnabled => 'disabled',
             $hasUnresolvedAttemptFailure => 'unavailable',
             $hasStaleQueue => 'unavailable',
             $latestCheck?->message_type === 'ai_failed' => 'unavailable',
@@ -101,6 +104,7 @@ class GetAiReviewerHealth
         };
 
         $reason = match (true) {
+            ! $aiEvaluationsEnabled => 'AI tekshiruvi administrator tomonidan vaqtincha o\'chirilgan.',
             $hasUnresolvedAttemptFailure => is_string($workerLastFailureReason)
                 ? $workerLastFailureReason
                 : 'AI worker jobni oldi, lekin urinish xato bilan yakunlandi.',
@@ -114,9 +118,11 @@ class GetAiReviewerHealth
             default => null,
         };
         $isProblemState = in_array($state, ['unavailable', 'degraded'], true);
-        $lastMessage = $isProblemState
-            ? $reason
-            : ($latestCheck?->message ?? $reason);
+        $lastMessage = match (true) {
+            $state === 'disabled' => $reason,
+            $isProblemState => $reason,
+            default => $latestCheck?->message ?? $reason,
+        };
         $lastMessageAt = match (true) {
             $hasUnresolvedAttemptFailure => $workerLastFailureAt,
             $isProblemState && $latestCheck?->message_type === 'ai_failed' => $latestCheck->created_at,

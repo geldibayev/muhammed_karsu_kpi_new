@@ -10,6 +10,7 @@ use App\Models\Criterion;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\DatumHistory;
+use App\Models\Option;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\AiSubmissionEvaluator;
@@ -308,6 +309,25 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $job->handle($evaluator, $recalculateReportPoints);
 
         $job->assertReleased();
+        $this->assertNull(Cache::get('kpi:ai-worker:last-seen-at'));
+        $this->assertSame('checking', $datum->fresh()->status);
+    }
+
+    public function test_disabled_ai_releases_job_without_calling_gemini(): void
+    {
+        Option::setAiEvaluationsEnabled(false);
+        $datum = $this->createDatum();
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldNotReceive('evaluate');
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+        $job = (new ProcessAiDatumEvaluation($datum->id, $datum->criterion_id))
+            ->withFakeQueueInteractions();
+
+        $job->handle($evaluator, $recalculateReportPoints);
+
+        $job->assertReleased(60);
+        $this->assertSame(0, RateLimiter::attempts(ProcessAiDatumEvaluation::RATE_LIMIT_KEY));
         $this->assertNull(Cache::get('kpi:ai-worker:last-seen-at'));
         $this->assertSame('checking', $datum->fresh()->status);
     }
