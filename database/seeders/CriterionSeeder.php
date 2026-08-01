@@ -15,6 +15,10 @@ use RuntimeException;
 
 class CriterionSeeder extends Seeder
 {
+    private const DEFAULT_AI_MODEL = 'gemini-3.5-flash-lite';
+
+    private const ADVANCED_AI_MODEL = 'gemini-3.5-flash';
+
     public function run(): void
     {
         $criteria = [
@@ -56,7 +60,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-pro',
+                        'ai_model' => self::ADVANCED_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan YouTube havolasi va uning ta'rifi/nomini tahlil qilib, o'quv kontenti turini aniqlang.
                         Baholash qoidalari:
                         1. Videodars = 1.5 ball
@@ -98,7 +102,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (darslik muqovasi, ISBN sahifasi, nashr ruxsatnomasi, kitobning texnik ma'lumotlari) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda darslikning ISBN raqami aniq ko'rsatilgan bo'lishi shart.
@@ -141,7 +145,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (o'quv qo'llanma muqovasi, ISBN sahifasi, nashr ruxsatnomasi, texnik ma'lumotlar) tahlil qiling.
                         Baholash qoidalari:
                         1. Hujjatda o'quv qo'llanmaning ISBN raqami va Vazirlik yoki Universitetning o'quv adabiyoti uchun nashr ruxsatnomasi mavjudligini tekshiring.
@@ -183,7 +187,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-pro',
+                        'ai_model' => self::ADVANCED_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatni (elektron darslik, o'quv qo'llanma yoki uning tarjimasi) tahlil qiling va qoidalarga mosligini tekshiring.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda kitobning ISBN raqami aniq ko'rsatilgan bo'lishi shart.
@@ -226,7 +230,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => null,
                     ],
                     [
@@ -256,7 +260,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => null,
                     ],
                     [
@@ -286,7 +290,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => null,
                     ],
                     [
@@ -314,7 +318,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni tahlil qilib, professor-o'qituvchining laboratoriya ishlariga oid faoliyatini baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Yangi laboratoriya ishi yoki virtual laboratoriya ishi tayyorlanganligi va joriy etilganligi tasdiqlansa: +1 ball.
@@ -354,7 +358,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (buyruqlar, hisobotlar yoki ma'lumotnomalar) tahlil qilib, professor-o'qituvchining quyidagi uchta yo'nalishdagi ishtirokini tasdiqlang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Bakalavriat ta'lim yo'nalishlariga abituriyentlarni qabul jarayoniga (targ'ibot/tashviqot) jalb etganligi tasdiqlansa: +1 ball.
@@ -396,7 +400,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (dars ishlanmasi, tahlil qog'ozlari, tasdiqlovchi xatlar) yoki videofayllar/havolalarni tahlil qilib, professor-o'qituvchining Master-klass darsi o'tganligini baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Mashg'ulot aynan Professional ta'lim muassasasi, akademik litsey, kasb-hunar maktabi yoki o'rta ta'lim maktabida o'tkazilganligi aniq bo'lishi kerak.
@@ -451,7 +455,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni tahlil qilib, professor-o'qituvchi tomonidan sohalar bo'yicha to'garak yoki xorijiy tillarni o'rgatish kursi tashkil etilganligini baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatlar orasida to'garak yoki kurs tashkil qilinganligi to'g'risida rasmiy buyruq (yoki muassasa rahbarining ruxsatnomasi) bo'lishi shart.
@@ -491,7 +495,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (dars jadvali, o'quv dasturi, kafedra ma'lumotnomasi yoki buyruqlar) tahlil qilib, professor-o'qituvchi o'z mutaxassislik darslarini xorijiy tilda olib borishini tekshiring.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda dars mashg'ulotlari xorijiy tilda (masalan, ingliz, rus, nemis va h.k.) o'tilishi aniq ko'rsatilgan bo'lishi shart.
@@ -532,7 +536,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => null,
                     ],
                     [
@@ -562,7 +566,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => null,
                     ],
                     [
@@ -592,7 +596,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatni (sertifikat, ma'lumotnoma, xizmat safari buyrug'i yoki diplom) tahlil qilib, professor-o'qituvchining xorijda (onlayn yoki offlayn) malaka oshirish, stajirovka yoki almashinuv dasturida ishtirok etganligini baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatdan xorijiy ta'lim muassasasining nomini aniqlang.
@@ -637,7 +641,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (xorijiy OTM bilan shartnomalar, chaqiruv xatlari, dars mashg'ulotlarini o'tkazish haqidagi buyruqlar, xorijlik talabalarni jalb qilishga oid hujjatlar) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Xorijiy OTMning QS, THE yoki ARWU reytingidagi o'rnini aniqlang (Top-100, 300, 500 yoki 1000).
@@ -693,7 +697,7 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 2,
                         'divide_ai_point_by_authors' => true,
-                        'ai_model' => 'gemini-2.5-pro',
+                        'ai_model' => self::ADVANCED_AI_MODEL,
                         'ai_prompt' => OakArticleCriterionRule::PROMPT,
                     ],
                     [
@@ -723,7 +727,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (ilmiy maqola matni, jurnal muqovasi, mundarija yoki impakt-faktorni tasdiqlovchi sertifikat/ma'lumotnoma) tahlil qilib, maqola holatini baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Jurnalning aniq \"Impakt-faktor\"ga (Impact Factor) ega ekanligi tasdiqlanishi kerak.
@@ -763,7 +767,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 3,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => ScopusCriterionRule::PROMPT,
                         'ai_submission_max_point' => ScopusCriterionRule::MAXIMUM_POINT,
                         'divide_ai_point_by_authors' => false,
@@ -795,7 +799,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatni (Scopus, Web of Science yoki Research Gate profili skrinshoti/ma'lumotnomasini) tahlil qilib, professor-o'qituvchining Xirsh indeksini (h-index) baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatdan o'qituvchining \"h-index\" (yoki Hirsch index) qiymatini aniq toping.
@@ -840,7 +844,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (monografiya yoki lug'at muqovasi, ISBN sahifasi, Universitet kengashi qarori) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda monografiya yoki lug'atning ISBN raqami aniq ko'rsatilgan bo'lishi shart.
@@ -879,7 +883,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => 'You are an AI evaluator. Verify the provided diploma or HAC (OAK) document proves the professor successfully supervised a Doctor of Science (DSc) candidate. Return a JSON object strictly in this format: {"status": true/false, "reason": "explanation"}.',
                     ],
                     [
@@ -907,7 +911,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => 'You are an AI evaluator. Verify the provided diploma or HAC (OAK) document proves the professor successfully supervised a Doctor of Philosophy (PhD) candidate. Return a JSON object strictly in this format: {"status": true/false, "reason": "explanation"}.',
                     ],
                     [
@@ -937,7 +941,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 3,
-                        'ai_model' => 'gemini-2.5-pro',
+                        'ai_model' => self::ADVANCED_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan patent hujjatini (ixtiro, foydali model, sanoat namunasi yoki seleksiya yutug'i) tahlil qiling va quyidagi qoidalar asosida baholang:
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Huquq egasi (patent egasi) sifatida universitet yoki o'qituvchining o'zi ko'rsatilganligini tekshiring. Boshqa tashkilot bo'lsa, rad eting.
@@ -977,7 +981,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-pro',
+                        'ai_model' => self::ADVANCED_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan mualliflik guvohnomasini (dasturiy ta'minot, ma'lumotlar bazasi yoki mualliflik huquqi bilan himoyalangan material) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Guvohnoma raqami, muallif nomi va obyekt nomi (dastur yoki ma'lumotlar bazasi) aniq ko'rinib turishi shart.
@@ -1019,7 +1023,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (sertifikat, diplom, tashakkurnoma yoki konferensiya dasturi) tahlil qilib, professor-o'qituvchining universitet nomidan ilmiy tadbirlardagi ishtirokini baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Xalqaro konferensiya/seminarlarda ma'ruza bilan qatnashganlik: 1.0 ball.
@@ -1061,7 +1065,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (diplom, sertifikat, talabaga rahbarlik buyrug'i) tahlil qilib, professor-o'qituvchining talabalarni nufuzli olimpiada yoki tanlovga tayyorlaganligini baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Talabaning sovrinli o'rni yoki stipendiat bo'lganligini tasdiqlovchi hujjat (diplom/sertifikat) bo'lishi shart.
@@ -1102,7 +1106,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (to'garak tashkil etish to'g'risidagi buyruq va to'garakning tasdiqlangan ish rejasi) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatlar orasida professor-o'qituvchi nomiga rasmiylashtirilgan to'garak tashkil etish to'g'risidagi buyruq (yoki ruxsatnoma) bo'lishi shart.
@@ -1143,7 +1147,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan shartnomalar, to‘lov hujjatlari va ilmiy-tadqiqot hisobotlarini tahlil qilib, professor-o‘qituvchining xo‘jalik yoki innovatsion shartnomalardagi ishtirokini baholang.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda shartnoma mavzusi, buyurtmachi (soha) va universitet hisobiga tushgan mablag‘ miqdori aniq ko‘rsatilgan bo‘lishi shart.
@@ -1185,7 +1189,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (davlat granti shartnomasi, loyihada ishtirok etish to'g'risidagi buyruq yoki ilmiy loyiha hisoboti) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Loyiha aynan sizning universitet doirasida amalga oshirilayotganligi tasdiqlanishi shart. Boshqa OTMlardagi loyihalar mezon talabiga javob bermaydi.
@@ -1225,7 +1229,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (Oliy Attestatsiya Komissiyasi - OAK rayosati qarori yoki Vazirlik buyrug'ini) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjat OAK rayosati yoki Vazirlikning rasmiy qarori, tasdiqlangan ro'yxati yoki buyrug'i ekanligini tekshiring.
@@ -1280,7 +1284,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (OAVdagi maqolalar, video havola, ijtimoiy tarmoqdagi rasmiy postlar yoki efir lavhalari) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Chiqish mavzusi universitet yoki mamlakatdagi islohotlar (ta'lim, ijtimoiy, iqtisodiy va h.k.) targ'ibotiga oid bo'lishi shart.
@@ -1324,7 +1328,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (Davlat hokimiyati yoki boshqaruv organidan kelgan rasmiy xat, murojaat va professor-o'qituvchi tomonidan tayyorlangan ilmiy-amaliy taklif) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda murojaat qilgan tashkilot Davlat hokimiyati yoki boshqaruv organi (masalan, Vazirliklar, Hokimiyatlar, Agentliklar) ekanligini tekshiring.
@@ -1366,7 +1370,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (tashabbuskorlik bo'yicha buyruq/ruxsatnoma, tadbir bayonnomasi, e'lonlar, fotosuratlar yoki tadbir hisoboti) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda o'qituvchining tashabbusi bilan ma'naviy-ma'rifiy tadbir (uchrashuv, mushoira, intellektual o'yin yoki tanlov) tashkil etilganligi tasdiqlanishi shart.
@@ -1408,7 +1412,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (ma'naviy-ma'rifiy tadbir bayonnomalari, sport musobaqalari hisobotlari, mahalla bilan hamkorlik hujjatlari yoki tadbir fotosuratlari) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda o'qituvchining talabalar bilan birga ma'naviy-ma'rifiy, sport yoki madaniy tadbirlarda (yoki biriktirilgan mahallada) ishtirok etganligi tasdiqlanishi shart.
@@ -1450,7 +1454,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (Davlat mukofoti guvohnomasi, orden/medal diplomi yoki respublika darajasidagi rasmiy tashakkurnoma) tahlil qiling.
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda davlat mukofoti (orden, medal, faxriy unvon) yoki Vazirliklar/Oliy idoralar tomonidan berilgan respublika darajasidagi rasmiy tashakkurnoma ekanligini tekshiring.
@@ -1492,7 +1496,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 1,
-                        'ai_model' => 'gemini-2.5-flash',
+                        'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => null,
                     ],
                 ],

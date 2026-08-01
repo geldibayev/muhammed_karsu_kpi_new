@@ -33,6 +33,31 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $this->assertDatabaseCount('criteria', 41);
         $this->assertDatabaseCount('criterion_evaluations', 148);
         $this->assertDatabaseCount('criterion_years', 37);
+        $this->assertSame(36, Criterion::query()->where('ai_model', 'gemini-3.5-flash-lite')->count());
+        $this->assertSame(5, Criterion::query()->where('ai_model', 'gemini-3.5-flash')->count());
+        $this->assertFalse(
+            Criterion::query()
+                ->whereIn('ai_model', ['gemini-2.5-flash', 'gemini-2.5-pro'])
+                ->exists(),
+        );
+    }
+
+    public function test_new_criteria_use_the_cost_efficient_default_ai_model(): void
+    {
+        $report = Report::query()->create([
+            'code' => 'default-ai-model-test',
+            'name' => ['uz' => 'Standart AI modeli testi'],
+            'status' => '1',
+        ]);
+
+        $criterion = Criterion::query()->create([
+            'name' => ['uz' => 'AI mezoni'],
+            'report_id' => $report->getKey(),
+            'upload' => '0',
+            'status' => '1',
+        ]);
+
+        $this->assertSame('gemini-3.5-flash-lite', $criterion->refresh()->ai_model);
     }
 
     public function test_it_applies_the_complete_pdf_matrix_idempotently(): void
