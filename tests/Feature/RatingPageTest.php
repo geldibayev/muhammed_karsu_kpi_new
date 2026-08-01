@@ -542,6 +542,8 @@ class RatingPageTest extends TestCase
             'message' => 'AI tasdiqladi.',
             'message_type' => 'ai_evaluation',
         ]);
+        $additionalAiSubmissions = collect([1.10, 1.20, 1.30])
+            ->map(fn (float $point): Datum => $this->createAcceptedDatum($ratedUser, $aiCriterion, $point));
         $this->createPendingDatum($ratedUser, $pendingCriterion, 'received');
         $this->createPendingDatum($ratedUser, $pendingCriterion, 'checking');
         $this->createPendingDatum($ratedUser, $manualCriterion, 'checking');
@@ -556,6 +558,9 @@ class RatingPageTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertSee('data-testid="rating-criterion-row"', false)
+            ->assertSee('data-target="#accepted-submissions-'.$aiCriterion->getKey().'"', false)
+            ->assertSee('4 ta resurs')
             ->assertSee('Baholangan Ustoz')
             ->assertSee('Birinchi bo‘lim')
             ->assertSee('#1')
@@ -592,6 +597,10 @@ class RatingPageTest extends TestCase
                 'search' => 'Baholangan',
                 'degree_group' => 'with_degree',
             ]));
+
+        $additionalAiSubmissions->each(
+            fn (Datum $datum) => $response->assertSee(route('upload.details', $datum)),
+        );
 
         $this->assertSame(1, substr_count($response->getContent(), 'Baholanishi kutilayotgan kriteriya'));
 

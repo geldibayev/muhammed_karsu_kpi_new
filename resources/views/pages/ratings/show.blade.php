@@ -9,7 +9,7 @@
                 $faculty = $department?->parent ?? ($department?->parent_id === null ? $department : null);
             @endphp
 
-            <div class="card card-outline card-primary">
+            <div class="card card-outline card-primary shadow-sm">
                 <div class="card-body">
                     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between">
                         <div class="d-flex align-items-center">
@@ -26,56 +26,64 @@
                                         / {{ data_get($department->name, 'uz', 'Kafedra biriktirilmagan') }}
                                     @endif
                                 </div>
-                                <div class="small text-muted">{{ $workplace?->position?->name ?? 'Lavozim biriktirilmagan' }}</div>
+                                <div class="small text-muted">
+                                    {{ $workplace?->position?->name ?? 'Lavozim biriktirilmagan' }}
+                                </div>
                             </div>
                         </div>
-                        <a href="{{ route('ratings.index', $filters) }}" class="btn btn-outline-secondary mt-3 mt-md-0">
-                            <i class="fas fa-arrow-left mr-1"></i> Reytingga qaytish
+                        <a href="{{ route('ratings.index', $filters) }}"
+                           class="btn btn-outline-secondary mt-3 mt-md-0">
+                            <i class="fas fa-arrow-left mr-1" aria-hidden="true"></i>
+                            Reytingga qaytish
                         </a>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
                     <div>
                         <h2 class="h6 font-weight-bold mb-1">Kriteriyalar bo‘yicha ballar</h2>
                         <div class="small text-muted">
                             {{ $report ? data_get($report->name, 'uz', 'Faol hisobot') : 'Faol hisobot topilmadi' }}
                         </div>
                     </div>
-                    <span class="badge badge-success px-3 py-2">Jami: {{ number_format($totalPoints, 2) }}</span>
+                    <span class="badge badge-success px-3 py-2 mt-2 mt-sm-0">
+                        Jami: {{ number_format($totalPoints, 2) }} ball
+                    </span>
                 </div>
+
                 <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover small mb-0">
-                            <thead>
-                            <tr>
-                                <th class="text-center">#</th>
-                                <th>Kriteriya</th>
-                                <th class="text-center">Ball</th>
-                                <th>Tasdiqlangan resurslar</th>
-                                <th>Baholagan</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @forelse($criterionSections as $section)
-                                <tr class="bg-light">
-                                    <th class="text-center align-middle py-3">#{{ $section['number'] }}</th>
-                                    <th colspan="4" class="align-middle py-3">
-                                        {{ data_get($section['criterion']->name, 'uz', 'Nomsiz bo‘lim') }}
-                                    </th>
-                                </tr>
-                                @foreach($section['rows'] as $score)
-                                    <tr>
-                                        <td class="text-center align-middle font-weight-bold">{{ $score['code'] }}</td>
-                                        <td class="align-middle font-weight-bold">
-                                            {{ data_get($score['criterion']->name, 'uz', 'Nomsiz kriteriya') }}
-                                        </td>
-                                        <td class="text-center align-middle">
+                    @forelse($criterionSections as $section)
+                        <section @class(['border-bottom' => ! $loop->last])>
+                            <div class="bg-light border-bottom px-3 py-3 d-flex align-items-center">
+                                <span class="badge badge-primary px-2 py-1 mr-2">#{{ $section['number'] }}</span>
+                                <h3 class="h6 font-weight-bold mb-0">
+                                    {{ data_get($section['criterion']->name, 'uz', 'Nomsiz bo‘lim') }}
+                                </h3>
+                            </div>
+
+                            @foreach($section['rows'] as $score)
+                                @php($collapseId = 'accepted-submissions-'.$score['criterion']->getKey())
+                                <article data-testid="rating-criterion-row"
+                                         @class(['px-3 py-3', 'border-bottom' => ! $loop->last])>
+                                    <div class="row align-items-start">
+                                        <div class="col-lg-4 col-md-12 mb-3 mb-lg-0">
+                                            <div class="d-flex align-items-start">
+                                                <span class="badge badge-light border text-primary text-nowrap mr-2 mt-1">
+                                                    {{ $score['code'] }}
+                                                </span>
+                                                <div class="font-weight-bold">
+                                                    {{ data_get($score['criterion']->name, 'uz', 'Nomsiz kriteriya') }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-2 col-md-4 mb-3 mb-lg-0">
+                                            <div class="small text-muted text-uppercase font-weight-bold mb-2">Natija</div>
                                             @if($score['state'] === 'scored')
                                                 <span class="badge badge-success px-3 py-2">
-                                                    {{ number_format($score['point'], 2) }}
+                                                    {{ number_format($score['point'], 2) }} ball
                                                 </span>
                                             @elseif($score['state'] === 'pending')
                                                 <span class="badge badge-warning px-3 py-2">Baholanmagan</span>
@@ -86,55 +94,87 @@
                                             @else
                                                 <span class="badge badge-secondary px-3 py-2">Yuklanmagan</span>
                                             @endif
+
                                             @if($score['pending_count'] > 0)
-                                                <span class="badge badge-warning d-block mt-1">
-                                                    {{ $score['pending_count'] }} ta baholanmagan yuklama
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="align-middle">
-                                            @forelse($score['accepted_submissions'] as $submission)
-                                                <div class="d-flex align-items-center justify-content-between border-bottom py-2">
-                                                    <a href="{{ route('upload.details', $submission) }}"
-                                                       class="text-break pr-3">
-                                                        #{{ $submission->id }}
-                                                    </a>
-                                                    <span class="badge badge-success px-2 py-1 text-nowrap">
-                                                        {{ number_format($submission->point, 2) }} ball
+                                                <div class="mt-2">
+                                                    <span class="badge badge-warning">
+                                                        {{ $score['pending_count'] }} ta baholanmagan yuklama
                                                     </span>
                                                 </div>
-                                            @empty
-                                                <span class="text-muted">Tasdiqlangan resurs yo‘q</span>
-                                            @endforelse
-                                        </td>
-                                        <td class="align-middle">
-                                            @foreach($score['evaluators'] as $evaluator)
-                                                <span class="badge {{ $evaluator['type'] === 'manual' ? 'badge-primary' : ($evaluator['type'] === 'ai' ? 'badge-info' : ($evaluator['type'] === 'pending' ? 'badge-warning' : 'badge-secondary')) }} mr-1">
-                                                    @if($evaluator['type'] === 'ai')
-                                                        <i class="fas fa-robot mr-1"></i>
-                                                    @elseif($evaluator['type'] === 'pending')
-                                                        <i class="fas fa-clock mr-1"></i>
-                                                    @elseif($evaluator['type'] === 'unuploaded')
-                                                        <i class="fas fa-upload mr-1"></i>
-                                                    @else
-                                                        <i class="fas fa-user-check mr-1"></i>
-                                                    @endif
-                                                    {{ $evaluator['name'] }}
+                                            @endif
+                                        </div>
+
+                                        <div class="col-lg-3 col-md-8 mb-3 mb-lg-0">
+                                            <div class="small text-muted text-uppercase font-weight-bold mb-2">
+                                                Tasdiqlangan resurslar
+                                            </div>
+                                            @if($score['accepted_submissions']->isNotEmpty())
+                                                <button type="button"
+                                                        class="btn btn-outline-success btn-sm text-left"
+                                                        data-toggle="collapse"
+                                                        data-target="#{{ $collapseId }}"
+                                                        aria-controls="{{ $collapseId }}"
+                                                        aria-expanded="false">
+                                                    <i class="fas fa-folder-open mr-1" aria-hidden="true"></i>
+                                                    {{ $score['accepted_submissions']->count() }} ta resurs
+                                                    <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
+                                                </button>
+                                            @else
+                                                <span class="text-muted small">
+                                                    <i class="far fa-folder-open mr-1" aria-hidden="true"></i>
+                                                    Tasdiqlangan resurs yo‘q
                                                 </span>
-                                            @endforeach
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-5">
-                                        Faol hisobot uchun kriteriyalar mavjud emas.
-                                    </td>
-                                </tr>
-                            @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                                            @endif
+                                        </div>
+
+                                        <div class="col-lg-3 col-md-12">
+                                            <div class="small text-muted text-uppercase font-weight-bold mb-2">Baholagan</div>
+                                            <div class="d-flex flex-wrap align-items-start">
+                                                @foreach($score['evaluators'] as $evaluator)
+                                                    <span class="badge {{ $evaluator['type'] === 'manual' ? 'badge-primary' : ($evaluator['type'] === 'ai' ? 'badge-info' : ($evaluator['type'] === 'pending' ? 'badge-warning' : 'badge-secondary')) }} mr-1 mb-1 px-2 py-1">
+                                                        @if($evaluator['type'] === 'ai')
+                                                            <i class="fas fa-robot mr-1" aria-hidden="true"></i>
+                                                        @elseif($evaluator['type'] === 'pending')
+                                                            <i class="fas fa-clock mr-1" aria-hidden="true"></i>
+                                                        @elseif($evaluator['type'] === 'unuploaded')
+                                                            <i class="fas fa-upload mr-1" aria-hidden="true"></i>
+                                                        @else
+                                                            <i class="fas fa-user-check mr-1" aria-hidden="true"></i>
+                                                        @endif
+                                                        {{ $evaluator['name'] }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if($score['accepted_submissions']->isNotEmpty())
+                                        <div id="{{ $collapseId }}" class="collapse mt-3">
+                                            <div class="list-group list-group-flush border rounded">
+                                                @foreach($score['accepted_submissions'] as $submission)
+                                                    <a href="{{ route('upload.details', $submission) }}"
+                                                       class="list-group-item list-group-item-action d-flex align-items-center justify-content-between py-2">
+                                                        <span class="text-primary text-nowrap">
+                                                            <i class="fas fa-file-alt mr-2" aria-hidden="true"></i>
+                                                            Resurs #{{ $submission->id }}
+                                                        </span>
+                                                        <span class="badge badge-success px-2 py-1 ml-3 text-nowrap">
+                                                            {{ number_format($submission->point, 2) }} ball
+                                                        </span>
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+                                </article>
+                            @endforeach
+                        </section>
+                    @empty
+                        <div class="text-center text-muted py-5">
+                            <i class="far fa-folder-open d-block mb-2" aria-hidden="true"></i>
+                            Faol hisobot uchun kriteriyalar mavjud emas.
+                        </div>
+                    @endforelse
                 </div>
             </div>
         </div>
