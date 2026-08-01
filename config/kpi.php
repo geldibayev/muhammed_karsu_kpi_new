@@ -12,6 +12,7 @@ return [
         '1.6' => env('KPI_REVIEWER_1_6_HEMIS_ID', '3862311015'),
         '1.7' => env('KPI_REVIEWER_1_7_HEMIS_ID', '3172011004'),
         '2.1.3' => env('KPI_REVIEWER_2_1_3_HEMIS_ID', '3862311015'),
+        '2.1.4' => env('KPI_REVIEWER_2_1_4_HEMIS_ID', '3462611061'),
         '3.1.4' => env('KPI_REVIEWER_3_1_4_HEMIS_ID', '3462011207'),
         '3.1.6' => env('KPI_REVIEWER_3_1_6_HEMIS_ID', '3462011207'),
         '3.1.7' => env('KPI_REVIEWER_3_1_7_HEMIS_ID', '3462011207'),

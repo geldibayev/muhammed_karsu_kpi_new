@@ -78,6 +78,11 @@ class ManualReviewWorkflowTest extends TestCase
             'criterion_id' => 36,
             'criterion_code' => '4.1.1',
         ]);
+        $this->assertDatabaseHas('criterion_reviewer_assignments', [
+            'hemis_id' => 3462611061,
+            'criterion_id' => 16,
+            'criterion_code' => '2.1.4',
+        ]);
         $oavAssignment = CriterionReviewerAssignment::query()
             ->where('criterion_code', '4.1.1')
             ->firstOrFail();

@@ -11,16 +11,14 @@ class CriterionReviewerAssignmentSeeder extends Seeder
 {
     public function run(): void
     {
-        $settingsManagerHemisId = (int) config('kpi.settings_manager_hemis_id');
         $oavReviewerHemisId = (int) config('kpi.ai_status_viewer_hemis_id');
 
-        if ($settingsManagerHemisId <= 0 || $oavReviewerHemisId <= 0) {
+        if ($oavReviewerHemisId <= 0) {
             throw new RuntimeException('KPI mas’ullarining HEMIS ID sozlamalari to‘liq emas.');
         }
 
         $reviewersByCriterionCode = array_map('intval', config('kpi.criterion_reviewers', []));
         $reviewersByCriterionCode += [
-            '2.1.4' => $settingsManagerHemisId,
             '4.1.1' => $oavReviewerHemisId,
         ];
 
