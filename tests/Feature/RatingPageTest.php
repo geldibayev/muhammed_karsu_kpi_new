@@ -548,7 +548,7 @@ class RatingPageTest extends TestCase
         $this->createPendingDatum($ratedUser, $pendingCriterion, 'checking');
         $this->createPendingDatum($ratedUser, $manualCriterion, 'checking');
         $this->createPendingDatum($ratedUser, $oldPendingCriterion, 'checking');
-        $this->createPendingDatum($ratedUser, $cancelledCriterion, 'cancelled');
+        $cancelledDatum = $this->createPendingDatum($ratedUser, $cancelledCriterion, 'cancelled');
 
         $response = $this->actingAs($viewer)->get(route('ratings.show', [
             'user' => $ratedUser,
@@ -560,7 +560,12 @@ class RatingPageTest extends TestCase
             ->assertOk()
             ->assertSee('data-testid="rating-criterion-row"', false)
             ->assertSee('data-target="#accepted-submissions-'.$aiCriterion->getKey().'"', false)
-            ->assertSee('4 ta resurs')
+            ->assertSee('4 ta tasdiqlangan')
+            ->assertSee('data-target="#cancelled-submissions-'.$cancelledCriterion->getKey().'"', false)
+            ->assertSee('btn btn-outline-danger btn-sm', false)
+            ->assertSee('list-group-item list-group-item-danger', false)
+            ->assertSee('1 ta qaytarilgan')
+            ->assertSee(route('upload.details', $cancelledDatum))
             ->assertSee('Baholangan Ustoz')
             ->assertSee('Birinchi bo‘lim')
             ->assertSee('#1')
@@ -607,7 +612,7 @@ class RatingPageTest extends TestCase
         $this->get(route('ratings.show', PHP_INT_MAX))->assertNotFound();
     }
 
-    public function test_authenticated_user_can_view_and_download_another_users_accepted_rating_resource(): void
+    public function test_authenticated_user_can_view_and_download_another_users_rating_resources(): void
     {
         Storage::fake('local');
 
@@ -637,6 +642,17 @@ class RatingPageTest extends TestCase
             'status' => 'accepted',
             'point' => 6.75,
         ]);
+        $cancelledPath = 'uploads/qaytarilgan-resurs.pdf';
+        Storage::disk('local')->put($cancelledPath, 'cancelled evidence');
+        $cancelledDatum = Datum::query()->create([
+            'name' => 'Qaytarilgan ilmiy maqola.pdf',
+            'material' => ['type' => 'file', 'disk' => 'local', 'path' => $cancelledPath],
+            'user_id' => $ratedUser->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'cancelled',
+            'point' => 0,
+            'reason' => 'Talablarga mos kelmadi.',
+        ]);
         $pendingDatum = $this->createPendingDatum($ratedUser, $criterion, 'checking');
         $pendingDatum->update(['name' => 'Yopiq tekshiruv resursi']);
         $oldDatum = $this->createAcceptedDatum($ratedUser, $oldCriterion, 99, 'Eski hisobot resursi');
@@ -648,6 +664,8 @@ class RatingPageTest extends TestCase
             ->assertDontSee('Shaffof ilmiy maqola.pdf')
             ->assertSee('6.75 ball')
             ->assertSee(route('upload.details', $acceptedDatum))
+            ->assertSee('1 ta qaytarilgan')
+            ->assertSee(route('upload.details', $cancelledDatum))
             ->assertDontSee('Yopiq tekshiruv resursi')
             ->assertDontSee('Eski hisobot resursi');
 
@@ -664,6 +682,19 @@ class RatingPageTest extends TestCase
             ->assertOk()
             ->assertDownload('Shaffof ilmiy maqola.pdf');
 
+        $this->actingAs($viewer)
+            ->get(route('upload.details', $cancelledDatum))
+            ->assertOk()
+            ->assertSee('Qaytarilgan ilmiy maqola.pdf')
+            ->assertSee('Qaytarilgan')
+            ->assertSee('Talablarga mos kelmadi.')
+            ->assertSee(route('upload.file.download', $cancelledDatum));
+
+        $this->actingAs($viewer)
+            ->get(route('upload.file.download', $cancelledDatum))
+            ->assertOk()
+            ->assertDownload('Qaytarilgan ilmiy maqola.pdf');
+
         $this->actingAs($viewer)->get(route('upload.details', $pendingDatum))->assertForbidden();
         $this->actingAs($viewer)->get(route('upload.file.download', $pendingDatum))->assertForbidden();
         $this->actingAs($viewer)->get(route('upload.details', $oldDatum))->assertOk();
@@ -671,6 +702,8 @@ class RatingPageTest extends TestCase
         $unknownRole = User::factory()->withRole('unknown')->create();
         $this->actingAs($unknownRole)->get(route('upload.details', $acceptedDatum))->assertForbidden();
         $this->actingAs($unknownRole)->get(route('upload.file.download', $acceptedDatum))->assertForbidden();
+        $this->actingAs($unknownRole)->get(route('upload.details', $cancelledDatum))->assertForbidden();
+        $this->actingAs($unknownRole)->get(route('upload.file.download', $cancelledDatum))->assertForbidden();
     }
 
     public function test_ratings_page_handles_the_absence_of_an_active_report(): void

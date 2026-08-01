@@ -64,7 +64,10 @@
                             </div>
 
                             @foreach($section['rows'] as $score)
-                                @php($collapseId = 'accepted-submissions-'.$score['criterion']->getKey())
+                                @php
+                                    $acceptedCollapseId = 'accepted-submissions-'.$score['criterion']->getKey();
+                                    $cancelledCollapseId = 'cancelled-submissions-'.$score['criterion']->getKey();
+                                @endphp
                                 <article data-testid="rating-criterion-row"
                                          @class(['px-3 py-3', 'border-bottom' => ! $loop->last])>
                                     <div class="row align-items-start">
@@ -106,24 +109,37 @@
 
                                         <div class="col-lg-3 col-md-8 mb-3 mb-lg-0">
                                             <div class="small text-muted text-uppercase font-weight-bold mb-2">
-                                                Tasdiqlangan resurslar
+                                                Resurslar
                                             </div>
                                             @if($score['accepted_submissions']->isNotEmpty())
                                                 <button type="button"
                                                         class="btn btn-outline-success btn-sm text-left"
                                                         data-toggle="collapse"
-                                                        data-target="#{{ $collapseId }}"
-                                                        aria-controls="{{ $collapseId }}"
+                                                        data-target="#{{ $acceptedCollapseId }}"
+                                                        aria-controls="{{ $acceptedCollapseId }}"
                                                         aria-expanded="false">
                                                     <i class="fas fa-folder-open mr-1" aria-hidden="true"></i>
-                                                    {{ $score['accepted_submissions']->count() }} ta resurs
+                                                    {{ $score['accepted_submissions']->count() }} ta tasdiqlangan
                                                     <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
                                                 </button>
-                                            @else
+                                            @elseif($score['cancelled_submissions']->isEmpty())
                                                 <span class="text-muted small">
                                                     <i class="far fa-folder-open mr-1" aria-hidden="true"></i>
-                                                    Tasdiqlangan resurs yo‘q
+                                                    Resurs yo‘q
                                                 </span>
+                                            @endif
+
+                                            @if($score['cancelled_submissions']->isNotEmpty())
+                                                <button type="button"
+                                                        class="btn btn-outline-danger btn-sm text-left mt-1"
+                                                        data-toggle="collapse"
+                                                        data-target="#{{ $cancelledCollapseId }}"
+                                                        aria-controls="{{ $cancelledCollapseId }}"
+                                                        aria-expanded="false">
+                                                    <i class="fas fa-undo-alt mr-1" aria-hidden="true"></i>
+                                                    {{ $score['cancelled_submissions']->count() }} ta qaytarilgan
+                                                    <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
+                                                </button>
                                             @endif
                                         </div>
 
@@ -149,7 +165,7 @@
                                     </div>
 
                                     @if($score['accepted_submissions']->isNotEmpty())
-                                        <div id="{{ $collapseId }}" class="collapse mt-3">
+                                        <div id="{{ $acceptedCollapseId }}" class="collapse mt-3">
                                             <div class="list-group list-group-flush border rounded">
                                                 @foreach($score['accepted_submissions'] as $submission)
                                                     <a href="{{ route('upload.details', $submission) }}"
@@ -160,6 +176,25 @@
                                                         </span>
                                                         <span class="badge badge-success px-2 py-1 ml-3 text-nowrap">
                                                             {{ number_format($submission->point, 2) }} ball
+                                                        </span>
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    @if($score['cancelled_submissions']->isNotEmpty())
+                                        <div id="{{ $cancelledCollapseId }}" class="collapse mt-3">
+                                            <div class="list-group list-group-flush border border-danger rounded">
+                                                @foreach($score['cancelled_submissions'] as $submission)
+                                                    <a href="{{ route('upload.details', $submission) }}"
+                                                       class="list-group-item list-group-item-danger list-group-item-action d-flex align-items-center justify-content-between py-2">
+                                                        <span class="text-danger text-nowrap">
+                                                            <i class="fas fa-file-alt mr-2" aria-hidden="true"></i>
+                                                            Resurs #{{ $submission->id }}
+                                                        </span>
+                                                        <span class="badge badge-danger px-2 py-1 ml-3 text-nowrap">
+                                                            Qaytarilgan
                                                         </span>
                                                     </a>
                                                 @endforeach

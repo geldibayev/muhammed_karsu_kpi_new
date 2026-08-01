@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\DatumStatus;
 use App\Models\CriterionManualScoreOption;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
@@ -21,7 +22,7 @@ class DatumPolicy
         return $datum->status !== 'deleted'
             && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
                 || $this->isAssignedReviewer($user, $datum)
-                || $this->isAcceptedRatingSubmissionVisible($user, $datum));
+                || $this->isRatingSubmissionVisible($user, $datum));
     }
 
     public function download(User $user, Datum $datum): bool
@@ -29,7 +30,7 @@ class DatumPolicy
         return $datum->status !== 'deleted'
             && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
                 || $this->isAssignedReviewer($user, $datum)
-                || $this->isAcceptedRatingSubmissionVisible($user, $datum));
+                || $this->isRatingSubmissionVisible($user, $datum));
     }
 
     public function delete(User $user, Datum $datum): bool
@@ -58,9 +59,12 @@ class DatumPolicy
         return $user->isSuperAdmin() || $datum->user_id === $user->id;
     }
 
-    private function isAcceptedRatingSubmissionVisible(User $user, Datum $datum): bool
+    private function isRatingSubmissionVisible(User $user, Datum $datum): bool
     {
-        return $datum->status === 'accepted' && $user->can('view-ratings');
+        return in_array($datum->status, [
+            DatumStatus::Accepted->value,
+            DatumStatus::Cancelled->value,
+        ], true) && $user->can('view-ratings');
     }
 
     private function isAssignedReviewer(User $user, Datum $datum): bool
