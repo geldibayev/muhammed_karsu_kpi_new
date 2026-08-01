@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Datum;
@@ -11,6 +12,7 @@ use App\Models\Formula;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class PrintedEducationalLiteratureScoringTest extends TestCase
@@ -82,6 +84,33 @@ class PrintedEducationalLiteratureScoringTest extends TestCase
         ])->assertSuccessful();
 
         $this->assertSame(2, $this->recalculationHistoryCount());
+
+        Queue::fake();
+        $this->artisan('kpi:recalculate-printed-literature-points', [
+            'report' => $report->id,
+            '--apply' => true,
+            '--requeue-unresolved' => true,
+        ])->expectsOutputToContain('AI navbatiga qaytarildi')->assertSuccessful();
+
+        $unresolved->refresh();
+        $this->assertSame('checking', $unresolved->status);
+        $this->assertSame(0.0, $unresolved->point);
+        $this->assertNull($unresolved->page_count);
+        $this->assertNull($unresolved->author_count);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $unresolved->id,
+            'message_type' => 'printed_literature_recheck_queued',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $unresolved->id,
+            'message_type' => 'ai_queued',
+        ]);
+        Queue::assertPushed(
+            ProcessAiDatumEvaluation::class,
+            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $unresolved->id
+                && $job->criterionId === $unresolved->criterion_id,
+        );
+        Queue::assertPushed(ProcessAiDatumEvaluation::class, 1);
     }
 
     private function createCriterion(Report $report, Formula $formula, string $code): Criterion

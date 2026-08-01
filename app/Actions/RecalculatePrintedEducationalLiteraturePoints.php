@@ -17,18 +17,22 @@ class RecalculatePrintedEducationalLiteraturePoints
     ) {}
 
     /**
-     * @return array{total: int, changes: int, unresolved_ids: array<int, int>, conflicts: int, page_sources: array<string, int>, author_sources: array<string, int>}
+     * @return array{total: int, changes: int, unresolved_ids: array<int, int>, requeued_ids: array<int, int>, conflicts: int, page_sources: array<string, int>, author_sources: array<string, int>}
      */
-    public function handle(Report $report, bool $apply = false): array
-    {
+    public function handle(
+        Report $report,
+        bool $apply = false,
+        bool $requeueUnresolved = false,
+    ): array {
         if (! $apply) {
             $analysis = $this->analyse($report);
+            $analysis['requeued_ids'] = [];
             unset($analysis['rows']);
 
             return $analysis;
         }
 
-        $analysis = DB::transaction(function () use ($report): array {
+        $analysis = DB::transaction(function () use ($report, $requeueUnresolved): array {
             Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
             $analysis = $this->analyse($report, true);
 
@@ -58,12 +62,49 @@ class RecalculatePrintedEducationalLiteraturePoints
                 ]);
             }
 
+            $requeuedIds = [];
+
+            if ($requeueUnresolved && $analysis['unresolved_ids'] !== []) {
+                $unresolvedData = Datum::query()
+                    ->whereIn('id', $analysis['unresolved_ids'])
+                    ->lockForUpdate()
+                    ->get();
+
+                foreach ($unresolvedData as $datum) {
+                    $datum->update([
+                        'status' => 'checking',
+                        'point' => 0,
+                        'author_count' => null,
+                        'page_count' => null,
+                        'reviewer_hemis_id' => null,
+                        'reason' => 'AI tahlili navbatga qo\'yildi.',
+                    ]);
+                    $datum->histories()->createMany([
+                        [
+                            'user_id' => $datum->user_id,
+                            'type' => 'info',
+                            'message' => '1.2/1.3 yangi hisoblash qoidasi uchun sahifalar va mualliflar sonini aniqlash maqsadida resurs qayta AI tekshiruviga yuborildi.',
+                            'message_type' => 'printed_literature_recheck_queued',
+                        ],
+                        [
+                            'user_id' => $datum->user_id,
+                            'type' => 'info',
+                            'message' => 'Resurs AI tekshiruv navbatiga qo\'yildi.',
+                            'message_type' => 'ai_queued',
+                        ],
+                    ]);
+                    $requeuedIds[] = $datum->getKey();
+                }
+            }
+
+            $analysis['requeued_ids'] = $requeuedIds;
+
             unset($analysis['rows']);
 
             return $analysis;
         }, 3);
 
-        if ($analysis['changes'] > 0) {
+        if ($analysis['changes'] > 0 || $analysis['requeued_ids'] !== []) {
             $this->recalculateReportPoints->handle($report);
         }
 
@@ -78,6 +119,7 @@ class RecalculatePrintedEducationalLiteraturePoints
         $data = Datum::query()
             ->whereHas('criterion', fn (Builder $query): Builder => $query
                 ->where('report_id', $report->getKey())
+                ->where('checking', 'ai')
                 ->whereIn('code', ['1.2', '1.3']))
             ->where('status', 'accepted')
             ->with([
