@@ -217,7 +217,7 @@
                                 'disabled' => [
                                     'badge' => 'badge-secondary',
                                     'icon' => 'fa-pause-circle',
-                                    'label' => 'OвЂchirilgan',
+                                    'label' => 'O‘chirilgan',
                                 ],
                                 default => [
                                     'badge' => 'badge-secondary',

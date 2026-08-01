@@ -67,11 +67,11 @@
                                 <div class="alert {{ $aiEvaluationsEnabled ? 'alert-success' : 'alert-danger' }}">
                                     <div class="font-weight-bold">
                                         Joriy holat:
-                                        {{ $aiEvaluationsEnabled ? 'AI tekshiruvi yoqilgan' : 'AI tekshiruvi oвЂchirilgan' }}
+                                        {{ $aiEvaluationsEnabled ? 'AI tekshiruvi yoqilgan' : 'AI tekshiruvi o‘chirilgan' }}
                                     </div>
                                     <div class="small mt-1">
-                                        OвЂchirilganda GeminiвЂ™ga yangi soвЂrov yuborilmaydi. Navbatdagi resurslar oвЂchirilmaydi;
-                                        AI qayta yoqilganda worker ularni davom ettiradi. Hozir ishlanayotgan bitta soвЂrov yakunlanishi mumkin.
+                                        O‘chirilganda Gemini’ga yangi so‘rov yuborilmaydi. Navbatdagi resurslar o‘chirilmaydi;
+                                        AI qayta yoqilganda worker ularni davom ettiradi. Hozir ishlanayotgan bitta so‘rov yakunlanishi mumkin.
                                     </div>
                                 </div>
 
@@ -84,7 +84,7 @@
                                             AI tekshiruvini yoqish
                                         </option>
                                         <option value="0" @selected((string) old('ai_evaluations_enabled', (int) $aiEvaluationsEnabled) === '0')>
-                                            AI tekshiruvini vaqtincha oвЂchirish
+                                            AI tekshiruvini vaqtincha o‘chirish
                                         </option>
                                     </select>
                                     @error('ai_evaluations_enabled')

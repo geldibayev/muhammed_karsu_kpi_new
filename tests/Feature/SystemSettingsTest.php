@@ -144,7 +144,7 @@ class SystemSettingsTest extends TestCase
         $this->actingAs($manager)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI oвЂchirilgan');
+            ->assertSee('AI o‘chirilgan');
 
         $this->actingAs($manager)
             ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => '1'])
