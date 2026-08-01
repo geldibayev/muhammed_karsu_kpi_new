@@ -13,6 +13,7 @@ use Gemini\Enums\DataType;
 use Gemini\Enums\ResponseMimeType;
 use Gemini\Exceptions\ErrorException;
 use Gemini\Laravel\Facades\Gemini;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use JsonException;
 use UnexpectedValueException;
@@ -43,6 +44,7 @@ class AiSubmissionEvaluator
 
         $maximumPoint = $this->maximumPoint($datum);
         $requiresAuthorCount = str_contains((string) $criterion->ai_prompt, 'author_count');
+        $requiresResourceDate = $criterion->observation === 'current';
 
         if ($maximumPoint === null) {
             return AiEvaluationResult::checking('Foydalanuvchi uchun mezon ball chegarasi topilmadi.');
@@ -61,7 +63,11 @@ class AiSubmissionEvaluator
             ->withGenerationConfig(new GenerationConfig(
                 temperature: 0.1,
                 responseMimeType: ResponseMimeType::APPLICATION_JSON,
-                responseSchema: $this->responseSchema($maximumPoint, $requiresAuthorCount),
+                responseSchema: $this->responseSchema(
+                    $maximumPoint,
+                    $requiresAuthorCount,
+                    $requiresResourceDate,
+                ),
             ));
 
         $contentParts = [$this->buildPrompt($datum, $maximumPoint, $requiresAuthorCount)];
@@ -114,7 +120,13 @@ class AiSubmissionEvaluator
         try {
             $result = AiEvaluationResult::fromJson($responseText, $maximumPoint);
 
-            return $this->aiAuthorPointDistributor->handle($result, (string) $criterion->ai_prompt);
+            $result = $this->enforceReportPeriod($datum, $result);
+
+            return $this->aiAuthorPointDistributor->handle(
+                $result,
+                (string) $criterion->ai_prompt,
+                $criterion->divide_ai_point_by_authors,
+            );
         } catch (JsonException|UnexpectedValueException) {
             return AiEvaluationResult::checking(
                 'AI javobi belgilangan format yoki ball chegarasiga mos kelmadi. Inson tekshiruvi zarur.',
@@ -124,8 +136,12 @@ class AiSubmissionEvaluator
 
     private function maximumPoint(Datum $datum): ?float
     {
+        if ($datum->criterion?->ai_submission_max_point !== null) {
+            return $datum->criterion->aiSubmissionMaximum();
+        }
+
         if ($datum->criterion?->formula_id === 3) {
-            return max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1));
+            return $datum->criterion->aiSubmissionMaximum();
         }
 
         $evaluation = $datum->criterion?->criterionEvaluations
@@ -135,7 +151,7 @@ class AiSubmissionEvaluator
             return null;
         }
 
-        return max(0, (float) $evaluation->score);
+        return $datum->criterion->aiSubmissionMaximum((float) $evaluation->score);
     }
 
     private function buildPrompt(
@@ -158,6 +174,8 @@ class AiSubmissionEvaluator
             'report_period' => [
                 'id' => $datum->criterion?->report_id,
                 'name' => $this->reportName($datum),
+                'eligible_start_date' => config('kpi.report_period_start'),
+                'eligible_end_date' => config('kpi.report_period_end'),
             ],
             'criterion_period_rule' => [
                 'code' => $datum->criterion?->observation,
@@ -169,9 +187,13 @@ class AiSubmissionEvaluator
             'submitted_metadata' => data_get($datum->material, 'article', data_get($datum->material, 'data', [])),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        $responseExample = $requiresAuthorCount
-            ? '{"status":"accepted|cancelled|checking","point":0,"author_count":1,"reason":"qisqa asos"}'
-            : '{"status":"accepted|cancelled|checking","point":0,"reason":"qisqa asos"}';
+        $requiresResourceDate = $datum->criterion?->observation === 'current';
+        $responseExample = match (true) {
+            $requiresAuthorCount && $requiresResourceDate => '{"status":"accepted|cancelled|checking","point":0,"author_count":1,"resource_date":"YYYY-MM-DD yoki bo‘sh satr","reason":"qisqa asos"}',
+            $requiresAuthorCount => '{"status":"accepted|cancelled|checking","point":0,"author_count":1,"reason":"qisqa asos"}',
+            $requiresResourceDate => '{"status":"accepted|cancelled|checking","point":0,"resource_date":"YYYY-MM-DD yoki bo‘sh satr","reason":"qisqa asos"}',
+            default => '{"status":"accepted|cancelled|checking","point":0,"reason":"qisqa asos"}',
+        };
         $authorInstruction = $requiresAuthorCount
             ? 'Accepted holatida author_count hujjatdagi jami mualliflar soni bo‘lishi va kamida 1 bo‘lishi shart.'
             : '';
@@ -189,6 +211,8 @@ SANA TEKSHIRUVI QOIDALARI:
 - Hujjatdagi sana yoki davr current_date_iso dan keyin bo'lsagina uni kelajakdagi sana deb hisoblang.
 - Hujjatdagi davrning tugash sanasi current_date_iso ga teng yoki undan oldin bo'lsa, uni kelajakdagi davr deb baholamang.
 - Resursning KPI davriga mosligini submission_year, report_period va criterion_period_rule bilan tekshiring; mavjud bo'lmagan davr chegaralarini o'ylab topmang.
+- criterion_period_rule.code current bo'lsa, resursning nashr yoki amalga oshirilgan sanasi report_period.eligible_start_date va report_period.eligible_end_date oralig'ida, chegaralar ham hisobga olingan holda bo'lishi shart.
+- criterion_period_rule.code current bo'lsa, hujjatdan topilgan sanani resource_date maydonida YYYY-MM-DD formatida qaytaring. Sana aniq topilmasa resource_date uchun bo'sh satr qaytaring.
 - criterion_period_rule.code last3years bo'lsa, hujjatdagi sana last_three_years_start_iso va current_date_iso oralig'ida ekanini tekshiring.
 - Sana o'qilmasa, noaniq bo'lsa yoki ishonchli vaqt kontekstiga zid xulosa chiqsa, cancelled emas, checking statusini va 0 ball qaytaring.
 
@@ -239,7 +263,56 @@ PROMPT;
         };
     }
 
-    private function responseSchema(float $maximumPoint, bool $requiresAuthorCount): Schema
+    private function enforceReportPeriod(Datum $datum, AiEvaluationResult $result): AiEvaluationResult
+    {
+        if ($datum->criterion?->observation !== 'current' || $result->status !== 'accepted') {
+            return $result;
+        }
+
+        if ($result->resourceDate === null) {
+            return AiEvaluationResult::checking(
+                'Resurs sanasi aniq topilmadi. Inson tekshiruvi zarur.',
+            );
+        }
+
+        $periodStart = $this->configuredPeriodDate('kpi.report_period_start');
+        $periodEnd = $this->configuredPeriodDate('kpi.report_period_end');
+        $resourceDate = Carbon::createFromFormat('!Y-m-d', $result->resourceDate);
+
+        if ($periodStart->greaterThan($periodEnd)) {
+            throw new UnexpectedValueException('KPI hisobot davri chegaralari noto‘g‘ri sozlangan.');
+        }
+
+        if ($resourceDate->lessThan($periodStart) || $resourceDate->greaterThan($periodEnd)) {
+            return new AiEvaluationResult(
+                status: 'cancelled',
+                point: 0,
+                reason: "Resurs sanasi ({$result->resourceDate}) KPI hisobot davriga mos emas.",
+                resourceDate: $result->resourceDate,
+            );
+        }
+
+        return $result;
+    }
+
+    private function configuredPeriodDate(string $key): Carbon
+    {
+        $value = config($key);
+
+        if (! is_string($value)) {
+            throw new UnexpectedValueException("{$key} sozlamasi topilmadi.");
+        }
+
+        $date = Carbon::createFromFormat('!Y-m-d', $value);
+
+        if ($date === false || $date->format('Y-m-d') !== $value) {
+            throw new UnexpectedValueException("{$key} sozlamasi YYYY-MM-DD formatiga mos emas.");
+        }
+
+        return $date;
+    }
+
+    private function responseSchema(float $maximumPoint, bool $requiresAuthorCount, bool $requiresResourceDate = false): Schema
     {
         $properties = [
             'status' => new Schema(
@@ -264,15 +337,29 @@ PROMPT;
             );
         }
 
+        if ($requiresResourceDate) {
+            $properties['resource_date'] = new Schema(
+                type: DataType::STRING,
+            );
+        }
+
+        $required = ['status', 'point'];
+
+        if ($requiresAuthorCount) {
+            $required[] = 'author_count';
+        }
+
+        if ($requiresResourceDate) {
+            $required[] = 'resource_date';
+        }
+
+        $required[] = 'reason';
+
         return new Schema(
             type: DataType::OBJECT,
             properties: $properties,
-            required: $requiresAuthorCount
-                ? ['status', 'point', 'author_count', 'reason']
-                : ['status', 'point', 'reason'],
-            propertyOrdering: $requiresAuthorCount
-                ? ['status', 'point', 'author_count', 'reason']
-                : ['status', 'point', 'reason'],
+            required: $required,
+            propertyOrdering: $required,
         );
     }
 }

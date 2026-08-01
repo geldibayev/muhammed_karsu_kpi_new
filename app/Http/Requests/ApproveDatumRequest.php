@@ -44,9 +44,7 @@ class ApproveDatumRequest extends FormRequest
         $evaluationCategory = $datum instanceof Datum ? $datum->user?->degree : null;
         $evaluationMaximum = $criterion?->criterionEvaluations
             ->firstWhere('evaluation', $evaluationCategory)?->score;
-        $reviewerPointMaximum = $criterion?->formula_id === 3
-            ? max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1))
-            : max(0, (float) $evaluationMaximum);
+        $reviewerPointMaximum = $criterion?->aiSubmissionMaximum((float) $evaluationMaximum) ?? 0;
 
         return [
             'score_option_id' => [

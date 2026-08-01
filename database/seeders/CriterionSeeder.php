@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\CriterionYear;
+use App\Support\ScopusCriterionRule;
 use Illuminate\Database\Seeder;
 
 class CriterionSeeder extends Seeder
@@ -769,20 +770,9 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 3,
                         'ai_model' => 'gemini-2.5-flash',
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (ilmiy maqola matni, Scopus/WoS bazasidan skrinshot, sertifikat yoki jurnal muqovasi) tahlil qilib, maqola holatini baholang.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Maqola aynan «Scopus» yoki «Web of Science» xalqaro bazalarida indekslangan bo'lishi shart.
-                        2. Jurnalning kvartilini (Q1, Q2, Q3, Q4) yoki maqola konferensiya materiali ekanligini aniqlang va shunga mos ball bering:
-                           - Q1 yoki Q2 kvartil jurnallar uchun: 1.0 ball (100%)
-                           - Q3 yoki Q4 kvartil jurnallar uchun: 0.8 ball (80%)
-                           - Konferensiyalarda nashr etilgan maqolalar uchun: 0.5 ball (50%)
-                        3. Ballni mualliflar o'rtasida teng taqsimlash uchun maqoladagi barcha mualliflar (hammualliflar) sonini aniq hisoblang.
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar maqola Scopus/WoS bazasida ekanligi va uning kvartili/turi tasdiqlansa: \"accepted\" statusini bering. \"point\" qismiga mos ballni (1.0, 0.8 yoki 0.5) yozing. \"author_count\" qismiga mualliflar sonini kiriting.
-                        - Agar hujjat xira bo'lsa, jurnalning Scopus/WoS dagi holati yoki kvartili aniq ko'rsatilmagan bo'lib, inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
-                        - Agar hujjatning maqolaga aloqasi bo'lmasa yoki jurnal Scopus/WoS bazalariga umuman kirmasligi aniq bo'lsa: \"cancelled\" statusini bering (\"point\": 0).
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam: 1.0, 0.8, 0.5 yoki 0>, \"author_count\": <mualliflar soni raqamda>, \"reason\": \"<Qabul qilingan qarorning sababi, kvartil darajasi va mualliflar soni haqida qisqacha izoh>\"}",
+                        'ai_prompt' => ScopusCriterionRule::PROMPT,
+                        'ai_submission_max_point' => ScopusCriterionRule::MAXIMUM_POINT,
+                        'divide_ai_point_by_authors' => false,
                     ],
                     [
                         'name' => [
@@ -1530,6 +1520,8 @@ class CriterionSeeder extends Seeder
                     'parent_id' => $c->id,
                     'ai_prompt' => $child['ai_prompt'],
                     'ai_model' => $child['ai_model'],
+                    'ai_submission_max_point' => $child['ai_submission_max_point'] ?? null,
+                    'divide_ai_point_by_authors' => $child['divide_ai_point_by_authors'] ?? null,
                     'report_id' => $child['report_id'],
                     'checking' => $child['checking'],
                     'file_limit' => $child['file_limit'] ?? 0,

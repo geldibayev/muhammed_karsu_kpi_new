@@ -962,6 +962,48 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_ai_human_review_uses_the_criterion_submission_maximum(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $criterion = $this->createCriterion();
+        $criterion->update([
+            'checking' => 'ai',
+            'ai_submission_max_point' => 5,
+        ]);
+        $this->assignAiHumanReviewer($reviewer);
+        Evaluation::query()->create([
+            'code' => 'no_degrees',
+            'name' => ['uz' => 'Darajasiz'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 3,
+        ]);
+        $datum = $this->createDatum($owner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $datum))
+            ->patch(route('reviews.approve', $datum), ['point' => 5.01])
+            ->assertSessionHasErrors('point');
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $datum), ['point' => 5])
+            ->assertRedirect(route('ai-human-reviews.index'));
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->id,
+            'status' => 'accepted',
+            'point' => 5,
+        ]);
+    }
+
     public function test_rejection_requires_reason_and_records_reviewer_decision(): void
     {
         $reviewer = User::factory()->create();

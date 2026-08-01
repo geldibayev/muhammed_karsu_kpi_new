@@ -30,6 +30,20 @@ class AiAuthorPointDistributorTest extends TestCase
         $this->assertSame($original, $result);
     }
 
+    public function test_it_keeps_full_point_when_author_division_is_explicitly_disabled(): void
+    {
+        $original = new AiEvaluationResult('accepted', 5, 'Q1 maqola.', 4);
+
+        $result = (new AiAuthorPointDistributor)->handle(
+            $original,
+            'author_count',
+            false,
+        );
+
+        $this->assertSame($original, $result);
+        $this->assertSame(5.0, $result->point);
+    }
+
     public function test_it_does_not_divide_a_point_that_the_prompt_already_distributed(): void
     {
         $original = new AiEvaluationResult('accepted', 1.5, 'Tasdiqlandi.', 2);

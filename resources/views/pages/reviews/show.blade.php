@@ -26,10 +26,9 @@
             && $scoreOptions->first()?->code === \App\Models\CriterionManualScoreOption::FIXED_APPROVAL_CODE
                 ? $scoreOptions->first()
                 : null;
-        $reviewerPointMaximum = $datum->criterion?->formula_id === 3
-            ? max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1))
-            : max(0, (float) $datum->criterion?->criterionEvaluations
-                ->firstWhere('evaluation', $datum->user?->degree)?->score);
+        $evaluationMaximum = (float) $datum->criterion?->criterionEvaluations
+            ->firstWhere('evaluation', $datum->user?->degree)?->score;
+        $reviewerPointMaximum = $datum->criterion?->aiSubmissionMaximum($evaluationMaximum) ?? 0;
     @endphp
 
     <section class="content">

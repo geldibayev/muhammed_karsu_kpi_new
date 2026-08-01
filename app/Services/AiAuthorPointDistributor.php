@@ -9,10 +9,11 @@ class AiAuthorPointDistributor
     public function handle(
         AiEvaluationResult $result,
         string $criterionPrompt,
+        ?bool $divideByAuthors = null,
     ): AiEvaluationResult {
         $requiresAuthorCount = str_contains($criterionPrompt, 'author_count');
 
-        if (! $requiresAuthorCount || $result->status !== 'accepted') {
+        if (! $requiresAuthorCount || $result->status !== 'accepted' || $divideByAuthors === false) {
             return $result;
         }
 
@@ -34,6 +35,7 @@ class AiAuthorPointDistributor
             reason: $result->reason.' Mualliflar soni: '.$result->authorCount
                 .'. Taqsimlangan ball: '.number_format($distributedPoint, 4, '.', '').'.',
             authorCount: $result->authorCount,
+            resourceDate: $result->resourceDate,
         );
     }
 

@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             OptionSeeder::class,
             LanguageSeeder::class,
             CriterionSeeder::class,
+            ScopusCriterionRuleSeeder::class,
             Criterion16EvaluationSeeder::class,
             CriterionReviewerAssignmentSeeder::class,
             OavCriterionRuleSeeder::class,

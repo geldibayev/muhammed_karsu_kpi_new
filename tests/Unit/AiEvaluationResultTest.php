@@ -45,6 +45,18 @@ class AiEvaluationResultTest extends TestCase
         $this->assertSame(3, $result->authorCount);
     }
 
+    public function test_valid_resource_date_is_preserved(): void
+    {
+        $result = AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 5,
+            'resource_date' => '2025-09-01',
+            'reason' => 'Maqola tasdiqlandi.',
+        ], 5);
+
+        $this->assertSame('2025-09-01', $result->resourceDate);
+    }
+
     /** @param array<string, mixed> $payload */
     #[DataProvider('invalidPayloads')]
     public function test_invalid_payloads_are_rejected(array $payload, float $maximumPoint): void
@@ -111,6 +123,13 @@ class AiEvaluationResultTest extends TestCase
         yield 'cancelled point over cap' => [[
             'status' => 'cancelled',
             'point' => 11,
+            'reason' => 'Xulosa',
+        ], 10];
+
+        yield 'invalid resource date' => [[
+            'status' => 'accepted',
+            'point' => 1,
+            'resource_date' => '01.09.2025',
             'reason' => 'Xulosa',
         ], 10];
     }

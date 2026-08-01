@@ -2,6 +2,7 @@
 
 namespace App\Data;
 
+use DateTimeImmutable;
 use JsonException;
 use UnexpectedValueException;
 
@@ -12,6 +13,7 @@ class AiEvaluationResult
         public readonly float $point,
         public readonly string $reason,
         public readonly ?int $authorCount = null,
+        public readonly ?string $resourceDate = null,
     ) {}
 
     /** @param array<string, mixed> $payload */
@@ -23,6 +25,8 @@ class AiEvaluationResult
         if (! in_array($payloadKeys, [
             ['point', 'reason', 'status'],
             ['author_count', 'point', 'reason', 'status'],
+            ['point', 'reason', 'resource_date', 'status'],
+            ['author_count', 'point', 'reason', 'resource_date', 'status'],
         ], true)) {
             throw new UnexpectedValueException('AI javobida kutilmagan yoki yetishmayotgan maydon bor.');
         }
@@ -35,6 +39,7 @@ class AiEvaluationResult
         $point = $payload['point'] ?? null;
         $reason = $payload['reason'] ?? null;
         $authorCount = $payload['author_count'] ?? null;
+        $resourceDate = $payload['resource_date'] ?? null;
 
         if (! is_string($status) || ! in_array($status, ['accepted', 'cancelled', 'checking'], true)) {
             throw new UnexpectedValueException('AI statusi ruxsat etilgan qiymatlardan biri emas.');
@@ -61,11 +66,28 @@ class AiEvaluationResult
             throw new UnexpectedValueException('Qabul qilingan resurs uchun mualliflar soni kamida 1 bo‘lishi kerak.');
         }
 
+        if ($resourceDate !== null && ! is_string($resourceDate)) {
+            throw new UnexpectedValueException('AI resurs sanasi matn ko‘rinishida bo‘lishi kerak.');
+        }
+
+        $resourceDate = is_string($resourceDate) && trim($resourceDate) !== ''
+            ? trim($resourceDate)
+            : null;
+
+        if ($resourceDate !== null) {
+            $parsedResourceDate = DateTimeImmutable::createFromFormat('!Y-m-d', $resourceDate);
+
+            if ($parsedResourceDate === false || $parsedResourceDate->format('Y-m-d') !== $resourceDate) {
+                throw new UnexpectedValueException('AI resurs sanasi YYYY-MM-DD formatiga mos emas.');
+            }
+        }
+
         return new self(
             status: $status,
             point: $status === 'accepted' ? (float) $point : 0,
             reason: trim($reason),
             authorCount: $status === 'accepted' ? $authorCount : null,
+            resourceDate: $resourceDate,
         );
     }
 

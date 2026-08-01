@@ -16,11 +16,7 @@ class Criterion extends Model
         'id', 'name', 'desc', 'parent_id', 'template',
         'upload', 'file_limit', 'observation', 'report_id', 'res_type',
         'formula_id', 'integrate', 'checking', 'ai_prompt', 'ai_model', 'status',
-    ];
-
-    protected $casts = [
-        'name' => 'json',
-        'desc' => 'json',
+        'ai_submission_max_point', 'divide_ai_point_by_authors',
     ];
 
     public function children(): HasMany
@@ -84,5 +80,28 @@ class Criterion extends Model
         return $this->hasMany(CriterionManualScoreOption::class)
             ->where('active', true)
             ->orderBy('sort_order');
+    }
+
+    public function aiSubmissionMaximum(float $evaluationMaximum = 0): float
+    {
+        if ($this->ai_submission_max_point !== null) {
+            return max(0, (float) $this->ai_submission_max_point);
+        }
+
+        if ((int) $this->formula_id === 3) {
+            return max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1));
+        }
+
+        return max(0, $evaluationMaximum);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'name' => 'json',
+            'desc' => 'json',
+            'ai_submission_max_point' => 'float',
+            'divide_ai_point_by_authors' => 'boolean',
+        ];
     }
 }

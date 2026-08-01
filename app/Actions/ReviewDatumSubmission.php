@@ -112,9 +112,7 @@ class ReviewDatumSubmission
         $maximumPoint = max(0, (float) $evaluation->score);
 
         if ($datum->criterion->checking === 'ai') {
-            $submissionMaximum = $datum->criterion->formula_id === 3
-                ? max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1))
-                : $maximumPoint;
+            $submissionMaximum = $datum->criterion->aiSubmissionMaximum($maximumPoint);
 
             if ($reviewerPoint === null || $reviewerPoint < 0 || $reviewerPoint > $submissionMaximum) {
                 throw ValidationException::withMessages([
