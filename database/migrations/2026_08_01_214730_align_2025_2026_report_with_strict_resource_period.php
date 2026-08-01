@@ -1,8 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,9 +10,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('reports', function (Blueprint $table) {
-            //
-        });
+        DB::table('reports')
+            ->where('code', '2025-2026')
+            ->update([
+                'starts_on' => config('kpi.report_period_start'),
+                'ends_on' => config('kpi.report_period_end'),
+                'updated_at' => now(),
+            ]);
     }
 
     /**
@@ -21,8 +24,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('reports', function (Blueprint $table) {
-            //
-        });
+        DB::table('reports')
+            ->where('code', '2025-2026')
+            ->where('starts_on', '2025-09-01')
+            ->where('ends_on', '2026-08-31')
+            ->update([
+                'ends_on' => '2026-07-31',
+                'updated_at' => now(),
+            ]);
     }
 };

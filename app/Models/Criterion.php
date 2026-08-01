@@ -13,6 +13,8 @@ class Criterion extends Model
 {
     public const H_INDEX_CODE = '3.1.4';
 
+    public const PRINTED_EDUCATIONAL_LITERATURE_CODES = ['1.2', '1.3'];
+
     protected $fillable = [
         'id', 'code', 'name', 'desc', 'parent_id', 'sort_order', 'template',
         'upload', 'file_limit', 'observation', 'report_id', 'res_type',
@@ -84,6 +86,11 @@ class Criterion extends Model
     public function isOakArticleCriterion(): bool
     {
         return $this->code === OakArticleCriterionRule::CODE;
+    }
+
+    public function isPrintedEducationalLiteratureCriterion(): bool
+    {
+        return in_array($this->code, self::PRINTED_EDUCATIONAL_LITERATURE_CODES, true);
     }
 
     public function manualScoreOptions(): HasMany

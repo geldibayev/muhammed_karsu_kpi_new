@@ -12,6 +12,7 @@ use App\Models\Report;
 use App\Models\User;
 use App\Models\Year;
 use App\Services\AiAuthorPointDistributor;
+use App\Services\AiResourceDatePolicy;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
 use App\Services\OakArticleScoreCalculator;
@@ -110,6 +111,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             new OakArticleScoreCalculator,
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
+            new AiResourceDatePolicy,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);
@@ -133,9 +135,14 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
                     && str_contains($prompt, '"name":"2025"')
                     && str_contains($prompt, '"report_period":{"id":')
                     && str_contains($prompt, '"name":"2025-yil KPI hisoboti"')
-                    && str_contains($prompt, '"criterion_period_rule":{"code":"last3years"')
-                    && str_contains($prompt, "tugash sanasi current_date_iso ga teng yoki undan oldin bo'lsa")
-                    && str_contains($prompt, 'cancelled emas, checking statusini')
+                    && str_contains($prompt, '"eligible_start_date":"2025-09-01"')
+                    && str_contains($prompt, '"eligible_end_date":"2026-08-31"')
+                    && str_contains($prompt, '"printed_educational_literature_exception":false')
+                    && ! str_contains($prompt, 'criterion_period_rule')
+                    && str_contains($prompt, 'BARCHA resurslar uchun')
+                    && str_contains($prompt, '01.09.2025')
+                    && str_contains($prompt, '31.08.2026')
+                    && str_contains($prompt, "chop etilgan darslik va o'quv qo'llanmalar istisno")
                     && str_contains($prompt, 'QAROR USTUVORLIGI:')
                     && str_contains($prompt, 'checking emas, cancelled statusini')
                     && str_contains($prompt, 'checking statusi bilan aniq rad etish sababini birga qaytarmang');
@@ -150,10 +157,13 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
                     ? $generationConfig->responseSchema?->toArray()
                     : null;
                 $reasonSchema = data_get($responseSchema, 'properties.reason');
+                $resourceDateSchema = data_get($responseSchema, 'properties.resource_date');
 
                 return $method === 'withGenerationConfig'
                     && is_array($reasonSchema)
-                    && $reasonSchema === ['type' => 'STRING'];
+                    && $reasonSchema === ['type' => 'STRING']
+                    && $resourceDateSchema === ['type' => 'STRING']
+                    && in_array('resource_date', data_get($responseSchema, 'required', []), true);
             },
         );
     }
@@ -215,6 +225,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             new OakArticleScoreCalculator,
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
+            new AiResourceDatePolicy,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);

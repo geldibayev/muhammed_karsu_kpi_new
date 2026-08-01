@@ -11,11 +11,13 @@ use App\Models\Observance;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\AiAuthorPointDistributor;
+use App\Services\AiResourceDatePolicy;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
 use App\Services\OakArticleScoreCalculator;
 use App\Support\ScopusCriterionRule;
 use Gemini\Laravel\Facades\Gemini;
+use Gemini\Resources\GenerativeModel;
 use Gemini\Responses\GenerativeModel\GenerateContentResponse;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -32,57 +34,123 @@ class AiReportPeriodValidationTest extends TestCase
         string $resourceDate,
         string $expectedStatus,
         float $expectedPoint,
+        ?string $expectedReason,
     ): void {
-        $result = $this->evaluateScopusArticle($resourceDate);
+        $result = $this->evaluateResource($resourceDate);
 
         $this->assertSame($expectedStatus, $result->status);
         $this->assertSame($expectedPoint, $result->point);
+
+        if ($expectedReason !== null) {
+            $this->assertStringContainsString($expectedReason, $result->reason);
+        }
+
     }
 
     public function test_scopus_point_is_not_divided_between_authors(): void
     {
-        $result = $this->evaluateScopusArticle('2026-07-31');
+        $result = $this->evaluateResource('2026-08-31');
 
         $this->assertSame('accepted', $result->status);
         $this->assertSame(5.0, $result->point);
         $this->assertSame(4, $result->authorCount);
     }
 
-    public function test_report_dates_override_global_period_configuration(): void
+    public function test_report_dates_cannot_override_the_strict_period(): void
     {
-        $result = $this->evaluateScopusArticle('2025-09-15', 'current', '2025-10-01', '2026-06-30');
+        $result = $this->evaluateResource('2025-09-15', 'current', ScopusCriterionRule::CODE, '2025-10-01', '2026-06-30');
 
-        $this->assertSame('cancelled', $result->status);
-        $this->assertSame(0.0, $result->point);
+        $this->assertSame('accepted', $result->status);
+        $this->assertSame(5.0, $result->point);
     }
 
-    public function test_previous_academic_year_is_enforced_by_the_server(): void
+    public function test_strict_period_is_enforced_for_every_observation_mode(): void
     {
-        $accepted = $this->evaluateScopusArticle('2024-09-01', 'previous');
-        $rejected = $this->evaluateScopusArticle('2025-09-01', 'previous');
+        $rejected = $this->evaluateResource('2024-09-01', 'previous');
+        $accepted = $this->evaluateResource('2025-09-01', 'project_finished');
 
         $this->assertSame('accepted', $accepted->status);
         $this->assertSame('cancelled', $rejected->status);
     }
 
-    /** @return iterable<string, array{string, string, float}> */
-    public static function publicationDates(): iterable
+    public function test_server_writes_the_period_reason_when_ai_already_rejects_an_outside_date(): void
     {
-        yield 'one day before period' => ['2025-08-31', 'cancelled', 0.0];
-        yield 'first day' => ['2025-09-01', 'accepted', 5.0];
-        yield 'last day' => ['2026-07-31', 'accepted', 5.0];
-        yield 'one day after period' => ['2026-08-01', 'cancelled', 0.0];
-        yield 'date cannot be determined' => ['', 'checking', 0.0];
+        $result = $this->evaluateResource(
+            '2025-08-31',
+            aiStatus: 'cancelled',
+            aiReason: 'AI umumiy rad javobini berdi.',
+        );
+
+        $this->assertSame('cancelled', $result->status);
+        $this->assertSame(0.0, $result->point);
+        $this->assertStringContainsString('2025-08-31', $result->reason);
+        $this->assertStringContainsString('01.09.2025–31.08.2026', $result->reason);
     }
 
-    private function evaluateScopusArticle(
+    #[DataProvider('printedEducationalLiteratureDates')]
+    public function test_printed_educational_literature_accepts_publication_years_2025_and_2026(
+        string $criterionCode,
+        string $resourceDate,
+        string $expectedStatus,
+        ?string $expectedReason,
+    ): void {
+        $result = $this->evaluateResource($resourceDate, 'current', $criterionCode);
+
+        $this->assertSame($expectedStatus, $result->status);
+
+        if ($expectedReason !== null) {
+            $this->assertStringContainsString($expectedReason, $result->reason);
+        }
+
+        Gemini::assertSent(
+            resource: GenerativeModel::class,
+            model: 'gemini-test',
+            callback: function (string $method, array $parameters): bool {
+                $contentParts = $parameters[0] ?? null;
+                $prompt = is_array($contentParts) ? ($contentParts[0] ?? null) : null;
+
+                return $method === 'generateContent'
+                    && is_string($prompt)
+                    && str_contains($prompt, '"printed_educational_literature_exception":true')
+                    && str_contains($prompt, 'YYYY-MM-DD yoki faqat YYYY');
+            },
+        );
+    }
+
+    /** @return iterable<string, array{string, string, float, ?string}> */
+    public static function publicationDates(): iterable
+    {
+        yield 'one day before period' => ['2025-08-31', 'cancelled', 0.0, '01.09.2025–31.08.2026'];
+        yield 'first day' => ['2025-09-01', 'accepted', 5.0, null];
+        yield 'last day' => ['2026-08-31', 'accepted', 5.0, null];
+        yield 'one day after period' => ['2026-09-01', 'cancelled', 0.0, '01.09.2025–31.08.2026'];
+        yield 'year alone is insufficient' => ['2025', 'checking', 0.0, 'to‘liq sana zarur'];
+        yield 'date cannot be determined' => ['', 'checking', 0.0, 'Resurs sanasi aniq topilmadi'];
+    }
+
+    /** @return iterable<string, array{string, string, string, ?string}> */
+    public static function printedEducationalLiteratureDates(): iterable
+    {
+        yield 'textbook year 2025' => ['1.2', '2025', 'accepted', null];
+        yield 'study guide year 2026' => ['1.3', '2026', 'accepted', null];
+        yield 'textbook beginning of 2025' => ['1.2', '2025-01-01', 'accepted', null];
+        yield 'study guide end of 2026' => ['1.3', '2026-12-31', 'accepted', null];
+        yield 'publication year 2024' => ['1.2', '2024', 'cancelled', '2025 yoki 2026'];
+        yield 'publication year 2027' => ['1.3', '2027', 'cancelled', '2025 yoki 2026'];
+        yield 'publication year missing' => ['1.2', '', 'checking', 'Resurs sanasi aniq topilmadi'];
+    }
+
+    private function evaluateResource(
         string $resourceDate,
         string $observation = 'current',
+        string $criterionCode = ScopusCriterionRule::CODE,
         ?string $reportStart = null,
         ?string $reportEnd = null,
+        string $aiStatus = 'accepted',
+        string $aiReason = 'Q1 Scopus maqolasi tasdiqlandi.',
     ): AiEvaluationResult {
         config()->set('kpi.report_period_start', '2025-09-01');
-        config()->set('kpi.report_period_end', '2026-07-31');
+        config()->set('kpi.report_period_end', '2026-08-31');
         Storage::fake('local');
         $image = UploadedFile::fake()->image('scopus.jpg', 10, 10);
         Storage::disk('local')->put('scopus.jpg', $image->getContent());
@@ -104,6 +172,7 @@ class AiReportPeriodValidationTest extends TestCase
             'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
+            'code' => $criterionCode,
             'name' => ['uz' => ScopusCriterionRule::NAME_UZ],
             'report_id' => $report->id,
             'observation' => $observation,
@@ -135,11 +204,11 @@ class AiReportPeriodValidationTest extends TestCase
                     'content' => [
                         'parts' => [[
                             'text' => json_encode([
-                                'status' => 'accepted',
+                                'status' => $aiStatus,
                                 'point' => 5,
                                 'author_count' => 4,
                                 'resource_date' => $resourceDate,
-                                'reason' => 'Q1 Scopus maqolasi tasdiqlandi.',
+                                'reason' => $aiReason,
                             ], JSON_THROW_ON_ERROR),
                         ]],
                     ],
@@ -152,6 +221,7 @@ class AiReportPeriodValidationTest extends TestCase
             new OakArticleScoreCalculator,
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
+            new AiResourceDatePolicy,
         ))->evaluate($datum);
     }
 }

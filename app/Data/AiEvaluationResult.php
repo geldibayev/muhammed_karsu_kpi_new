@@ -74,11 +74,11 @@ class AiEvaluationResult
             ? trim($resourceDate)
             : null;
 
-        if ($resourceDate !== null) {
+        if ($resourceDate !== null && preg_match('/^\d{4}$/', $resourceDate) !== 1) {
             $parsedResourceDate = DateTimeImmutable::createFromFormat('!Y-m-d', $resourceDate);
 
             if ($parsedResourceDate === false || $parsedResourceDate->format('Y-m-d') !== $resourceDate) {
-                throw new UnexpectedValueException('AI resurs sanasi YYYY-MM-DD formatiga mos emas.');
+                throw new UnexpectedValueException('AI resurs sanasi YYYY-MM-DD yoki YYYY formatiga mos emas.');
             }
         }
 

@@ -57,6 +57,18 @@ class AiEvaluationResultTest extends TestCase
         $this->assertSame('2025-09-01', $result->resourceDate);
     }
 
+    public function test_publication_year_is_preserved_for_policy_validation(): void
+    {
+        $result = AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 5,
+            'resource_date' => '2025',
+            'reason' => 'Darslik nashr yili tasdiqlandi.',
+        ], 5);
+
+        $this->assertSame('2025', $result->resourceDate);
+    }
+
     /** @param array<string, mixed> $payload */
     #[DataProvider('invalidPayloads')]
     public function test_invalid_payloads_are_rejected(array $payload, float $maximumPoint): void

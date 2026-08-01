@@ -10,6 +10,7 @@ use App\Models\Evaluation;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\AiAuthorPointDistributor;
+use App\Services\AiResourceDatePolicy;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
 use App\Services\OakArticleScoreCalculator;
@@ -64,6 +65,7 @@ class AiSubmissionEvaluatorUrlTest extends TestCase
             new OakArticleScoreCalculator,
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
+            new AiResourceDatePolicy,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);
