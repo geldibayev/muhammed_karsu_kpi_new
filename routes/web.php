@@ -13,6 +13,7 @@ use App\Http\Controllers\ManualReviewController;
 use App\Http\Controllers\RatingController;
 use App\Http\Controllers\ResourceStatisticsController;
 use App\Http\Controllers\ReviewerAssignmentController;
+use App\Http\Controllers\SystemSettingsController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,12 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/statistics', ResourceStatisticsController::class)
         ->middleware('can:view-resource-statistics')
         ->name('statistics.index');
+    Route::get('/settings', [SystemSettingsController::class, 'index'])
+        ->middleware('can:manage-kpi-settings')
+        ->name('settings.index');
+    Route::put('/settings/uploads', [SystemSettingsController::class, 'updateUploads'])
+        ->middleware('can:manage-kpi-settings')
+        ->name('settings.uploads.update');
     Route::get('/ratings', [RatingController::class, 'index'])
         ->middleware('can:view-ratings')
         ->name('ratings.index');

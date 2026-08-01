@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Criterion;
+use App\Models\Option;
 use App\Models\User;
 
 class CriterionPolicy
@@ -11,7 +12,8 @@ class CriterionPolicy
     {
         $hasTeacherRole = $user->hasRole('teacher') || $user->hasRole('user');
 
-        return ($hasTeacherRole || $user->isSuperAdmin())
+        return Option::resourceUploadsEnabled()
+            && ($hasTeacherRole || $user->isSuperAdmin())
             && ($criterion->upload === '1' || $criterion->isHIndexCriterion())
             && $criterion->status === '1'
             && $criterion->criterionEvaluations()

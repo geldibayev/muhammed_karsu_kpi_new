@@ -121,6 +121,11 @@ class AppServiceProvider extends ServiceProvider
         );
         Gate::define('rebuild-report-points', fn (User $user): bool => $user->isSuperAdmin());
         Gate::define(
+            'manage-kpi-settings',
+            fn (User $user): bool => (string) $user->hemis_id
+                === (string) config('kpi.settings_manager_hemis_id'),
+        );
+        Gate::define(
             'access-manual-reviews',
             fn (User $user): bool => CriterionReviewerAssignment::query()
                 ->where('hemis_id', $user->hemis_id)

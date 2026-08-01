@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Criterion;
+use App\Models\Option;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -32,8 +33,9 @@ class HomeController extends Controller
                 'name' => 'Asosiy sahifa',
             ],
         ];
+        $resourceUploadsEnabled = Option::resourceUploadsEnabled();
 
-        return view('home', compact(['criteria', 'breadcrumbs']));
+        return view('home', compact(['criteria', 'breadcrumbs', 'resourceUploadsEnabled']));
     }
 
     public function profile()

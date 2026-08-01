@@ -2,6 +2,13 @@
 
 @section('content')
     <section class="content">
+        @unless($resourceUploadsEnabled)
+            <div class="alert alert-warning shadow-sm">
+                <i class="fas fa-pause-circle mr-1" aria-hidden="true"></i>
+                Tizimga resurs yuklash administrator tomonidan vaqtincha to‘xtatilgan.
+            </div>
+        @endunless
+
         <div class="card">
             <div class="card-body p-0">
                 <table class="table table-hover">
@@ -67,7 +74,7 @@
                                            title="Kriteriya reytingini ko‘rish">
                                             <i class="fa fa-eye"></i>
                                         </a>
-                                        @if(($value->upload == '1' || $value->isHIndexCriterion()) && $evaluation)
+                                        @if($resourceUploadsEnabled && ($value->upload == '1' || $value->isHIndexCriterion()) && $evaluation)
                                             <a href="{{ route('upload.show', $value->id) }}"
                                                class="btn btn-outline-primary btn-sm"
                                                title="Ma’lumot kiritish">

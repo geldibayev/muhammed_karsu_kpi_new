@@ -251,12 +251,15 @@
                             <p>HEMIS malumotlar</p>
                         </a>
                     </li>--}}
-                    <li class="nav-item">
-                        <a href="{{ url('/') }}" class="nav-link">
-                            <i class="nav-icon fa fa-cog"></i>
-                            <p>Sozlamalar</p>
-                        </a>
-                    </li>
+                    @can('manage-kpi-settings')
+                        <li class="nav-item">
+                            <a href="{{ route('settings.index') }}"
+                               class="nav-link @if(request()->routeIs('settings.*')) active @endif">
+                                <i class="nav-icon fa fa-cog"></i>
+                                <p>Sozlamalar</p>
+                            </a>
+                        </li>
+                    @endcan
                     <li class="nav-item">
                         <form method="POST" action="{{ route('auth.logout') }}">
                             @csrf
