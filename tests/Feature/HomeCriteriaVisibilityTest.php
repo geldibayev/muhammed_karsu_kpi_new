@@ -59,10 +59,10 @@ class HomeCriteriaVisibilityTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_international_project_criterion_is_only_uploadable_for_foreign_language_category(): void
+    public function test_international_project_criterion_is_uploadable_for_every_category(): void
     {
         Storage::fake('local');
-        $user = User::factory()->withRole('user')->create(['degree' => 'foreign_lang']);
+        $user = User::factory()->withRole('user')->create(['degree' => 'hold_degrees']);
         foreach (['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'] as $evaluationCode) {
             Evaluation::query()->create([
                 'code' => $evaluationCode,
@@ -146,8 +146,8 @@ class HomeCriteriaVisibilityTest extends TestCase
             $this->assertDatabaseHas('criterion_evaluations', [
                 'criterion_id' => 16,
                 'evaluation' => $evaluationCode,
-                'has' => $evaluationCode === 'foreign_lang' ? '1' : '0',
-                'score' => $evaluationCode === 'foreign_lang' ? 4 : 0,
+                'has' => '1',
+                'score' => 4,
             ]);
         }
     }

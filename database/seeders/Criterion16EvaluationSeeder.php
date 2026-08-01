@@ -28,8 +28,8 @@ class Criterion16EvaluationSeeder extends Seeder
                     'evaluation' => $evaluation,
                 ],
                 [
-                    'has' => $evaluation === 'foreign_lang' ? '1' : '0',
-                    'score' => $evaluation === 'foreign_lang' ? 4 : 0,
+                    'has' => '1',
+                    'score' => 4,
                 ],
             );
         }
