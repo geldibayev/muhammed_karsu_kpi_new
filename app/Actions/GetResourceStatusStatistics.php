@@ -3,12 +3,19 @@
 namespace App\Actions;
 
 use App\Models\Datum;
+use Carbon\CarbonImmutable;
 
 class GetResourceStatusStatistics
 {
     /**
      * @return array{
      *     total: int,
+     *     uploads: array{
+     *         today: int,
+     *         current_week: int,
+     *         today_label: string,
+     *         current_week_label: string
+     *     },
      *     statuses: array<int, array{
      *         value: string,
      *         label: string,
@@ -20,9 +27,22 @@ class GetResourceStatusStatistics
      */
     public function handle(): array
     {
+        $now = CarbonImmutable::now();
+        $todayStartsAt = $now->startOfDay();
+        $tomorrowStartsAt = $todayStartsAt->addDay();
+        $weekStartsAt = $now->startOfWeek();
+
         $statistics = Datum::query()
             ->toBase()
             ->selectRaw('COUNT(*) as total')
+            ->selectRaw(
+                'SUM(CASE WHEN created_at >= ? AND created_at < ? THEN 1 ELSE 0 END) as uploaded_today',
+                [$todayStartsAt, $tomorrowStartsAt],
+            )
+            ->selectRaw(
+                'SUM(CASE WHEN created_at >= ? AND created_at < ? THEN 1 ELSE 0 END) as uploaded_current_week',
+                [$weekStartsAt, $tomorrowStartsAt],
+            )
             ->selectRaw(
                 'SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as received',
                 ['received'],
@@ -63,6 +83,12 @@ class GetResourceStatusStatistics
 
         return [
             'total' => $total,
+            'uploads' => [
+                'today' => (int) ($statistics?->uploaded_today ?? 0),
+                'current_week' => (int) ($statistics?->uploaded_current_week ?? 0),
+                'today_label' => $todayStartsAt->format('d.m.Y'),
+                'current_week_label' => $weekStartsAt->format('d.m.Y').' — '.$todayStartsAt->format('d.m.Y'),
+            ],
             'statuses' => $statuses,
         ];
     }

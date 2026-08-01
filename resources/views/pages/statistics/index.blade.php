@@ -31,6 +31,43 @@
             </div>
 
             <div class="d-flex align-items-center justify-content-between mb-2">
+                <h5 class="font-weight-bold mb-0">Yuklanishlar</h5>
+                <span class="text-muted small">Yaratilgan sana bo‘yicha</span>
+            </div>
+
+            <div class="row mb-2">
+                <div class="col-md-6 d-flex">
+                    <div class="info-box shadow-sm flex-fill">
+                        <span class="info-box-icon bg-info">
+                            <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                        </span>
+                        <div class="info-box-content">
+                            <span class="info-box-text font-weight-bold">Bugun yuklangan</span>
+                            <span class="info-box-number h3 mb-0">
+                                {{ number_format($statistics['uploads']['today'], 0, '.', ' ') }}
+                            </span>
+                            <span class="text-muted small">{{ $statistics['uploads']['today_label'] }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 d-flex">
+                    <div class="info-box shadow-sm flex-fill">
+                        <span class="info-box-icon bg-primary">
+                            <i class="fas fa-calendar-week" aria-hidden="true"></i>
+                        </span>
+                        <div class="info-box-content">
+                            <span class="info-box-text font-weight-bold">Joriy haftada yuklangan</span>
+                            <span class="info-box-number h3 mb-0">
+                                {{ number_format($statistics['uploads']['current_week'], 0, '.', ' ') }}
+                            </span>
+                            <span class="text-muted small">{{ $statistics['uploads']['current_week_label'] }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
                 <h5 class="font-weight-bold mb-0">Holatlar kesimida</h5>
                 <span class="text-muted small">5 ta holat</span>
             </div>
