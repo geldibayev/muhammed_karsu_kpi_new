@@ -35,7 +35,7 @@ class FixedScoreCriterionReviewTest extends TestCase
         ]);
 
         $this->artisan('kpi:reviewers:assign-fixed-score', [
-            'criterion-code' => '2/16',
+            'criterion-code' => '2.1.4',
             'hemis-id' => (string) $fixture['reviewer']->hemis_id,
             'point' => '4',
             '--dry-run' => true,
@@ -51,7 +51,7 @@ class FixedScoreCriterionReviewTest extends TestCase
         $this->assertDatabaseHas('criterion_reviewer_assignments', [
             'criterion_id' => $fixture['criterion']->getKey(),
             'hemis_id' => $fixture['reviewer']->hemis_id,
-            'criterion_code' => '2/16',
+            'criterion_code' => '2.1.4',
         ]);
         $this->assertDatabaseCount('criterion_reviewer_assignments', 1);
         $this->assertDatabaseHas('criterion_manual_score_options', [
@@ -191,6 +191,7 @@ class FixedScoreCriterionReviewTest extends TestCase
         ]);
         $criterion = Criterion::query()->create([
             'id' => 16,
+            'code' => '2.1.4',
             'name' => ['uz' => 'Xalqaro loyihalarda ishtiroki'],
             'parent_id' => $secondSection->getKey(),
             'report_id' => $report->getKey(),
@@ -202,6 +203,7 @@ class FixedScoreCriterionReviewTest extends TestCase
         ]);
         $target = Criterion::query()->create([
             'id' => 17,
+            'code' => '2.1.5',
             'name' => ['uz' => 'Boshqa mezon'],
             'parent_id' => $secondSection->getKey(),
             'report_id' => $report->getKey(),
@@ -247,7 +249,7 @@ class FixedScoreCriterionReviewTest extends TestCase
     private function runAssignmentCommand(User $reviewer): void
     {
         $this->artisan('kpi:reviewers:assign-fixed-score', [
-            'criterion-code' => '2/16',
+            'criterion-code' => '2.1.4',
             'hemis-id' => (string) $reviewer->hemis_id,
             'point' => '4',
         ])->assertSuccessful();

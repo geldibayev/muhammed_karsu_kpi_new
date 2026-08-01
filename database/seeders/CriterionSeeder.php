@@ -5,8 +5,12 @@ namespace Database\Seeders;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\CriterionYear;
+use App\Models\Formula;
+use App\Models\Report;
+use App\Models\Year;
 use App\Support\ScopusCriterionRule;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class CriterionSeeder extends Seeder
 {
@@ -1505,41 +1509,65 @@ class CriterionSeeder extends Seeder
             ],
         ];
 
-        foreach ($criteria as $criterion) {
-            $c = Criterion::create([
+        $report = Report::query()->where('status', '1')->latest('id')->firstOrFail();
+        $formulaIdsByLegacyPosition = [
+            1 => Formula::query()->where('code', Formula::Competition)->value('id'),
+            2 => Formula::query()->where('code', Formula::Maximum)->value('id'),
+            3 => Formula::query()->where('code', Formula::Unlimited)->value('id'),
+        ];
+        $yearId = Year::query()->where('name', data_get($report->name, 'uz'))->value('id');
+
+        if (in_array(null, $formulaIdsByLegacyPosition, true) || ! is_numeric($yearId)) {
+            throw new RuntimeException('KPI formulalari yoki faol hisobot yili topilmadi.');
+        }
+
+        foreach ($criteria as $sectionIndex => $criterion) {
+            $sectionCode = (string) ($sectionIndex + 1);
+            $c = Criterion::query()->updateOrCreate([
+                'report_id' => $report->getKey(),
+                'code' => $sectionCode,
+            ], [
                 'name' => $criterion['main']['name'],
-                'report_id' => $criterion['main']['report_id'],
+                'sort_order' => $sectionIndex + 1,
                 'upload' => $criterion['main']['upload'],
                 'status' => $criterion['main']['status'],
             ]);
-            foreach ($criterion['children'] as $child) {
-                $ch = Criterion::create([
+            foreach ($criterion['children'] as $childIndex => $child) {
+                $position = $childIndex + 1;
+                $childCode = $sectionIndex === 0
+                    ? "1.{$position}"
+                    : "{$sectionCode}.1.{$position}";
+                $ch = Criterion::query()->updateOrCreate([
+                    'report_id' => $report->getKey(),
+                    'code' => $childCode,
+                ], [
                     'name' => $child['name'],
                     'desc' => $child['desc'],
                     'observation' => $child['observation'],
                     'parent_id' => $c->id,
+                    'sort_order' => $position,
                     'ai_prompt' => $child['ai_prompt'],
                     'ai_model' => $child['ai_model'],
                     'ai_submission_max_point' => $child['ai_submission_max_point'] ?? null,
                     'divide_ai_point_by_authors' => $child['divide_ai_point_by_authors'] ?? null,
-                    'report_id' => $child['report_id'],
                     'checking' => $child['checking'],
                     'file_limit' => $child['file_limit'] ?? 0,
                     'res_type' => $child['res_type'],
                     'template' => $child['template'] ?? '1',
-                    // 'res_type' => 'all',
                     'upload' => $child['upload'],
                     'status' => $child['status'],
-                    'formula_id' => $child['formula_id'],
+                    'formula_id' => $formulaIdsByLegacyPosition[$child['formula_id']],
                 ]);
-                CriterionYear::create([
+                CriterionYear::query()->updateOrCreate([
                     'criterion_id' => $ch->id,
-                    'year_id' => $child['year'],
+                    'year_id' => (int) $yearId,
                 ]);
                 foreach ($child['evaluation'] as $key => $eva) {
-                    CriterionEvaluation::create([
+                    CriterionEvaluation::query()->updateOrCreate([
                         'criterion_id' => $ch->id,
                         'evaluation' => $key,
+                    ], [
+                        'has' => '1',
                         'score' => $eva,
                     ]);
                 }

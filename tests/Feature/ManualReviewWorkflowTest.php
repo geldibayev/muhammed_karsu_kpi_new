@@ -27,16 +27,37 @@ class ManualReviewWorkflowTest extends TestCase
     public function test_assignment_seeder_stores_all_hemis_mappings_without_local_users(): void
     {
         $report = $this->createReport();
+        Criterion::query()->create([
+            'id' => 1,
+            'code' => '1',
+            'name' => ['uz' => 'Bo‘lim'],
+            'report_id' => $report->id,
+        ]);
 
-        foreach ([2, 6, 7, 8, 15, 16, 23, 25, 26, 36, 41] as $criterionId) {
+        $criterionCodes = [
+            2 => '1.1',
+            6 => '1.5',
+            7 => '1.6',
+            8 => '1.7',
+            15 => '2.1.3',
+            16 => '2.1.4',
+            23 => '3.1.4',
+            25 => '3.1.6',
+            26 => '3.1.7',
+            36 => '4.1.1',
+            41 => '4.1.6',
+        ];
+
+        foreach ($criterionCodes as $criterionId => $criterionCode) {
             Criterion::query()->create([
                 'id' => $criterionId,
+                'code' => $criterionCode,
                 'name' => [
                     'uz' => $criterionId === 36
                         ? 'OAV yoki ijtimoiy tarmoqlarda universitet va mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqishlar qilganlig'
                         : 'Mezon '.$criterionId,
                 ],
-                'parent_id' => $criterionId === 36 ? 2 : null,
+                'parent_id' => 1,
                 'report_id' => $report->id,
             ]);
         }
@@ -46,19 +67,19 @@ class ManualReviewWorkflowTest extends TestCase
         $this->seed(CriterionManualScoreOptionSeeder::class);
         $this->seed(CriterionManualScoreOptionSeeder::class);
 
-        $this->assertDatabaseCount('criterion_reviewer_assignments', 10);
+        $this->assertDatabaseCount('criterion_reviewer_assignments', 11);
         $this->assertDatabaseHas('criterion_reviewer_assignments', [
             'hemis_id' => 3172011004,
             'criterion_id' => 2,
-            'criterion_code' => '1/2',
+            'criterion_code' => '1.1',
         ]);
         $this->assertDatabaseHas('criterion_reviewer_assignments', [
             'hemis_id' => 3172011004,
             'criterion_id' => 36,
-            'criterion_code' => '4/36',
+            'criterion_code' => '4.1.1',
         ]);
         $oavAssignment = CriterionReviewerAssignment::query()
-            ->where('criterion_code', '4/36')
+            ->where('criterion_code', '4.1.1')
             ->firstOrFail();
         $this->assertNull($oavAssignment->user);
 
@@ -77,8 +98,8 @@ class ManualReviewWorkflowTest extends TestCase
             [15, 'c1', 1.5],
             [15, 'c2', 2],
             [16, 'rector_order', 1],
-            [25, 'dsc_diploma', 1],
-            [26, 'phd_diploma', 1],
+            [25, 'dsc_diploma', 3],
+            [26, 'phd_diploma', 3],
         ];
 
         foreach ($expectedScoreOptions as [$criterionId, $code, $point]) {
@@ -93,13 +114,15 @@ class ManualReviewWorkflowTest extends TestCase
     public function test_oav_rule_seeder_configures_fixed_manual_scoring_idempotently(): void
     {
         $report = $this->createReport();
-        Formula::query()->create([
+        $competitionFormula = Formula::query()->create([
             'id' => 1,
+            'code' => Formula::Competition,
             'name' => ['uz' => 'Raqobat reyting tizimida'],
             'status' => '1',
         ]);
-        $maximumFormula = Formula::query()->create([
+        Formula::query()->create([
             'id' => 2,
+            'code' => Formula::Maximum,
             'name' => ['uz' => 'Maksimal ballga asoslangan'],
             'status' => '1',
         ]);
@@ -109,6 +132,7 @@ class ManualReviewWorkflowTest extends TestCase
             'formula_id' => 1,
         ]);
         $criterion = Criterion::query()->create([
+            'code' => '4.1.1',
             'name' => [
                 'uz' => 'OAV yoki ijtimoiy tarmoqlarda universitet va mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqishlar qilganlig',
             ],
@@ -122,7 +146,7 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
         $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
         $owner = User::factory()->create(['degree' => 'no_degrees']);
-        $this->assign($reviewer, $criterion, '4/36');
+        $this->assign($reviewer, $criterion, '4.1.1');
         Evaluation::query()->create([
             'code' => 'no_degrees',
             'name' => ['uz' => 'Ilmiy darajasiz'],
@@ -141,7 +165,7 @@ class ManualReviewWorkflowTest extends TestCase
         $criterion->refresh();
         $this->assertSame('manual', $criterion->checking);
         $this->assertSame(4, $criterion->file_limit);
-        $this->assertSame($maximumFormula->getKey(), $criterion->formula_id);
+        $this->assertSame($competitionFormula->getKey(), $criterion->formula_id);
         $this->assertDatabaseHas('criterion_evaluations', [
             'criterion_id' => $criterion->id,
             'evaluation' => 'no_degrees',
@@ -880,7 +904,7 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
     }
 
-    public function test_assigned_non_manual_criterion_keeps_automatic_maximum_score_flow(): void
+    public function test_assigned_non_manual_criterion_requires_an_explicit_score_handler(): void
     {
         $reviewer = User::factory()->create();
         $owner = User::factory()->create(['degree' => 'no_degrees']);
@@ -902,12 +926,12 @@ class ManualReviewWorkflowTest extends TestCase
 
         $this->actingAs($reviewer)
             ->patch(route('reviews.approve', $datum))
-            ->assertRedirect(route('reviews.index'));
+            ->assertSessionHasErrors('datum');
 
         $this->assertDatabaseHas('data', [
             'id' => $datum->id,
-            'status' => 'accepted',
-            'point' => 3,
+            'status' => 'received',
+            'point' => 0,
         ]);
     }
 

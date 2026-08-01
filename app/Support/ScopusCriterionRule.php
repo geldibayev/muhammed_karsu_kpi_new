@@ -4,6 +4,8 @@ namespace App\Support;
 
 class ScopusCriterionRule
 {
+    public const CODE = '3.1.3';
+
     public const NAME_UZ = '“SCOPUS” xalqaro ilmiy - texnik ma’lumotlar bazalaridagi Q1 - Q4 kvartildagi jurnallarda nashr etilgan maqolalar';
 
     public const MAXIMUM_POINT = 5.0;

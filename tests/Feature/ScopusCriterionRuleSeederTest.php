@@ -26,6 +26,7 @@ class ScopusCriterionRuleSeederTest extends TestCase
             'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
+            'code' => ScopusCriterionRule::CODE,
             'name' => ['uz' => ScopusCriterionRule::NAME_UZ],
             'desc' => ['uz' => 'Eski qoida'],
             'parent_id' => $parent->id,

@@ -19,10 +19,50 @@ class HomeCriteriaVisibilityTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_criterion_16_is_visible_and_uploadable_for_every_degree(): void
+    public function test_home_and_submission_policy_are_scoped_to_the_active_report(): void
+    {
+        $user = User::factory()->withRole('user')->create(['degree' => 'hold_degrees']);
+        Evaluation::query()->create([
+            'code' => 'hold_degrees',
+            'name' => ['uz' => 'Ilmiy darajali'],
+        ]);
+        $inactiveReport = Report::query()->create(['name' => ['uz' => 'Eski'], 'status' => '0']);
+        $activeReport = Report::query()->create(['name' => ['uz' => 'Faol'], 'status' => '1']);
+        $inactiveParent = $this->createCriterion($inactiveReport, ['name' => ['uz' => 'Eski bo‘lim']]);
+        $inactiveCriterion = $this->createCriterion($inactiveReport, [
+            'name' => ['uz' => 'Eski hisobot mezoni'],
+            'parent_id' => $inactiveParent->getKey(),
+        ]);
+        $activeParent = $this->createCriterion($activeReport, ['name' => ['uz' => 'Faol bo‘lim']]);
+        $activeCriterion = $this->createCriterion($activeReport, [
+            'name' => ['uz' => 'Faol hisobot mezoni'],
+            'parent_id' => $activeParent->getKey(),
+        ]);
+
+        foreach ([$inactiveCriterion, $activeCriterion] as $criterion) {
+            CriterionEvaluation::query()->create([
+                'criterion_id' => $criterion->getKey(),
+                'evaluation' => 'hold_degrees',
+                'has' => '1',
+                'score' => 2,
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('Faol hisobot mezoni')
+            ->assertDontSee('Eski hisobot mezoni');
+
+        $this->actingAs($user)
+            ->get(route('upload.show', $inactiveCriterion))
+            ->assertForbidden();
+    }
+
+    public function test_international_project_criterion_is_only_uploadable_for_foreign_language_category(): void
     {
         Storage::fake('local');
-        $user = User::factory()->withRole('user')->create(['degree' => 'hold_degrees']);
+        $user = User::factory()->withRole('user')->create(['degree' => 'foreign_lang']);
         foreach (['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'] as $evaluationCode) {
             Evaluation::query()->create([
                 'code' => $evaluationCode,
@@ -54,6 +94,7 @@ class HomeCriteriaVisibilityTest extends TestCase
         ]);
         $criterionWithoutEvaluation = $this->createCriterion($report, [
             'id' => 16,
+            'code' => '2.1.4',
             'parent_id' => $secondParent->id,
             'name' => ['uz' => 'Xalqaro loyihalarda ishtiroki'],
             'res_type' => 'file',
@@ -76,7 +117,7 @@ class HomeCriteriaVisibilityTest extends TestCase
         $this->actingAs($user)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('2/16')
+            ->assertSee('2.1.4')
             ->assertSee('Xalqaro loyihalarda ishtiroki')
             ->assertSee('4.00')
             ->assertSee(route('upload.show', $applicableCriterion))
@@ -105,8 +146,8 @@ class HomeCriteriaVisibilityTest extends TestCase
             $this->assertDatabaseHas('criterion_evaluations', [
                 'criterion_id' => 16,
                 'evaluation' => $evaluationCode,
-                'has' => '1',
-                'score' => 4,
+                'has' => $evaluationCode === 'foreign_lang' ? '1' : '0',
+                'score' => $evaluationCode === 'foreign_lang' ? 4 : 0,
             ]);
         }
     }

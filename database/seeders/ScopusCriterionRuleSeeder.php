@@ -15,16 +15,13 @@ class ScopusCriterionRuleSeeder extends Seeder
      */
     public function run(): void
     {
-        $criteria = Criterion::query()
-            ->whereNotNull('parent_id')
+        $scopusCriteria = Criterion::query()
+            ->where('code', ScopusCriterionRule::CODE)
             ->whereHas('report', fn (Builder $query): Builder => $query->where('status', '1'))
-            ->get(['id', 'name', 'desc']);
-        $scopusCriteria = $criteria->filter(
-            fn (Criterion $criterion): bool => data_get($criterion->name, 'uz') === ScopusCriterionRule::NAME_UZ,
-        );
+            ->get(['id', 'code', 'name', 'desc']);
 
         if ($scopusCriteria->count() !== 1) {
-            throw new RuntimeException('3/22 SCOPUS kriteriyasi yagona yozuv sifatida topilmadi.');
+            throw new RuntimeException('3.1.3 SCOPUS mezoni yagona yozuv sifatida topilmadi.');
         }
 
         $criterion = $scopusCriteria->firstOrFail();

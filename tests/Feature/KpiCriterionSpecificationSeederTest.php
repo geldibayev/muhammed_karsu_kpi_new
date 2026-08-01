@@ -1,0 +1,123 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Criterion;
+use App\Models\CriterionManualScoreOption;
+use App\Models\Formula;
+use App\Models\Report;
+use App\Support\KpiCriterionSpecification;
+use Database\Seeders\CriterionSeeder;
+use Database\Seeders\KpiCriterionSpecificationSeeder;
+use Database\Seeders\LanguageSeeder;
+use Database\Seeders\OptionSeeder;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Tests\TestCase;
+
+class KpiCriterionSpecificationSeederTest extends TestCase
+{
+    use LazilyRefreshDatabase;
+
+    public function test_reference_and_criterion_seeders_can_be_run_twice_without_duplicates(): void
+    {
+        foreach ([OptionSeeder::class, LanguageSeeder::class, CriterionSeeder::class, KpiCriterionSpecificationSeeder::class] as $seeder) {
+            $this->seed($seeder);
+        }
+
+        foreach ([OptionSeeder::class, LanguageSeeder::class, CriterionSeeder::class, KpiCriterionSpecificationSeeder::class] as $seeder) {
+            $this->seed($seeder);
+        }
+
+        $this->assertDatabaseCount('reports', 1);
+        $this->assertDatabaseCount('formulas', 3);
+        $this->assertDatabaseCount('criteria', 41);
+        $this->assertDatabaseCount('criterion_evaluations', 148);
+        $this->assertDatabaseCount('criterion_years', 37);
+    }
+
+    public function test_it_applies_the_complete_pdf_matrix_idempotently(): void
+    {
+        $this->seed(OptionSeeder::class);
+
+        $report = Report::query()->create([
+            'code' => 'audit-test',
+            'name' => ['uz' => 'Audit testi'],
+            'status' => '1',
+        ]);
+        $parents = collect(range(1, 4))->mapWithKeys(function (int $section) use ($report): array {
+            $criterion = Criterion::query()->create([
+                'code' => (string) $section,
+                'name' => ['uz' => "{$section}-bo‘lim"],
+                'report_id' => $report->getKey(),
+                'sort_order' => $section,
+                'status' => '1',
+            ]);
+
+            return [(string) $section => $criterion];
+        });
+        $defaultFormula = Formula::query()->where('code', Formula::Competition)->firstOrFail();
+
+        foreach (KpiCriterionSpecification::criteria() as $code => $rule) {
+            Criterion::query()->create([
+                'code' => $code,
+                'name' => ['uz' => "{$code} mezoni"],
+                'parent_id' => $parents->get(strtok($code, '.'))->getKey(),
+                'report_id' => $report->getKey(),
+                'formula_id' => $defaultFormula->getKey(),
+                'status' => '1',
+            ]);
+        }
+
+        foreach (['3.1.6' => 'dsc_diploma', '3.1.7' => 'phd_diploma'] as $code => $optionCode) {
+            CriterionManualScoreOption::query()->create([
+                'criterion_id' => Criterion::query()->where('code', $code)->value('id'),
+                'code' => $optionCode,
+                'label' => ['uz' => 'Diplom'],
+                'point' => 1,
+                'active' => true,
+            ]);
+        }
+
+        $this->seed(KpiCriterionSpecificationSeeder::class);
+        $this->seed(KpiCriterionSpecificationSeeder::class);
+
+        $this->assertDatabaseCount('criterion_evaluations', 148);
+        foreach (KpiCriterionSpecification::criteria() as $code => $rule) {
+            $this->assertCriterion(
+                $code,
+                $rule['formula'],
+                $rule['file_limit'],
+                $rule['observation'],
+                array_values($rule['scores']),
+            );
+        }
+
+        $this->assertDatabaseHas('criterion_manual_score_options', ['code' => 'dsc_diploma', 'point' => 3]);
+        $this->assertDatabaseHas('criterion_manual_score_options', ['code' => 'phd_diploma', 'point' => 3]);
+    }
+
+    /** @param array{0: int|null, 1: int|null, 2: int|null, 3: int|null} $scores */
+    private function assertCriterion(
+        string $code,
+        string $formulaCode,
+        int $fileLimit,
+        string $observation,
+        array $scores,
+    ): void {
+        $criterion = Criterion::query()
+            ->with(['formula', 'criterionEvaluations'])
+            ->where('code', $code)
+            ->firstOrFail();
+
+        $this->assertSame($formulaCode, $criterion->formula->code);
+        $this->assertSame($fileLimit, $criterion->file_limit);
+        $this->assertSame($observation, $criterion->observation);
+
+        foreach (array_combine(['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'], $scores) as $category => $score) {
+            $evaluation = $criterion->criterionEvaluations->firstWhere('evaluation', $category);
+            $this->assertNotNull($evaluation);
+            $this->assertSame($score === null ? '0' : '1', $evaluation->has);
+            $this->assertSame($score ?? 0, $evaluation->score);
+        }
+    }
+}

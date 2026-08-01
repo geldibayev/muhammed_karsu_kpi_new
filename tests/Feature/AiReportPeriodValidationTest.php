@@ -47,6 +47,23 @@ class AiReportPeriodValidationTest extends TestCase
         $this->assertSame(4, $result->authorCount);
     }
 
+    public function test_report_dates_override_global_period_configuration(): void
+    {
+        $result = $this->evaluateScopusArticle('2025-09-15', 'current', '2025-10-01', '2026-06-30');
+
+        $this->assertSame('cancelled', $result->status);
+        $this->assertSame(0.0, $result->point);
+    }
+
+    public function test_previous_academic_year_is_enforced_by_the_server(): void
+    {
+        $accepted = $this->evaluateScopusArticle('2024-09-01', 'previous');
+        $rejected = $this->evaluateScopusArticle('2025-09-01', 'previous');
+
+        $this->assertSame('accepted', $accepted->status);
+        $this->assertSame('cancelled', $rejected->status);
+    }
+
     /** @return iterable<string, array{string, string, float}> */
     public static function publicationDates(): iterable
     {
@@ -57,8 +74,12 @@ class AiReportPeriodValidationTest extends TestCase
         yield 'date cannot be determined' => ['', 'checking', 0.0];
     }
 
-    private function evaluateScopusArticle(string $resourceDate): AiEvaluationResult
-    {
+    private function evaluateScopusArticle(
+        string $resourceDate,
+        string $observation = 'current',
+        ?string $reportStart = null,
+        ?string $reportEnd = null,
+    ): AiEvaluationResult {
         config()->set('kpi.report_period_start', '2025-09-01');
         config()->set('kpi.report_period_end', '2026-07-31');
         Storage::fake('local');
@@ -66,24 +87,25 @@ class AiReportPeriodValidationTest extends TestCase
         Storage::disk('local')->put('scopus.jpg', $image->getContent());
 
         $user = User::factory()->create();
-        Formula::query()->create([
-            'id' => 3,
+        Formula::query()->updateOrCreate(['id' => 3], [
+            'code' => Formula::Unlimited,
             'name' => ['uz' => 'Cheklanmagan'],
             'status' => '1',
         ]);
-        Observance::query()->create([
-            'code' => 'current',
+        Observance::query()->updateOrCreate(['code' => $observation], [
             'name' => ['uz' => 'Joriy davr'],
             'status' => '1',
         ]);
         $report = Report::query()->create([
             'name' => ['uz' => '2025-2026'],
+            'starts_on' => $reportStart,
+            'ends_on' => $reportEnd,
             'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
             'name' => ['uz' => ScopusCriterionRule::NAME_UZ],
             'report_id' => $report->id,
-            'observation' => 'current',
+            'observation' => $observation,
             'formula_id' => 3,
             'checking' => 'ai',
             'ai_prompt' => ScopusCriterionRule::PROMPT,

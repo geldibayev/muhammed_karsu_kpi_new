@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Actions\DescribeAiFailure;
 use App\Data\AiEvaluationResult;
 use App\Models\Datum;
+use App\Models\Formula;
 use Gemini\Data\Blob;
 use Gemini\Data\Content;
 use Gemini\Data\GenerationConfig;
@@ -30,6 +31,7 @@ class AiSubmissionEvaluator
     {
         $datum->loadMissing([
             'criterion.criterionEvaluations',
+            'criterion.formula',
             'criterion.report',
             'user',
             'year',
@@ -44,7 +46,7 @@ class AiSubmissionEvaluator
 
         $maximumPoint = $this->maximumPoint($datum);
         $requiresAuthorCount = str_contains((string) $criterion->ai_prompt, 'author_count');
-        $requiresResourceDate = $criterion->observation === 'current';
+        $requiresResourceDate = in_array($criterion->observation, ['current', 'previous', 'last3years'], true);
 
         if ($maximumPoint === null) {
             return AiEvaluationResult::checking('Foydalanuvchi uchun mezon ball chegarasi topilmadi.');
@@ -140,7 +142,7 @@ class AiSubmissionEvaluator
             return $datum->criterion->aiSubmissionMaximum();
         }
 
-        if ($datum->criterion?->formula_id === 3) {
+        if ($datum->criterion?->usesFormula(Formula::Unlimited)) {
             return $datum->criterion->aiSubmissionMaximum();
         }
 
@@ -174,8 +176,8 @@ class AiSubmissionEvaluator
             'report_period' => [
                 'id' => $datum->criterion?->report_id,
                 'name' => $this->reportName($datum),
-                'eligible_start_date' => config('kpi.report_period_start'),
-                'eligible_end_date' => config('kpi.report_period_end'),
+                'eligible_start_date' => $this->reportPeriodDate($datum, 'starts_on', 'kpi.report_period_start')->toDateString(),
+                'eligible_end_date' => $this->reportPeriodDate($datum, 'ends_on', 'kpi.report_period_end')->toDateString(),
             ],
             'criterion_period_rule' => [
                 'code' => $datum->criterion?->observation,
@@ -187,7 +189,11 @@ class AiSubmissionEvaluator
             'submitted_metadata' => data_get($datum->material, 'article', data_get($datum->material, 'data', [])),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        $requiresResourceDate = $datum->criterion?->observation === 'current';
+        $requiresResourceDate = in_array(
+            $datum->criterion?->observation,
+            ['current', 'previous', 'last3years'],
+            true,
+        );
         $responseExample = match (true) {
             $requiresAuthorCount && $requiresResourceDate => '{"status":"accepted|cancelled|checking","point":0,"author_count":1,"resource_date":"YYYY-MM-DD yoki bo‘sh satr","reason":"qisqa asos"}',
             $requiresAuthorCount => '{"status":"accepted|cancelled|checking","point":0,"author_count":1,"reason":"qisqa asos"}',
@@ -212,7 +218,8 @@ SANA TEKSHIRUVI QOIDALARI:
 - Hujjatdagi davrning tugash sanasi current_date_iso ga teng yoki undan oldin bo'lsa, uni kelajakdagi davr deb baholamang.
 - Resursning KPI davriga mosligini submission_year, report_period va criterion_period_rule bilan tekshiring; mavjud bo'lmagan davr chegaralarini o'ylab topmang.
 - criterion_period_rule.code current bo'lsa, resursning nashr yoki amalga oshirilgan sanasi report_period.eligible_start_date va report_period.eligible_end_date oralig'ida, chegaralar ham hisobga olingan holda bo'lishi shart.
-- criterion_period_rule.code current bo'lsa, hujjatdan topilgan sanani resource_date maydonida YYYY-MM-DD formatida qaytaring. Sana aniq topilmasa resource_date uchun bo'sh satr qaytaring.
+- criterion_period_rule.code previous bo'lsa, resurs report_period chegaralaridan bir yil oldingi o'quv davriga tegishli bo'lishi shart.
+- criterion_period_rule.code current, previous yoki last3years bo'lsa, hujjatdan topilgan sanani resource_date maydonida YYYY-MM-DD formatida qaytaring. Sana aniq topilmasa resource_date uchun bo'sh satr qaytaring.
 - criterion_period_rule.code last3years bo'lsa, hujjatdagi sana last_three_years_start_iso va current_date_iso oralig'ida ekanini tekshiring.
 - Sana o'qilmasa, noaniq bo'lsa yoki ishonchli vaqt kontekstiga zid xulosa chiqsa, cancelled emas, checking statusini va 0 ball qaytaring.
 
@@ -256,16 +263,22 @@ PROMPT;
     {
         return match ($code) {
             'current' => 'Resurs joriy tanlangan KPI yoki o‘quv davriga tegishli bo‘lishi kerak.',
+            'previous' => 'Resurs tanlangan KPI davridan avvalgi o‘quv yiliga tegishli bo‘lishi kerak.',
+            'current_state' => 'Ko‘rsatkichning tekshiruv vaqtidagi joriy holati hisobga olinadi.',
             'certificate_expire' => 'Resurs sertifikatning amal qilish muddati tugagunga qadar hisobga olinadi.',
             'last3years' => 'Hujjatdagi faoliyat joriy sanadan oldingi 3 yil ichida yakunlangan bo‘lishi kerak.',
             'project_finished' => 'Resurs loyiha tugagunga qadar hisobga olinadi.',
+            'end_of_council' => 'Kengashdagi faoliyat muddati tugagunga qadar hisobga olinadi.',
             default => null,
         };
     }
 
     private function enforceReportPeriod(Datum $datum, AiEvaluationResult $result): AiEvaluationResult
     {
-        if ($datum->criterion?->observation !== 'current' || $result->status !== 'accepted') {
+        $observation = $datum->criterion?->observation;
+
+        if (! in_array($observation, ['current', 'previous', 'last3years'], true)
+            || $result->status !== 'accepted') {
             return $result;
         }
 
@@ -275,8 +288,17 @@ PROMPT;
             );
         }
 
-        $periodStart = $this->configuredPeriodDate('kpi.report_period_start');
-        $periodEnd = $this->configuredPeriodDate('kpi.report_period_end');
+        [$periodStart, $periodEnd] = match ($observation) {
+            'previous' => [
+                $this->reportPeriodDate($datum, 'starts_on', 'kpi.report_period_start')->subYear(),
+                $this->reportPeriodDate($datum, 'ends_on', 'kpi.report_period_end')->subYear(),
+            ],
+            'last3years' => [now()->subYears(3)->startOfDay(), now()->endOfDay()],
+            default => [
+                $this->reportPeriodDate($datum, 'starts_on', 'kpi.report_period_start'),
+                $this->reportPeriodDate($datum, 'ends_on', 'kpi.report_period_end'),
+            ],
+        };
         $resourceDate = Carbon::createFromFormat('!Y-m-d', $result->resourceDate);
 
         if ($periodStart->greaterThan($periodEnd)) {
@@ -295,18 +317,24 @@ PROMPT;
         return $result;
     }
 
-    private function configuredPeriodDate(string $key): Carbon
+    private function reportPeriodDate(Datum $datum, string $attribute, string $fallbackKey): Carbon
     {
-        $value = config($key);
+        $reportDate = $datum->criterion?->report?->{$attribute};
+
+        if ($reportDate instanceof Carbon) {
+            return $reportDate->copy()->startOfDay();
+        }
+
+        $value = config($fallbackKey);
 
         if (! is_string($value)) {
-            throw new UnexpectedValueException("{$key} sozlamasi topilmadi.");
+            throw new UnexpectedValueException("{$fallbackKey} sozlamasi topilmadi.");
         }
 
         $date = Carbon::createFromFormat('!Y-m-d', $value);
 
         if ($date === false || $date->format('Y-m-d') !== $value) {
-            throw new UnexpectedValueException("{$key} sozlamasi YYYY-MM-DD formatiga mos emas.");
+            throw new UnexpectedValueException("{$fallbackKey} sozlamasi YYYY-MM-DD formatiga mos emas.");
         }
 
         return $date;

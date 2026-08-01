@@ -61,7 +61,8 @@
                         {{ $upload->name['uz'] }}
                     </div>
                     <div style="text-align: justify" class="small">
-                        {!! $upload->desc['uz'] !!}
+                        @php($description = strip_tags(str_ireplace(['<br>', '<br/>', '<br />'], "\n", data_get($upload->desc, 'uz', ''))))
+                        <div style="white-space: pre-line">{{ $description }}</div>
                     </div>
                     <div class="text-danger font-weight-bold pt-2">
                         Maksimal ball:

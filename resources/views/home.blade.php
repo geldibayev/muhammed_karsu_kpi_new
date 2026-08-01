@@ -33,14 +33,13 @@
                         @foreach($item->children as $value)
                             @php($evaluation = $value->criterionEvaluations->first())
                             <tr class="small">
-                                <td class="align-middle text-center">{{ $main }}/{{ $value->id }}</td>
+                                <td class="align-middle text-center">{{ $value->code ?: $main.'/'.$value->id }}</td>
                                 <td class="align-middle">
                                     <div class="font-weight-bold" style="text-align: justify">
                                         {{ data_get($value->name, 'uz', 'Nomsiz mezon') }}
                                     </div>
-                                    <div style="text-align: justify">
-                                        {!! data_get($value->desc, 'uz', '') !!}
-                                    </div>
+                                    @php($description = strip_tags(str_ireplace(['<br>', '<br/>', '<br />'], "\n", data_get($value->desc, 'uz', ''))))
+                                    <div style="text-align: justify; white-space: pre-line">{{ $description }}</div>
                                 </td>
                                 <td class="text-center align-middle">
                                     @if($value->checking == 'ai')
@@ -60,7 +59,7 @@
                                 </td>
                                 <td class="align-middle text-center">
                                     <span class="font-weight-bold text-success">
-                                        {{ number_format(auth()->user()->point($value->id), 2) }}
+                                        {{ number_format($points->get($value->id, 0), 2) }}
                                     </span>
                                     /
                                     <span class="font-weight-bold text-primary">

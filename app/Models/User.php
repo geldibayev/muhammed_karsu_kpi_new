@@ -77,11 +77,12 @@ class User extends Authenticatable
         return filter_var($this->image, FILTER_VALIDATE_URL) ? $this->image : null;
     }
 
-    public function point($criterion_id)
+    public function point(int $criterionId, int $reportId): float
     {
-        $point = Point::where('user_id', auth()->id())->where('criterion_id', $criterion_id)->first();
-
-        return $point->point ?? 0;
+        return (float) $this->points()
+            ->where('criterion_id', $criterionId)
+            ->where('report_id', $reportId)
+            ->value('point');
     }
 
     protected function casts(): array

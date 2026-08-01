@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class AssignFixedScoreCriterionReviewer extends Command
 {
     protected $signature = 'kpi:reviewers:assign-fixed-score
-        {criterion-code : Kriteriya kodi, masalan 2/16}
+        {criterion-code : Mezon kodi, masalan 2.1.4}
         {hemis-id : Mas’ulning HEMIS ID raqami}
         {point : Tasdiqlanganda beriladigan qat’iy ball}
         {--dry-run : Bazaga yozmasdan natijani ko‘rsatish}';
@@ -28,8 +28,8 @@ class AssignFixedScoreCriterionReviewer extends Command
         $hemisId = trim((string) $this->argument('hemis-id'));
         $pointArgument = trim((string) $this->argument('point'));
 
-        if (! preg_match('/^([1-9]\d*)\/([1-9]\d*)$/', $criterionCode, $matches)) {
-            $this->error('Kriteriya kodi 2/16 ko‘rinishida bo‘lishi kerak.');
+        if (! preg_match('/^[1-9]\d*(?:\.[1-9]\d*)+$/', $criterionCode)) {
+            $this->error('Mezon kodi 2.1.4 ko‘rinishida bo‘lishi kerak.');
 
             return self::FAILURE;
         }
@@ -54,10 +54,7 @@ class AssignFixedScoreCriterionReviewer extends Command
             return self::FAILURE;
         }
 
-        $criterion = $this->resolveCriterion(
-            (int) $matches[1],
-            (int) $matches[2],
-        );
+        $criterion = $this->resolveCriterion($criterionCode);
 
         if ($criterion === null) {
             $this->error("{$criterionCode} kriteriyasi topilmadi.");
@@ -162,27 +159,12 @@ class AssignFixedScoreCriterionReviewer extends Command
         return self::SUCCESS;
     }
 
-    private function resolveCriterion(int $sectionNumber, int $criterionId): ?Criterion
+    private function resolveCriterion(string $criterionCode): ?Criterion
     {
-        $criterion = Criterion::query()
-            ->whereKey($criterionId)
+        return Criterion::query()
+            ->where('code', $criterionCode)
             ->whereNotNull('parent_id')
+            ->whereHas('report', fn ($query) => $query->where('status', '1'))
             ->first();
-
-        if ($criterion === null) {
-            return null;
-        }
-
-        $actualSectionNumber = Criterion::query()
-            ->where('report_id', $criterion->report_id)
-            ->whereNull('parent_id')
-            ->where('id', '<=', $criterion->parent_id)
-            ->count();
-
-        if ($actualSectionNumber !== $sectionNumber) {
-            return null;
-        }
-
-        return $criterion;
     }
 }

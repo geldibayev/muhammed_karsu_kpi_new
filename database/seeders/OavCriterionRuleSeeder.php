@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Criterion;
 use App\Models\CriterionManualScoreOption;
-use App\Models\CriterionReviewerAssignment;
 use App\Models\Formula;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -12,11 +11,7 @@ use RuntimeException;
 
 class OavCriterionRuleSeeder extends Seeder
 {
-    private const CRITERION_CODE = '4/36';
-
-    private const CRITERION_NAME = 'OAV yoki ijtimoiy tarmoqlarda universitet va mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqishlar qilganlig';
-
-    private const FORMULA_NAME = 'Maksimal ballga asoslangan';
+    private const CRITERION_CODE = '4.1.1';
 
     /**
      * Run the database seeds.
@@ -26,13 +21,11 @@ class OavCriterionRuleSeeder extends Seeder
         DB::transaction(function (): void {
             $criterion = $this->criterion();
             $formula = Formula::query()
-                ->get(['id', 'name'])
-                ->first(
-                    fn (Formula $formula): bool => data_get($formula->name, 'uz') === self::FORMULA_NAME,
-                );
+                ->where('code', Formula::Competition)
+                ->first();
 
             if ($formula === null) {
-                throw new RuntimeException('Maksimal ballga asoslangan formula topilmadi.');
+                throw new RuntimeException('Raqobat reyting formulasi topilmadi.');
             }
 
             $criterion->update([
@@ -41,9 +34,12 @@ class OavCriterionRuleSeeder extends Seeder
                 'formula_id' => $formula->getKey(),
             ]);
 
-            $criterion->criterionEvaluations()
-                ->where('has', '1')
-                ->update(['score' => 3]);
+            $criterion->criterionEvaluations()->each(function ($evaluation): void {
+                $evaluation->update([
+                    'has' => '1',
+                    'score' => $evaluation->evaluation === 'foreign_lang' ? 2 : 3,
+                ]);
+            });
 
             CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterion->getKey())
@@ -67,23 +63,13 @@ class OavCriterionRuleSeeder extends Seeder
 
     private function criterion(): Criterion
     {
-        $criterionId = CriterionReviewerAssignment::query()
-            ->where('criterion_code', self::CRITERION_CODE)
-            ->value('criterion_id');
-
-        $criterion = is_numeric($criterionId)
-            ? Criterion::query()->find((int) $criterionId)
-            : null;
-
-        $criterion ??= Criterion::query()
-            ->whereNotNull('parent_id')
-            ->get(['id', 'name'])
-            ->first(
-                fn (Criterion $criterion): bool => data_get($criterion->name, 'uz') === self::CRITERION_NAME,
-            );
+        $criterion = Criterion::query()
+            ->where('code', self::CRITERION_CODE)
+            ->whereHas('report', fn ($query) => $query->where('status', '1'))
+            ->first();
 
         if ($criterion === null) {
-            throw new RuntimeException('4/36 OAV kriteriyasi topilmadi.');
+            throw new RuntimeException('4.1.1 OAV mezoni topilmadi.');
         }
 
         return $criterion;

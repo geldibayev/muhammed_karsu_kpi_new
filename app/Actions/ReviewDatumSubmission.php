@@ -127,10 +127,9 @@ class ReviewDatumSubmission
         }
 
         if ($datum->criterion->checking !== 'manual') {
-            return [
-                'point' => $maximumPoint,
-                'rule' => 'daraja bo‘yicha maksimal ball',
-            ];
+            throw ValidationException::withMessages([
+                'datum' => "{$datum->criterion->checking} tekshirish rejimi uchun alohida baholash mexanizmi sozlanmagan.",
+            ]);
         }
 
         $optionQuery = CriterionManualScoreOption::query()

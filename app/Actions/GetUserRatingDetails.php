@@ -69,16 +69,18 @@ class GetUserRatingDetails
         }
 
         return Criterion::query()
-            ->select(['id', 'name', 'report_id'])
+            ->select(['id', 'code', 'name', 'report_id', 'sort_order'])
             ->whereBelongsTo($report)
             ->whereNull('parent_id')
             ->where('status', '1')
             ->with([
                 'children' => fn (HasMany $query): HasMany => $query
-                    ->select(['id', 'name', 'parent_id', 'checking'])
+                    ->select(['id', 'code', 'name', 'parent_id', 'checking', 'sort_order'])
                     ->where('status', '1')
+                    ->orderBy('sort_order')
                     ->orderBy('id'),
             ])
+            ->orderBy('sort_order')
             ->orderBy('id')
             ->get()
             ->values()
@@ -203,7 +205,7 @@ class GetUserRatingDetails
     ): array {
         return [
             'criterion' => $criterion,
-            'code' => "{$sectionNumber}/{$criterion->getKey()}",
+            'code' => $criterion->code ?: "{$sectionNumber}/{$criterion->getKey()}",
             'state' => $state,
             'point' => $point,
             'pending_count' => $pendingCount,

@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Models\Criterion;
 use App\Models\CriterionPoint;
 use App\Models\Datum;
+use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
 use Illuminate\Support\Carbon;
@@ -67,6 +68,7 @@ class RecalculateReportPoints
             ->whereNotNull('parent_id')
             ->with([
                 'criterionEvaluations:id,criterion_id,evaluation,has,score',
+                'formula:id,code',
                 'reviewerAssignment:id,criterion_id,criterion_code',
                 'criterionPoints' => fn ($query) => $query
                     ->where('report_id', $report->getKey())
@@ -102,12 +104,14 @@ class RecalculateReportPoints
 
                 $calculatedPoint = $criterion->isHIndexCriterion()
                     ? $rawPoint
-                    : match ((int) $criterion->formula_id) {
-                        1 => $highestRawPoint > 0 ? $maximumPoint * ($rawPoint / $highestRawPoint) : 0,
-                        2 => min($rawPoint, $maximumPoint),
-                        3 => $rawPoint,
+                    : match (true) {
+                        $criterion->usesFormula(Formula::Competition) => $highestRawPoint > 0
+                            ? $maximumPoint * ($rawPoint / $highestRawPoint)
+                            : 0,
+                        $criterion->usesFormula(Formula::Maximum) => min($rawPoint, $maximumPoint),
+                        $criterion->usesFormula(Formula::Unlimited) => $rawPoint,
                         default => throw new UnexpectedValueException(
-                            "Unknown scoring formula [{$criterion->formula_id}] for criterion [{$criterion->getKey()}].",
+                            "Unknown scoring formula [{$criterion->formula?->code}] for criterion [{$criterion->getKey()}].",
                         ),
                     };
 

@@ -6,126 +6,89 @@ use App\Models\Evaluation;
 use App\Models\Formula;
 use App\Models\Observance;
 use App\Models\Option;
-use App\Models\Report;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class OptionSeeder extends Seeder
 {
     public function run(): void
     {
-        Evaluation::create([
-            'code' => 'hold_degrees',
-            'name' => [
+        $evaluations = [
+            'hold_degrees' => [
                 'uz' => 'Ilmiy daraja yoki unvonga ega bo‘lganlar',
-                'ru' => 'Имеющие ученую степень или звание',
                 'kaa' => 'Ilimiy dáreje yaki ataqqa iye bolganlar',
+                'ru' => 'Имеющие ученую степень или звание',
                 'en' => 'Holding academic degrees or titles',
-            ]
-        ]);
-        Evaluation::create([
-            'code' => 'no_degrees',
-            'name' => [
+            ],
+            'no_degrees' => [
                 'uz' => 'Ilmiy daraja yoki unvonga ega bo‘lmaganlar',
-                'ru' => 'Не имеющие ученой степени или звания',
                 'kaa' => 'Ilimiy dáreje yamasa ataqqa ie bolmaǵanlar',
+                'ru' => 'Не имеющие ученой степени или звания',
                 'en' => 'No academic degree or title',
-            ]
-        ]);
-        Evaluation::create([
-            'code' => 'foreign_lang',
-            'name' => [
+            ],
+            'foreign_lang' => [
                 'uz' => 'Fakultetlararo chet tillari kafedrasi',
-                'ru' => 'Межфакультетская кафедра иностранных языков',
                 'kaa' => 'Fakultetler aralıq shet tilleri kafedrası',
+                'ru' => 'Межфакультетская кафедра иностранных языков',
                 'en' => 'Interfaculty Department of Foreign Languages',
-            ]
-        ]);
-        Evaluation::create([
-            'code' => 'physical',
-            'name' => [
+            ],
+            'physical' => [
                 'uz' => 'Fakultetlararo jismoniy tarbiya kafedrasi',
-                'ru' => 'Межфакультетская кафедра физической культуры',
                 'kaa' => 'Fakultetler aralıq dene tárbiyası kafedrası',
+                'ru' => 'Межфакультетская кафедра физической культуры',
                 'en' => 'Department of Interfaculty Physical Education',
-            ]
-        ]);
+            ],
+        ];
 
-        Observance::create([
-            'code' => 'current',
-            'name' => [
-                'uz' => 'Joriy o‘quv yili uchun',
-                'kaa' => 'Usı oqıw jılı ushın',
-                'ru' => 'На текущий учебный год',
-                'en' => 'For the current academic year',
-            ]
-        ]);
-        Observance::create([
-            'code' => 'certificate_expire',
-            'name' => [
-                'uz' => 'Sertifikat muddati tugagunga qadar',
-                'kaa' => 'Sertifikat múddeti tamamlanǵansha',
-                'ru' => 'До истечения срока действия сертификата',
-                'en' => 'Until the certificate expires',
-            ]
-        ]);
-        Observance::create([
-            'code' => 'last3years',
-            'name' => [
-                'uz' => 'Oxirgi 3 yilda',
-                'kaa' => 'Sońǵı 3 jılda',
-                'ru' => 'За последние 3 года',
-                'en' => 'Last 3 years',
-            ]
-        ]);
-        Observance::create([
-            'code' => 'project_finished',
-            'name' => [
-                'uz' => 'Loyiha tugagunga qadar',
-                'kaa' => 'Joybar juwmaqlanǵansha',
-                'ru' => 'До завершения проекта',
-                'en' => 'Until project completion',
-            ]
-        ]);
-        Observance::create([
-            'code' => 'end_of_council',
-            'name' => [
-                'uz' => 'Kengashda faoliyati tugagunga qadar',
-                'kaa' => 'Keńestegi xızmeti juwmaqlanǵansha',
-                'ru' => 'До окончания срока деятельности в Совете',
-                'en' => 'Until the end of their term of office in the Council',
-            ]
-        ]);
+        foreach ($evaluations as $code => $name) {
+            Evaluation::query()->updateOrCreate(['code' => $code], ['name' => $name, 'status' => '1']);
+        }
 
+        $observances = [
+            'current' => ['Joriy o‘quv yili uchun', 'Usı oqıw jılı ushın', 'На текущий учебный год', 'For the current academic year'],
+            'previous' => ['Avvalgi o‘quv yili uchun', 'Aldıńǵı oqıw jılı ushın', 'За предыдущий учебный год', 'For the previous academic year'],
+            'current_state' => ['Joriy holati bo‘yicha', 'Házirgi jaǵdayı boyınsha', 'По текущему состоянию', 'Based on the current state'],
+            'certificate_expire' => ['Sertifikat muddati tugagunga qadar', 'Sertifikat múddeti tamamlanǵansha', 'До истечения срока действия сертификата', 'Until the certificate expires'],
+            'last3years' => ['Oxirgi 3 yilda', 'Sońǵı 3 jılda', 'За последние 3 года', 'Last 3 years'],
+            'project_finished' => ['Loyiha tugagunga qadar', 'Joybar juwmaqlanǵansha', 'До завершения проекта', 'Until project completion'],
+            'end_of_council' => ['Kengashda faoliyati tugagunga qadar', 'Keńestegi xızmeti juwmaqlanǵansha', 'До окончания срока деятельности в Совете', 'Until the end of their term of office in the Council'],
+        ];
 
-        Option::create([
-            'key' => 'title',
-            'value' => 'KarSU KPI',
-        ]);
+        foreach ($observances as $code => $translations) {
+            Observance::query()->updateOrCreate(
+                ['code' => $code],
+                [
+                    'name' => [
+                        'uz' => $translations[0],
+                        'kaa' => $translations[1],
+                        'ru' => $translations[2],
+                        'en' => $translations[3],
+                    ],
+                    'status' => '1',
+                ],
+            );
+        }
 
-        Formula::create([
-            'name' => [
-                'uz' => 'Raqobat reyting tizimida',
-                'kaa' => 'Báseki reyting sistemasında',
-                'ru' => 'В рейтинговой системе конкуренции',
-                'en' => 'Competition in the rating system',
-            ]
-        ]);
-        Formula::create([
-            'name' => [
-                'uz' => 'Maksimal ballga asoslangan',
-                'kaa' => 'Maksimal ballǵa tiykarlanǵan',
-                'ru' => 'На основе максимального балла',
-                'en' => 'Based on maximum score',
-            ]
-        ]);
-        Formula::create([
-            'name' => [
-                'uz' => 'Cheklanmagan ball asosida',
-                'kaa' => 'Sheklenbegen ball tiykarında',
-                'ru' => 'На основе неограниченных баллов',
-                'en' => 'Unlimited points',
-            ]
-        ]);
+        Option::query()->updateOrCreate(['key' => 'title'], ['value' => 'KarSU KPI']);
+
+        $formulas = [
+            Formula::Competition => ['Raqobat reyting tizimida', 'Báseki reyting sistemasında', 'В рейтинговой системе конкуренции', 'Competition in the rating system'],
+            Formula::Maximum => ['Maksimal ballga asoslangan', 'Maksimal ballǵa tiykarlanǵan', 'На основе максимального балла', 'Based on maximum score'],
+            Formula::Unlimited => ['Cheklanmagan ball asosida', 'Sheklenbegen ball tiykarında', 'На основе неограниченных баллов', 'Unlimited points'],
+        ];
+
+        foreach ($formulas as $code => $translations) {
+            Formula::query()->updateOrCreate(
+                ['code' => $code],
+                [
+                    'name' => [
+                        'uz' => $translations[0],
+                        'kaa' => $translations[1],
+                        'ru' => $translations[2],
+                        'en' => $translations[3],
+                    ],
+                    'status' => '1',
+                ],
+            );
+        }
     }
 }

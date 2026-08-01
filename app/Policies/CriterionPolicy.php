@@ -16,6 +16,7 @@ class CriterionPolicy
             && ($hasTeacherRole || $user->isSuperAdmin())
             && ($criterion->upload === '1' || $criterion->isHIndexCriterion())
             && $criterion->status === '1'
+            && $criterion->report()->where('status', '1')->exists()
             && $criterion->criterionEvaluations()
                 ->where('evaluation', $user->degree)
                 ->where('has', '1')

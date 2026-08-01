@@ -12,27 +12,22 @@ class ReviewerAssignmentController extends Controller
     {
         $criteria = Criterion::query()
             ->whereNotNull('parent_id')
+            ->whereHas('report', fn (Builder $query): Builder => $query->where('status', '1'))
             ->where(function (Builder $query): void {
                 $query->where('checking', '!=', 'ai')
                     ->orWhereHas('reviewerAssignment');
             })
             ->with(['reviewerAssignment.user:id,hemis_id,name'])
             ->orderBy('parent_id')
+            ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
-        $parentNumbers = Criterion::query()
-            ->whereNull('parent_id')
-            ->orderBy('id')
-            ->pluck('id')
-            ->values()
-            ->flip()
-            ->map(fn (int $index): int => $index + 1);
 
         $breadcrumbs = [
             ['url' => route('home'), 'name' => 'Asosiy sahifa'],
             ['url' => '#', 'name' => 'Ma’sullar'],
         ];
 
-        return view('pages.admin.reviewers.index', compact('criteria', 'parentNumbers', 'breadcrumbs'));
+        return view('pages.admin.reviewers.index', compact('criteria', 'breadcrumbs'));
     }
 }

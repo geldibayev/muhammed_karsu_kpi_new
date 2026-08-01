@@ -22,8 +22,7 @@
                                 @php
                                     $assignment = $criterion->reviewerAssignment;
                                     $reviewer = $assignment?->user;
-                                    $criterionCode = $assignment?->criterion_code
-                                        ?? (($parentNumbers[$criterion->parent_id] ?? '?').'/'.$criterion->id);
+                                    $criterionCode = $criterion->code ?: ($assignment?->criterion_code ?? '—');
                                 @endphp
                                 <tr>
                                     <td class="align-middle font-weight-bold">{{ $criterionCode }}</td>

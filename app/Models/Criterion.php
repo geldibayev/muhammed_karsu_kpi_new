@@ -10,10 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Criterion extends Model
 {
-    public const H_INDEX_CODE = '3/23';
+    public const H_INDEX_CODE = '3.1.4';
 
     protected $fillable = [
-        'id', 'name', 'desc', 'parent_id', 'template',
+        'id', 'code', 'name', 'desc', 'parent_id', 'sort_order', 'template',
         'upload', 'file_limit', 'observation', 'report_id', 'res_type',
         'formula_id', 'integrate', 'checking', 'ai_prompt', 'ai_model', 'status',
         'ai_submission_max_point', 'divide_ai_point_by_authors',
@@ -32,6 +32,11 @@ class Criterion extends Model
     public function report(): BelongsTo
     {
         return $this->belongsTo(Report::class);
+    }
+
+    public function formula(): BelongsTo
+    {
+        return $this->belongsTo(Formula::class);
     }
 
     public function criterionEvaluation($criterion_id, $evaluation)
@@ -66,12 +71,12 @@ class Criterion extends Model
 
     public function isHIndexCriterion(): bool
     {
-        if ($this->relationLoaded('reviewerAssignment')) {
-            return $this->reviewerAssignment?->criterion_code === self::H_INDEX_CODE;
+        if (filled($this->code)) {
+            return $this->code === self::H_INDEX_CODE;
         }
 
         return $this->reviewerAssignment()
-            ->where('criterion_code', self::H_INDEX_CODE)
+            ->whereIn('criterion_code', [self::H_INDEX_CODE, '3/23'])
             ->exists();
     }
 
@@ -88,11 +93,31 @@ class Criterion extends Model
             return max(0, (float) $this->ai_submission_max_point);
         }
 
-        if ((int) $this->formula_id === 3) {
+        if ($this->usesFormula(Formula::Unlimited)) {
             return max(0, (float) config('kpi.ai_unlimited_submission_max_point', 1));
         }
 
         return max(0, $evaluationMaximum);
+    }
+
+    public function usesFormula(string $code): bool
+    {
+        $formula = $this->relationLoaded('formula')
+            ? $this->formula
+            : $this->formula()->first(['id', 'code']);
+
+        if (filled($formula?->code)) {
+            return $formula->code === $code;
+        }
+
+        $legacyCode = match ((int) $this->formula_id) {
+            1 => Formula::Competition,
+            2 => Formula::Maximum,
+            3 => Formula::Unlimited,
+            default => null,
+        };
+
+        return $legacyCode === $code;
     }
 
     protected function casts(): array
@@ -102,6 +127,7 @@ class Criterion extends Model
             'desc' => 'json',
             'ai_submission_max_point' => 'float',
             'divide_ai_point_by_authors' => 'boolean',
+            'sort_order' => 'integer',
         ];
     }
 }

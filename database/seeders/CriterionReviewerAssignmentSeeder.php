@@ -9,62 +9,44 @@ use RuntimeException;
 
 class CriterionReviewerAssignmentSeeder extends Seeder
 {
-    private const OAV_CRITERION_CODE = '4/36';
-
-    private const OAV_CRITERION_NAME = 'OAV yoki ijtimoiy tarmoqlarda universitet va mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqishlar qilganlig';
-
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $now = now();
-        $oavCriterion = Criterion::query()
-            ->select(['id', 'name'])
-            ->whereNotNull('parent_id')
-            ->get()
-            ->first(
-                fn (Criterion $criterion): bool => data_get($criterion->name, 'uz') === self::OAV_CRITERION_NAME,
-            );
-
-        if ($oavCriterion === null) {
-            throw new RuntimeException('4/36 OAV kriteriyasi topilmadi.');
-        }
-
+        $settingsManagerHemisId = (int) config('kpi.settings_manager_hemis_id');
         $oavReviewerHemisId = (int) config('kpi.ai_status_viewer_hemis_id');
 
-        if ($oavReviewerHemisId <= 0) {
-            throw new RuntimeException('4/36 OAV kriteriyasi mas’ulining HEMIS IDsi sozlanmagan.');
+        if ($settingsManagerHemisId <= 0 || $oavReviewerHemisId <= 0) {
+            throw new RuntimeException('KPI mas’ullarining HEMIS ID sozlamalari to‘liq emas.');
         }
 
-        $assignments = [
-            ['hemis_id' => 3172011004, 'criterion_id' => 2, 'criterion_code' => '1/2'],
-            ['hemis_id' => 3172011004, 'criterion_id' => 8, 'criterion_code' => '1/8'],
-            ['hemis_id' => 3862011037, 'criterion_id' => 6, 'criterion_code' => '1/6'],
-            ['hemis_id' => 3462011207, 'criterion_id' => 23, 'criterion_code' => '3/23'],
-            ['hemis_id' => 3462011207, 'criterion_id' => 25, 'criterion_code' => '3/25'],
-            ['hemis_id' => 3462011207, 'criterion_id' => 26, 'criterion_code' => '3/26'],
-            ['hemis_id' => 3862311015, 'criterion_id' => 7, 'criterion_code' => '1/7'],
-            ['hemis_id' => 3862311015, 'criterion_id' => 15, 'criterion_code' => '2/15'],
-            ['hemis_id' => 3461612013, 'criterion_id' => 41, 'criterion_code' => '4/41'],
-            [
-                'hemis_id' => $oavReviewerHemisId,
-                'criterion_id' => $oavCriterion->getKey(),
-                'criterion_code' => self::OAV_CRITERION_CODE,
-            ],
+        $reviewersByCriterionCode = array_map('intval', config('kpi.criterion_reviewers', []));
+        $reviewersByCriterionCode += [
+            '2.1.4' => $settingsManagerHemisId,
+            '4.1.1' => $oavReviewerHemisId,
         ];
 
-        CriterionReviewerAssignment::query()->upsert(
-            array_map(
-                static fn (array $assignment): array => [
-                    ...$assignment,
-                    'created_at' => $now,
-                    'updated_at' => $now,
+        if (in_array(0, $reviewersByCriterionCode, true)) {
+            throw new RuntimeException('Mezon mas’ullarining HEMIS ID sozlamalarida noto‘g‘ri qiymat bor.');
+        }
+        $criteria = Criterion::query()
+            ->whereHas('report', fn ($query) => $query->where('status', '1'))
+            ->whereIn('code', array_keys($reviewersByCriterionCode))
+            ->get(['id', 'code'])
+            ->keyBy('code');
+
+        foreach ($reviewersByCriterionCode as $criterionCode => $hemisId) {
+            $criterion = $criteria->get($criterionCode);
+
+            if (! $criterion instanceof Criterion) {
+                throw new RuntimeException("{$criterionCode} mezoni topilmadi.");
+            }
+
+            CriterionReviewerAssignment::query()->updateOrCreate(
+                ['criterion_id' => $criterion->getKey()],
+                [
+                    'hemis_id' => $hemisId,
+                    'criterion_code' => $criterionCode,
                 ],
-                $assignments,
-            ),
-            ['criterion_id'],
-            ['hemis_id', 'criterion_code', 'updated_at'],
-        );
+            );
+        }
     }
 }
