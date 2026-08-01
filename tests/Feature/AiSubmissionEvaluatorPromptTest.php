@@ -15,6 +15,7 @@ use App\Services\AiAuthorPointDistributor;
 use App\Services\AiResourceDatePolicy;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
+use App\Services\GeminiUrlContextGateway;
 use App\Services\OakArticleScoreCalculator;
 use Gemini\Data\Blob;
 use Gemini\Data\GenerationConfig;
@@ -112,6 +113,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
             new AiResourceDatePolicy,
+            new GeminiUrlContextGateway,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);
@@ -226,6 +228,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
             new AiResourceDatePolicy,
+            new GeminiUrlContextGateway,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);

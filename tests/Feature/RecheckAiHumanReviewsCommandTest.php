@@ -103,9 +103,30 @@ class RecheckAiHumanReviewsCommandTest extends TestCase
         $this->assertSame(3172011004, $datum->fresh()->reviewer_hemis_id);
     }
 
+    public function test_urls_only_option_requeues_only_url_human_reviews(): void
+    {
+        $urlDatum = $this->createHumanReviewDatum(resourceType: 'url');
+        $this->createHumanReviewDatum(resourceType: 'file');
+        Queue::fake();
+
+        $this->artisan('kpi:ai:recheck-human-reviews', [
+            '--urls-only' => true,
+            '--force' => true,
+        ])
+            ->expectsOutput('Qayta AI tekshiruviga qo‘yildi: 1')
+            ->assertSuccessful();
+
+        Queue::assertPushed(
+            ProcessAiDatumEvaluation::class,
+            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $urlDatum->id,
+        );
+        Queue::assertPushed(ProcessAiDatumEvaluation::class, 1);
+    }
+
     private function createHumanReviewDatum(
         string $status = 'checking',
         string $checking = 'ai',
+        string $resourceType = 'file',
     ): Datum {
         $user = User::factory()->create();
         $report = Report::query()->create([
@@ -122,8 +143,10 @@ class RecheckAiHumanReviewsCommandTest extends TestCase
             'ai_model' => 'gemini-test',
         ]);
         $datum = Datum::query()->create([
-            'name' => 'proof.pdf',
-            'material' => ['type' => 'file', 'disk' => 'local', 'path' => 'proof.pdf'],
+            'name' => $resourceType === 'url' ? 'https://example.com/proof' : 'proof.pdf',
+            'material' => $resourceType === 'url'
+                ? ['type' => 'url', 'link' => 'https://example.com/proof']
+                : ['type' => 'file', 'disk' => 'local', 'path' => 'proof.pdf'],
             'user_id' => $user->id,
             'criterion_id' => $criterion->id,
             'reviewer_hemis_id' => 3172011004,

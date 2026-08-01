@@ -16,6 +16,7 @@ class RecheckAiHumanReviews extends Command
     protected $signature = 'kpi:ai:recheck-human-reviews
                             {--limit=0 : Qayta tekshiriladigan maksimum resurslar soni (0 = barchasi)}
                             {--dry-run : Ma’lumotlarni o‘zgartirmasdan nomzodlar sonini ko‘rsatish}
+                            {--urls-only : Faqat URL resurslarini qayta navbatga qo‘yish}
                             {--force : Tasdiqlash so‘ramasdan qayta navbatga qo‘yish}';
 
     protected $description = 'AI inson tekshiruviga qoldirgan resurslarni yangi qaror qoidasi bilan qayta baholaydi';
@@ -135,6 +136,10 @@ class RecheckAiHumanReviews extends Command
                     ->where('message_type', 'criterion_transferred'),
             ], 'id')
             ->where('data.status', 'checking')
+            ->when(
+                $this->option('urls-only'),
+                fn (Builder $query): Builder => $query->where('data.material->type', 'url'),
+            )
             ->whereHas(
                 'criterion',
                 fn (Builder $query): Builder => $query->where('checking', 'ai'),

@@ -14,6 +14,7 @@ use App\Services\AiAuthorPointDistributor;
 use App\Services\AiResourceDatePolicy;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
+use App\Services\GeminiUrlContextGateway;
 use App\Services\OakArticleScoreCalculator;
 use App\Support\ScopusCriterionRule;
 use Gemini\Laravel\Facades\Gemini;
@@ -222,6 +223,7 @@ class AiReportPeriodValidationTest extends TestCase
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
             new AiResourceDatePolicy,
+            new GeminiUrlContextGateway,
         ))->evaluate($datum);
     }
 }
