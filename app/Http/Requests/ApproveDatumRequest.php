@@ -36,6 +36,7 @@ class ApproveDatumRequest extends FormRequest
         $isManualCriterion = $criterion?->checking === 'manual';
         $isAiCriterion = $criterion?->checking === 'ai';
         $isOakArticleCriterion = $criterion?->isOakArticleCriterion() === true;
+        $isPrintedLiteratureCriterion = $criterion?->isPrintedEducationalLiteratureCriterion() === true;
         $activeScoreOptionCount = $isManualCriterion
             ? CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterionId)
@@ -59,20 +60,28 @@ class ApproveDatumRequest extends FormRequest
                         ->where('active', true)),
             ],
             'point' => [
-                Rule::requiredIf($isAiCriterion && ! $isOakArticleCriterion),
-                Rule::prohibitedIf(! $isAiCriterion || $isOakArticleCriterion),
+                Rule::requiredIf($isAiCriterion && ! $isOakArticleCriterion && ! $isPrintedLiteratureCriterion),
+                Rule::prohibitedIf(! $isAiCriterion || $isOakArticleCriterion || $isPrintedLiteratureCriterion),
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:'.$reviewerPointMaximum,
             ],
             'author_count' => [
-                Rule::requiredIf($isAiCriterion && $isOakArticleCriterion),
-                Rule::prohibitedIf(! $isAiCriterion || ! $isOakArticleCriterion),
+                Rule::requiredIf($isAiCriterion && ($isOakArticleCriterion || $isPrintedLiteratureCriterion)),
+                Rule::prohibitedIf(! $isAiCriterion || (! $isOakArticleCriterion && ! $isPrintedLiteratureCriterion)),
                 'nullable',
                 'integer',
                 'min:1',
                 'max:1000',
+            ],
+            'page_count' => [
+                Rule::requiredIf($isAiCriterion && $isPrintedLiteratureCriterion),
+                Rule::prohibitedIf(! $isAiCriterion || ! $isPrintedLiteratureCriterion),
+                'nullable',
+                'integer',
+                'min:1',
+                'max:100000',
             ],
         ];
     }
@@ -89,6 +98,8 @@ class ApproveDatumRequest extends FormRequest
             'point.max' => 'Kiritilgan ball ushbu submission uchun ruxsat etilgan chegaradan oshdi.',
             'author_count.required' => 'Tasdiqlash uchun maqoladagi jami mualliflar sonini kiriting.',
             'author_count.prohibited' => 'Bu mezon uchun mualliflar soni alohida yuborilmaydi.',
+            'page_count.required' => 'Tasdiqlash uchun kitobdagi jami sahifalar sonini kiriting.',
+            'page_count.prohibited' => 'Bu mezon uchun sahifalar soni alohida yuborilmaydi.',
         ];
     }
 }

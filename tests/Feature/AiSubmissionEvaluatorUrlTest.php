@@ -15,6 +15,7 @@ use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
 use App\Services\GeminiUrlContextGateway;
 use App\Services\OakArticleScoreCalculator;
+use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use Gemini\Laravel\Facades\Gemini;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -172,6 +173,7 @@ class AiSubmissionEvaluatorUrlTest extends TestCase
             new GeminiFileMimeTypeResolver,
             new AiResourceDatePolicy,
             new GeminiUrlContextGateway,
+            new PrintedEducationalLiteratureScoreCalculator,
         );
     }
 

@@ -57,6 +57,20 @@ class AiEvaluationResultTest extends TestCase
         $this->assertSame('2025-09-01', $result->resourceDate);
     }
 
+    public function test_valid_page_count_is_preserved_for_accepted_result(): void
+    {
+        $result = AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 0,
+            'author_count' => 2,
+            'page_count' => 160,
+            'resource_date' => '2025',
+            'reason' => 'Darslik tasdiqlandi.',
+        ], 100);
+
+        $this->assertSame(160, $result->pageCount);
+    }
+
     public function test_publication_year_is_preserved_for_policy_validation(): void
     {
         $result = AiEvaluationResult::fromPayload([
@@ -142,6 +156,15 @@ class AiEvaluationResultTest extends TestCase
             'status' => 'accepted',
             'point' => 1,
             'resource_date' => '01.09.2025',
+            'reason' => 'Xulosa',
+        ], 10];
+
+        yield 'invalid accepted page count' => [[
+            'status' => 'accepted',
+            'point' => 0,
+            'author_count' => 1,
+            'page_count' => 0,
+            'resource_date' => '2025',
             'reason' => 'Xulosa',
         ], 10];
     }

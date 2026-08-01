@@ -16,7 +16,7 @@ class Datum extends Model
 
     protected $fillable = [
         'id', 'name', 'material', 'user_id', 'criterion_id', 'reviewer_hemis_id', 'status', 'year_id', 'language_id',
-        'point', 'author_count', 'reason',
+        'point', 'author_count', 'page_count', 'reason',
     ];
 
     /** @return array<int, string> */
@@ -122,6 +122,7 @@ class Datum extends Model
             'material' => 'array',
             'point' => 'float',
             'author_count' => 'integer',
+            'page_count' => 'integer',
             'reviewer_hemis_id' => 'integer',
         ];
     }

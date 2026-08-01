@@ -109,6 +109,7 @@ class ManualReviewController extends Controller
             $request->validated('score_option_id'),
             $request->filled('point') ? $request->float('point') : null,
             $request->filled('author_count') ? $request->integer('author_count') : null,
+            $request->filled('page_count') ? $request->integer('page_count') : null,
         );
 
         return redirect()->route($reviewIndexRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');

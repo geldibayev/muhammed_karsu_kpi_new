@@ -16,7 +16,9 @@ use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
 use App\Services\GeminiUrlContextGateway;
 use App\Services\OakArticleScoreCalculator;
+use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Support\ScopusCriterionRule;
+use Gemini\Data\GenerationConfig;
 use Gemini\Laravel\Facades\Gemini;
 use Gemini\Resources\GenerativeModel;
 use Gemini\Responses\GenerativeModel\GenerateContentResponse;
@@ -55,6 +57,32 @@ class AiReportPeriodValidationTest extends TestCase
         $this->assertSame('accepted', $result->status);
         $this->assertSame(5.0, $result->point);
         $this->assertSame(4, $result->authorCount);
+    }
+
+    public function test_printed_literature_point_is_calculated_on_server_from_pages_and_authors(): void
+    {
+        $result = $this->evaluateResource('2025', criterionCode: '1.2');
+
+        $this->assertSame('accepted', $result->status);
+        $this->assertSame(1.0, $result->point);
+        $this->assertSame(160, $result->pageCount);
+        $this->assertSame(4, $result->authorCount);
+        $this->assertStringContainsString('160 sahifa / 16 × 0.4 / 4 muallif', $result->reason);
+        Gemini::assertFunctionCalled(
+            resource: GenerativeModel::class,
+            model: 'gemini-test',
+            callback: function (string $method, array $parameters): bool {
+                $generationConfig = $parameters[0] ?? null;
+                $schema = $generationConfig instanceof GenerationConfig
+                    ? $generationConfig->responseSchema?->toArray()
+                    : null;
+
+                return $method === 'withGenerationConfig'
+                    && data_get($schema, 'properties.page_count.type') === 'INTEGER'
+                    && in_array('page_count', data_get($schema, 'required', []), true)
+                    && in_array('author_count', data_get($schema, 'required', []), true);
+            },
+        );
     }
 
     public function test_report_dates_cannot_override_the_strict_period(): void
@@ -113,7 +141,9 @@ class AiReportPeriodValidationTest extends TestCase
                 return $method === 'generateContent'
                     && is_string($prompt)
                     && str_contains($prompt, '"printed_educational_literature_exception":true')
-                    && str_contains($prompt, 'YYYY-MM-DD yoki faqat YYYY');
+                    && str_contains($prompt, 'YYYY-MM-DD yoki faqat YYYY')
+                    && str_contains($prompt, 'page_count')
+                    && str_contains($prompt, 'Pointni o\'zingiz hisoblamang');
             },
         );
     }
@@ -204,13 +234,14 @@ class AiReportPeriodValidationTest extends TestCase
                 'candidates' => [[
                     'content' => [
                         'parts' => [[
-                            'text' => json_encode([
+                            'text' => json_encode(array_filter([
                                 'status' => $aiStatus,
                                 'point' => 5,
                                 'author_count' => 4,
+                                'page_count' => in_array($criterionCode, ['1.2', '1.3'], true) ? 160 : null,
                                 'resource_date' => $resourceDate,
                                 'reason' => $aiReason,
-                            ], JSON_THROW_ON_ERROR),
+                            ], static fn (mixed $value): bool => $value !== null), JSON_THROW_ON_ERROR),
                         ]],
                     ],
                 ]],
@@ -224,6 +255,7 @@ class AiReportPeriodValidationTest extends TestCase
             new GeminiFileMimeTypeResolver,
             new AiResourceDatePolicy,
             new GeminiUrlContextGateway,
+            new PrintedEducationalLiteratureScoreCalculator,
         ))->evaluate($datum);
     }
 }

@@ -107,16 +107,15 @@ class CriterionSeeder extends Seeder
                         Baholash qoidalari jami %pointing% ballgacha:
                         1. Hujjatda darslikning ISBN raqami aniq ko'rsatilgan bo'lishi shart.
                         2. Hujjatda Vazirlik yoki Universitetning o'quv adabiyotlariga nashr ruxsatnomasi mavjud bo'lishi shart.
-                        3. Baholash usuli: har bir bosma tabog'i (printed sheet/bosma taboq) uchun 0.4 ball. Hujjatdan kitobning jami bosma tabog'i hajmini aniqlang.
-                        4. Mualliflik ulushini aniqlash uchun mualliflar sonini aniqlang va umumiy ballni shunga qarab taqsimlang.
+                        3. Kitobning jami sahifalar sonini va jami mualliflar sonini hujjatdan aniqlang. Ballni hisoblamang: server 1 bosma taboq = 16 sahifa, har bir bosma taboq uchun 0.4 ball qoidasini qo'llab, natijani mualliflar soniga bo'ladi.
 
                         Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar ISBN, nashr ruxsatnomasi va bosma tabog'i aniq tasdiqlansa: \"accepted\" statusini bering. \"point\" qismiga (bosma_tabog'i * 0.4) qiymatini mualliflar soniga bo'lib yozing. \"author_count\" ga mualliflar sonini kiriting.
+                        - Agar ISBN, nashr ruxsatnomasi, jami sahifalar va mualliflar soni aniq tasdiqlansa: \"accepted\" statusini bering. \"point\" ga 0, \"page_count\" ga jami sahifalar sonini va \"author_count\" ga jami mualliflar sonini kiriting.
                         - Agar hujjatlar xira bo'lsa, ISBN yoki ruxsatnomani o'qib bo'lmasa, yoki bosma tabog'i hajmi ko'rsatilmagan bo'lib, inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
                         - Agar hujjatning darslikka aloqasi bo'lmasa, ISBN yoki ruxsatnoma topilmasa: \"cancelled\" statusini bering (\"point\": 0).
 
                         Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam>, \"author_count\": <mualliflar soni raqamda>, \"reason\": \"<Qabul qilingan qarorning sababi, bosma tabog'i hajmi va ruxsatnoma haqida izoh>\"}",
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": 0, \"author_count\": <mualliflar soni raqamda>, \"page_count\": <jami sahifalar soni raqamda>, \"reason\": \"<Qabul qilingan qarorning sababi, sahifalar soni va ruxsatnoma haqida izoh>\"}",
                     ],
                     [
                         'name' => [
@@ -149,16 +148,15 @@ class CriterionSeeder extends Seeder
                         'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (o'quv qo'llanma muqovasi, ISBN sahifasi, nashr ruxsatnomasi, texnik ma'lumotlar) tahlil qiling.
                         Baholash qoidalari:
                         1. Hujjatda o'quv qo'llanmaning ISBN raqami va Vazirlik yoki Universitetning o'quv adabiyoti uchun nashr ruxsatnomasi mavjudligini tekshiring.
-                        2. Baholash usuli: har bir bosma tabog'i uchun 0.3 ball. Hujjatdan kitobning jami bosma tabog'i hajmini aniqlang.
-                        3. Mualliflik ulushini aniqlash uchun mualliflar sonini aniqlang va umumiy ballni shunga qarab taqsimlang.
+                        2. Kitobning jami sahifalar sonini va jami mualliflar sonini hujjatdan aniqlang. Ballni hisoblamang: server 1 bosma taboq = 16 sahifa, har bir bosma taboq uchun 0.3 ball qoidasini qo'llab, natijani mualliflar soniga bo'ladi.
 
                         Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar ISBN, nashr ruxsatnomasi va bosma tabog'i hajmi aniq tasdiqlansa: \"accepted\" statusini bering. \"point\" qismiga (bosma_tabog'i * 0.3 / mualliflar_soni) natijasini yozing. \"author_count\" ga mualliflar sonini kiriting.
+                        - Agar ISBN, nashr ruxsatnomasi, jami sahifalar va mualliflar soni aniq tasdiqlansa: \"accepted\" statusini bering. \"point\" ga 0, \"page_count\" ga jami sahifalar sonini va \"author_count\" ga jami mualliflar sonini kiriting.
                         - Agar hujjatlar xira bo'lsa, ISBN yoki ruxsatnomani o'qib bo'lmasa, yoxud bosma tabog'i hajmi ko'rsatilmagan bo'lib, inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
                         - Agar hujjatning o'quv qo'llanmaga aloqasi bo'lmasa, ISBN yoki ruxsatnoma topilmasa: \"cancelled\" statusini bering (\"point\": 0).
 
                         Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam>, \"author_count\": <mualliflar soni>, \"reason\": \"<Qabul qilingan qarorning sababi, bosma tabog'i hajmi va ruxsatnoma haqida qisqacha izoh>\"}",
+                        {\"status\": \"accepted|checking|cancelled\", \"point\": 0, \"author_count\": <mualliflar soni>, \"page_count\": <jami sahifalar soni>, \"reason\": \"<Qabul qilingan qarorning sababi, sahifalar soni va ruxsatnoma haqida qisqacha izoh>\"}",
                     ],
                     [
                         'name' => [

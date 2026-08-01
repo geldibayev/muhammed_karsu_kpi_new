@@ -9,6 +9,7 @@ use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
 use App\Services\OakArticleScoreCalculator;
+use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Support\OakArticleCriterionRule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -18,7 +19,10 @@ use UnexpectedValueException;
 
 class RecalculateReportPoints
 {
-    public function __construct(private OakArticleScoreCalculator $oakArticleScoreCalculator) {}
+    public function __construct(
+        private OakArticleScoreCalculator $oakArticleScoreCalculator,
+        private PrintedEducationalLiteratureScoreCalculator $printedLiteratureScoreCalculator,
+    ) {}
 
     public function handle(Report $report): void
     {
@@ -28,9 +32,52 @@ class RecalculateReportPoints
                     Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
 
                     $this->refreshOakArticleDatumPoints($report);
+                    $this->refreshPrintedLiteratureDatumPoints($report);
                     $this->rebuildCriterionPoints($report);
                     $this->rebuildFinalPoints($report);
                 }, attempts: 5);
+            });
+    }
+
+    private function refreshPrintedLiteratureDatumPoints(Report $report): void
+    {
+        Datum::query()
+            ->where('status', 'accepted')
+            ->whereNotNull('page_count')
+            ->whereNotNull('author_count')
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->whereIn('code', Criterion::PRINTED_EDUCATIONAL_LITERATURE_CODES))
+            ->with('criterion:id,code')
+            ->lockForUpdate()
+            ->get()
+            ->each(function (Datum $datum): void {
+                if ($datum->criterion === null
+                    || $datum->page_count === null
+                    || $datum->author_count === null) {
+                    return;
+                }
+
+                $point = $this->printedLiteratureScoreCalculator->calculate(
+                    (string) $datum->criterion->code,
+                    $datum->page_count,
+                    $datum->author_count,
+                );
+
+                if (abs($datum->point - $point) < 0.00005) {
+                    return;
+                }
+
+                $oldPoint = $datum->point;
+                $datum->update(['point' => $point]);
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => 'info',
+                    'message' => $datum->criterion->code.' balli saqlangan sahifa va mualliflar soni bo\'yicha qayta hisoblandi. '
+                        .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
+                        .'Yangi ball: '.number_format($point, 4, '.', '').'.',
+                    'message_type' => 'printed_literature_point_recalculated',
+                ]);
             });
     }
 

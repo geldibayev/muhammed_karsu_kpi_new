@@ -27,6 +27,7 @@ class AiSubmissionEvaluator
         private GeminiFileMimeTypeResolver $geminiFileMimeTypeResolver,
         private AiResourceDatePolicy $aiResourceDatePolicy,
         private GeminiUrlContextGateway $geminiUrlContextGateway,
+        private PrintedEducationalLiteratureScoreCalculator $printedEducationalLiteratureScoreCalculator,
     ) {}
 
     public function evaluate(Datum $datum): AiEvaluationResult
@@ -47,7 +48,9 @@ class AiSubmissionEvaluator
         }
 
         $maximumPoint = $this->maximumPoint($datum);
-        $requiresAuthorCount = str_contains((string) $criterion->ai_prompt, 'author_count');
+        $requiresPageCount = $criterion->isPrintedEducationalLiteratureCriterion();
+        $requiresAuthorCount = $requiresPageCount
+            || str_contains((string) $criterion->ai_prompt, 'author_count');
         $requiresResourceDate = true;
 
         if ($maximumPoint === null) {
@@ -74,9 +77,10 @@ class AiSubmissionEvaluator
                 $maximumPoint,
                 $requiresAuthorCount,
                 $requiresResourceDate,
+                $requiresPageCount,
             ));
 
-        $contentParts = [$this->buildPrompt($datum, $maximumPoint, $requiresAuthorCount)];
+        $contentParts = [$this->buildPrompt($datum, $maximumPoint, $requiresAuthorCount, $requiresPageCount)];
 
         if ($resourceUrl !== null) {
             $contentParts[0] .= <<<PROMPT
@@ -132,6 +136,7 @@ PROMPT;
                         $maximumPoint,
                         $requiresAuthorCount,
                         $requiresResourceDate,
+                        $requiresPageCount,
                     ),
                     prompt: $contentParts[0],
                 );
@@ -170,6 +175,13 @@ PROMPT;
             $result = AiEvaluationResult::fromJson($responseText, $maximumPoint);
 
             $result = $this->aiResourceDatePolicy->enforce($datum, $result);
+
+            if ($criterion->isPrintedEducationalLiteratureCriterion()) {
+                return $this->printedEducationalLiteratureScoreCalculator->apply(
+                    $result,
+                    (string) $criterion->code,
+                );
+            }
 
             if ($criterion->isOakArticleCriterion()) {
                 return $this->oakArticleScoreCalculator->apply($result, $user->degree);
@@ -227,6 +239,7 @@ PROMPT;
         float $maximumPoint,
         bool $requiresAuthorCount,
         bool $requiresResourceDate,
+        bool $requiresPageCount = false,
     ): GenerationConfig {
         return new GenerationConfig(
             temperature: 0.1,
@@ -235,6 +248,7 @@ PROMPT;
                 $maximumPoint,
                 $requiresAuthorCount,
                 $requiresResourceDate,
+                $requiresPageCount,
             ),
         );
     }
@@ -294,6 +308,7 @@ PROMPT;
         Datum $datum,
         float $maximumPoint,
         bool $requiresAuthorCount,
+        bool $requiresPageCount,
     ): string {
         $criterionPrompt = trim((string) preg_replace('/[ \t]+/', ' ', (string) $datum->criterion?->ai_prompt));
         $criterionPrompt = str_replace('%pointing%', (string) $maximumPoint, $criterionPrompt);
@@ -332,13 +347,17 @@ PROMPT;
             ? 'YYYY-MM-DD yoki faqat YYYY'
             : 'YYYY-MM-DD';
         $responseExample = match (true) {
-            $requiresAuthorCount && $requiresResourceDate => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo‘sh satr\",\"reason\":\"qisqa asos\"}",
+            $requiresPageCount => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
+            $requiresAuthorCount && $requiresResourceDate => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresAuthorCount => '{"status":"accepted|cancelled|checking","point":0,"author_count":1,"reason":"qisqa asos"}',
             $requiresResourceDate => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"resource_date\":\"{$resourceDateFormat} yoki bo‘sh satr\",\"reason\":\"qisqa asos\"}",
             default => '{"status":"accepted|cancelled|checking","point":0,"reason":"qisqa asos"}',
         };
         $authorInstruction = $requiresAuthorCount
-            ? 'Accepted holatida author_count hujjatdagi jami mualliflar soni bo‘lishi va kamida 1 bo‘lishi shart.'
+            ? "Accepted holatida author_count hujjatdagi jami mualliflar soni bo'lishi va kamida 1 bo'lishi shart."
+            : '';
+        $printedLiteratureInstruction = $requiresPageCount
+            ? "BOSMA TABOQ HISOBI: accepted holatida page_count maydoniga kitobning jami sahifalar sonini butun son ko'rinishida yozing. Pointni o'zingiz hisoblamang: point uchun 0 qaytaring. Server 1 bosma taboq = 16 sahifa qoidasi bo'yicha ballni hisoblaydi va mualliflar soniga bo'ladi."
             : '';
 
         return <<<PROMPT
@@ -368,6 +387,7 @@ Faqat quyidagi kalitlarga ega JSON obyekt qaytaring:
 {$responseExample}
 Status accepted bo'lmasa point 0 bo'lishi shart. Ishonch yetarli bo'lmasa checking qaytaring.
 {$authorInstruction}
+{$printedLiteratureInstruction}
 PROMPT;
     }
 
@@ -394,8 +414,12 @@ PROMPT;
         return null;
     }
 
-    private function responseSchema(float $maximumPoint, bool $requiresAuthorCount, bool $requiresResourceDate = false): Schema
-    {
+    private function responseSchema(
+        float $maximumPoint,
+        bool $requiresAuthorCount,
+        bool $requiresResourceDate = false,
+        bool $requiresPageCount = false,
+    ): Schema {
         $properties = [
             'status' => new Schema(
                 type: DataType::STRING,
@@ -425,6 +449,14 @@ PROMPT;
             );
         }
 
+        if ($requiresPageCount) {
+            $properties['page_count'] = new Schema(
+                type: DataType::INTEGER,
+                minimum: 0,
+                maximum: 100000,
+            );
+        }
+
         $required = ['status', 'point'];
 
         if ($requiresAuthorCount) {
@@ -433,6 +465,10 @@ PROMPT;
 
         if ($requiresResourceDate) {
             $required[] = 'resource_date';
+        }
+
+        if ($requiresPageCount) {
+            $required[] = 'page_count';
         }
 
         $required[] = 'reason';

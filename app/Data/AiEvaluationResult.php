@@ -14,6 +14,7 @@ class AiEvaluationResult
         public readonly string $reason,
         public readonly ?int $authorCount = null,
         public readonly ?string $resourceDate = null,
+        public readonly ?int $pageCount = null,
     ) {}
 
     /** @param array<string, mixed> $payload */
@@ -27,6 +28,7 @@ class AiEvaluationResult
             ['author_count', 'point', 'reason', 'status'],
             ['point', 'reason', 'resource_date', 'status'],
             ['author_count', 'point', 'reason', 'resource_date', 'status'],
+            ['author_count', 'page_count', 'point', 'reason', 'resource_date', 'status'],
         ], true)) {
             throw new UnexpectedValueException('AI javobida kutilmagan yoki yetishmayotgan maydon bor.');
         }
@@ -40,6 +42,7 @@ class AiEvaluationResult
         $reason = $payload['reason'] ?? null;
         $authorCount = $payload['author_count'] ?? null;
         $resourceDate = $payload['resource_date'] ?? null;
+        $pageCount = $payload['page_count'] ?? null;
 
         if (! is_string($status) || ! in_array($status, ['accepted', 'cancelled', 'checking'], true)) {
             throw new UnexpectedValueException('AI statusi ruxsat etilgan qiymatlardan biri emas.');
@@ -66,6 +69,15 @@ class AiEvaluationResult
             throw new UnexpectedValueException('Qabul qilingan resurs uchun mualliflar soni kamida 1 bo‘lishi kerak.');
         }
 
+        if ($pageCount !== null
+            && (! is_int($pageCount) || $pageCount < 0 || $pageCount > 100000)) {
+            throw new UnexpectedValueException('AI sahifalar soni 0 dan 100000 gacha butun son bo\'lishi kerak.');
+        }
+
+        if ($status === 'accepted' && $pageCount !== null && $pageCount < 1) {
+            throw new UnexpectedValueException('Qabul qilingan resurs uchun sahifalar soni kamida 1 bo\'lishi kerak.');
+        }
+
         if ($resourceDate !== null && ! is_string($resourceDate)) {
             throw new UnexpectedValueException('AI resurs sanasi matn ko‘rinishida bo‘lishi kerak.');
         }
@@ -88,6 +100,7 @@ class AiEvaluationResult
             reason: trim($reason),
             authorCount: $status === 'accepted' ? $authorCount : null,
             resourceDate: $resourceDate,
+            pageCount: $status === 'accepted' ? $pageCount : null,
         );
     }
 

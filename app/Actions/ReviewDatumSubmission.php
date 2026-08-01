@@ -8,6 +8,7 @@ use App\Models\Datum;
 use App\Models\User;
 use App\Services\HIndexScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
+use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +19,7 @@ class ReviewDatumSubmission
         private RecalculateReportPoints $recalculateReportPoints,
         private HIndexScoreCalculator $hIndexScoreCalculator,
         private OakArticleScoreCalculator $oakArticleScoreCalculator,
+        private PrintedEducationalLiteratureScoreCalculator $printedLiteratureScoreCalculator,
     ) {}
 
     public function approve(
@@ -26,6 +28,7 @@ class ReviewDatumSubmission
         ?int $scoreOptionId = null,
         ?float $reviewerPoint = null,
         ?int $authorCount = null,
+        ?int $pageCount = null,
     ): Datum {
         $reviewedDatum = DB::transaction(function () use (
             $reviewer,
@@ -33,6 +36,7 @@ class ReviewDatumSubmission
             $scoreOptionId,
             $reviewerPoint,
             $authorCount,
+            $pageCount,
         ): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'user'])
@@ -82,11 +86,13 @@ class ReviewDatumSubmission
                 $scoreOptionId,
                 $reviewerPoint,
                 $authorCount,
+                $pageCount,
             );
             $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
                 .'. Avtomatik xom ball: '.number_format(
                     $point,
-                    $lockedDatum->criterion->isOakArticleCriterion() ? 4 : 2,
+                    ($lockedDatum->criterion->isOakArticleCriterion()
+                        || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()) ? 4 : 2,
                     '.',
                     '',
                 ).'.';
@@ -94,7 +100,9 @@ class ReviewDatumSubmission
             $lockedDatum->update([
                 'status' => 'accepted',
                 'point' => $point,
-                'author_count' => $lockedDatum->criterion->isOakArticleCriterion() ? $authorCount : null,
+                'author_count' => ($lockedDatum->criterion->isOakArticleCriterion()
+                    || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()) ? $authorCount : null,
+                'page_count' => $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion() ? $pageCount : null,
                 'reason' => $message,
                 'reviewer_hemis_id' => null,
             ]);
@@ -120,6 +128,7 @@ class ReviewDatumSubmission
         ?int $scoreOptionId,
         ?float $reviewerPoint,
         ?int $authorCount,
+        ?int $pageCount,
     ): array {
         $maximumPoint = max(0, (float) $evaluation->score);
 
@@ -136,6 +145,32 @@ class ReviewDatumSubmission
                 return [
                     'point' => $this->oakArticleScoreCalculator->calculate($datum->user->degree, $authorCount),
                     'rule' => number_format($basePoint, 2, '.', '').' ball / '.$authorCount.' muallif',
+                ];
+            }
+
+            if ($datum->criterion->isPrintedEducationalLiteratureCriterion()) {
+                if ($pageCount === null || $pageCount < 1 || $pageCount > 100000) {
+                    throw ValidationException::withMessages([
+                        'page_count' => 'Sahifalar soni 1 dan 100000 gacha bo\'lishi kerak.',
+                    ]);
+                }
+
+                if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
+                    throw ValidationException::withMessages([
+                        'author_count' => 'Mualliflar soni 1 dan 1000 gacha bo\'lishi kerak.',
+                    ]);
+                }
+
+                $rate = $datum->criterion->code === '1.2' ? 0.4 : 0.3;
+
+                return [
+                    'point' => $this->printedLiteratureScoreCalculator->calculate(
+                        (string) $datum->criterion->code,
+                        $pageCount,
+                        $authorCount,
+                    ),
+                    'rule' => $pageCount.' sahifa / 16 × '.number_format($rate, 1, '.', '')
+                        .' / '.$authorCount.' muallif',
                 ];
             }
 

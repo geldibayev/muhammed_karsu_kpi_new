@@ -22,6 +22,7 @@
         $isManualCriterion = $datum->criterion?->checking === 'manual';
         $isAiCriterion = $datum->criterion?->checking === 'ai';
         $isOakArticleCriterion = $datum->criterion?->isOakArticleCriterion() === true;
+        $isPrintedLiteratureCriterion = $datum->criterion?->isPrintedEducationalLiteratureCriterion() === true;
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
         $fixedApprovalOption = $isManualCriterion && $scoreOptions->count() === 1
             && $scoreOptions->first()?->code === \App\Models\CriterionManualScoreOption::FIXED_APPROVAL_CODE
@@ -116,7 +117,7 @@
                                 <button type="button" class="btn btn-success btn-sm mr-2"
                                         data-toggle="modal" data-target="#ai-approve-modal">
                                     <i class="fas fa-check mr-1"></i>
-                                    {{ $isOakArticleCriterion ? 'Mualliflar soni bilan tasdiqlash' : 'Ball bilan tasdiqlash' }}
+                                    {{ $isPrintedLiteratureCriterion ? 'Sahifa va mualliflar bilan tasdiqlash' : ($isOakArticleCriterion ? 'Mualliflar soni bilan tasdiqlash' : 'Ball bilan tasdiqlash') }}
                                 </button>
                             @elseif($isManualCriterion && $scoreOptions->isEmpty())
                                 <button type="button" class="btn btn-success btn-sm mr-2" disabled
@@ -264,7 +265,29 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        @if($isOakArticleCriterion)
+                        @if($isPrintedLiteratureCriterion)
+                            <div class="form-group">
+                                <label for="page-count">Kitobdagi jami sahifalar soni</label>
+                                <input id="page-count" name="page_count" type="number" min="1" max="100000"
+                                       step="1" required value="{{ old('page_count', $datum->page_count) }}"
+                                       class="form-control @error('page_count') is-invalid @enderror">
+                                @error('page_count')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="form-group">
+                                <label for="author-count">Kitobdagi jami mualliflar soni</label>
+                                <input id="author-count" name="author_count" type="number" min="1" max="1000"
+                                       step="1" required value="{{ old('author_count', $datum->author_count ?? data_get($datum->material, 'article.authors_num')) }}"
+                                       class="form-control @error('author_count') is-invalid @enderror">
+                                @error('author_count')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="small text-muted mt-2">
+                                Ball serverda: sahifalar / 16 × {{ $datum->criterion?->code === '1.2' ? '0.4' : '0.3' }} / mualliflar soni.
+                            </div>
+                        @elseif($isOakArticleCriterion)
                             <label for="author-count">Maqoladagi jami mualliflar soni</label>
                             <input id="author-count" name="author_count" type="number" min="1" max="1000"
                                    step="1" required value="{{ old('author_count', data_get($datum->material, 'article.authors_num')) }}"
@@ -369,7 +392,7 @@
 @endsection
 
 @section('script')
-    @if($errors->has('point') || $errors->has('author_count'))
+    @if($errors->has('point') || $errors->has('author_count') || $errors->has('page_count'))
         <script>$('#ai-approve-modal').modal('show');</script>
     @elseif($errors->has('criterion_id'))
         <script>$('#transfer-criterion-modal').modal('show');</script>

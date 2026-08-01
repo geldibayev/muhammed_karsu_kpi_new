@@ -97,6 +97,8 @@ class TransferDatumCriterion
                 'criterion_id' => $targetCriterion->getKey(),
                 'status' => 'checking',
                 'point' => 0,
+                'author_count' => null,
+                'page_count' => null,
                 'reviewer_hemis_id' => null,
                 'reason' => 'Kriteriya o‘zgartirildi. Inson tekshiruvi kutilmoqda.',
             ]);
