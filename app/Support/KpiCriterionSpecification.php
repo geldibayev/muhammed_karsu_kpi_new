@@ -51,7 +51,14 @@ class KpiCriterionSpecification
             '2.1.5' => self::rule(self::Maximum, 1, 'last3years', [2, 3, 2, 3]),
             '2.1.6' => self::rule(self::Maximum, 1, 'current', [3, 3, 4, 4]),
 
-            '3.1.1' => self::rule(self::Competition, 4, 'current', [2, 3, 3, 3]),
+            '3.1.1' => self::rule(
+                self::Maximum,
+                4,
+                'current',
+                [2, 3, 3, 3],
+                divideAiPointByAuthors: true,
+                descriptionUz: OakArticleCriterionRule::DESCRIPTION_UZ,
+            ),
             '3.1.2' => self::rule(self::Competition, 4, 'current', [2, 3, 3, 3]),
             '3.1.3' => self::rule(
                 self::Unlimited,

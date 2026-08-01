@@ -8,6 +8,8 @@ use App\Models\Datum;
 use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
+use App\Services\OakArticleScoreCalculator;
+use App\Support\OakArticleCriterionRule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -16,6 +18,8 @@ use UnexpectedValueException;
 
 class RecalculateReportPoints
 {
+    public function __construct(private OakArticleScoreCalculator $oakArticleScoreCalculator) {}
+
     public function handle(Report $report): void
     {
         Cache::lock("reports:{$report->getKey()}:points-rebuild", 120)
@@ -23,9 +27,49 @@ class RecalculateReportPoints
                 DB::transaction(function () use ($report): void {
                     Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
 
+                    $this->refreshOakArticleDatumPoints($report);
                     $this->rebuildCriterionPoints($report);
                     $this->rebuildFinalPoints($report);
                 }, attempts: 5);
+            });
+    }
+
+    private function refreshOakArticleDatumPoints(Report $report): void
+    {
+        Datum::query()
+            ->where('status', 'accepted')
+            ->whereNotNull('author_count')
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->where('code', OakArticleCriterionRule::CODE))
+            ->with('user:id,degree')
+            ->lockForUpdate()
+            ->get()
+            ->each(function (Datum $datum): void {
+                if ($datum->user === null || $datum->author_count === null) {
+                    return;
+                }
+
+                $point = $this->oakArticleScoreCalculator->calculate(
+                    $datum->user->degree,
+                    $datum->author_count,
+                );
+
+                if (abs($datum->point - $point) < 0.00005) {
+                    return;
+                }
+
+                $oldPoint = $datum->point;
+                $datum->update(['point' => $point]);
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => 'info',
+                    'message' => '3.1.1 balli foydalanuvchi ilmiy darajasi o‘zgarishi sabab qayta hisoblandi. '
+                        .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
+                        .'Yangi ball: '.number_format($point, 4, '.', '').'. '
+                        .'Mualliflar soni: '.$datum->author_count.'.',
+                    'message_type' => 'oak_article_point_recalculated',
+                ]);
             });
     }
 

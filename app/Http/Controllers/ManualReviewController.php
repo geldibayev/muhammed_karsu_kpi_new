@@ -10,6 +10,7 @@ use App\Http\Requests\RejectDatumRequest;
 use App\Http\Requests\TransferDatumCriterionRequest;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
+use App\Services\OakArticleScoreCalculator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,15 +52,18 @@ class ManualReviewController extends Controller
         ));
     }
 
-    public function show(Datum $datum, TransferDatumCriterion $transferDatumCriterion): View
-    {
+    public function show(
+        Datum $datum,
+        TransferDatumCriterion $transferDatumCriterion,
+        OakArticleScoreCalculator $oakArticleScoreCalculator,
+    ): View {
         $this->authorize('review', $datum);
 
         $reviewIndexRoute = $this->reviewIndexRoute($datum);
         $reviewQueue = $datum->usesAiChecking() ? 'ai' : 'manual';
         $datum->load([
             'user:id,name,hemis_id,degree',
-            'criterion:id,name,desc,checking,formula_id,report_id',
+            'criterion:id,code,name,desc,checking,formula_id,report_id',
             'criterion.criterionEvaluations:id,criterion_id,evaluation,has,score',
             'criterion.manualScoreOptions',
             'year:id,name',
@@ -67,6 +71,9 @@ class ManualReviewController extends Controller
         ]);
         $status = DatumStatus::from($datum->status);
         $scoreOptions = $datum->criterion?->manualScoreOptions ?? collect();
+        $oakArticleBasePoint = $datum->criterion?->isOakArticleCriterion() === true
+            ? $oakArticleScoreCalculator->basePoint($datum->user?->degree ?? '')
+            : null;
         $transferCriteria = $transferDatumCriterion->destinations($datum);
         $breadcrumbs = [
             ['url' => route('home'), 'name' => 'Asosiy sahifa'],
@@ -85,6 +92,7 @@ class ManualReviewController extends Controller
             'breadcrumbs',
             'reviewIndexRoute',
             'reviewQueue',
+            'oakArticleBasePoint',
         ));
     }
 
@@ -100,6 +108,7 @@ class ManualReviewController extends Controller
             $datum,
             $request->validated('score_option_id'),
             $request->filled('point') ? $request->float('point') : null,
+            $request->filled('author_count') ? $request->integer('author_count') : null,
         );
 
         return redirect()->route($reviewIndexRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');

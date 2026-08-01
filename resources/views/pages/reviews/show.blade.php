@@ -21,6 +21,7 @@
         $criterionDescription = trim(strip_tags($criterionDescription));
         $isManualCriterion = $datum->criterion?->checking === 'manual';
         $isAiCriterion = $datum->criterion?->checking === 'ai';
+        $isOakArticleCriterion = $datum->criterion?->isOakArticleCriterion() === true;
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
         $fixedApprovalOption = $isManualCriterion && $scoreOptions->count() === 1
             && $scoreOptions->first()?->code === \App\Models\CriterionManualScoreOption::FIXED_APPROVAL_CODE
@@ -114,7 +115,8 @@
                             @elseif($isAiCriterion)
                                 <button type="button" class="btn btn-success btn-sm mr-2"
                                         data-toggle="modal" data-target="#ai-approve-modal">
-                                    <i class="fas fa-check mr-1"></i> Ball bilan tasdiqlash
+                                    <i class="fas fa-check mr-1"></i>
+                                    {{ $isOakArticleCriterion ? 'Mualliflar soni bilan tasdiqlash' : 'Ball bilan tasdiqlash' }}
                                 </button>
                             @elseif($isManualCriterion && $scoreOptions->isEmpty())
                                 <button type="button" class="btn btn-success btn-sm mr-2" disabled
@@ -262,17 +264,30 @@
                         </button>
                     </div>
                     <div class="modal-body">
-                        <label for="reviewer-point">Tasdiqlangan ball</label>
-                        <input id="reviewer-point" name="point" type="number" min="0"
-                               max="{{ $reviewerPointMaximum }}" step="0.01" required
-                               value="{{ old('point') }}"
-                               class="form-control @error('point') is-invalid @enderror">
-                        @error('point')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <div class="small text-muted mt-2">
-                            Ruxsat etilgan oraliq: 0–{{ number_format($reviewerPointMaximum, 2) }} ball.
-                        </div>
+                        @if($isOakArticleCriterion)
+                            <label for="author-count">Maqoladagi jami mualliflar soni</label>
+                            <input id="author-count" name="author_count" type="number" min="1" max="1000"
+                                   step="1" required value="{{ old('author_count', data_get($datum->material, 'article.authors_num')) }}"
+                                   class="form-control @error('author_count') is-invalid @enderror">
+                            @error('author_count')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="small text-muted mt-2">
+                                Bazaviy {{ number_format($oakArticleBasePoint, 2) }} ball kiritilgan mualliflar soniga avtomatik bo‘linadi.
+                            </div>
+                        @else
+                            <label for="reviewer-point">Tasdiqlangan ball</label>
+                            <input id="reviewer-point" name="point" type="number" min="0"
+                                   max="{{ $reviewerPointMaximum }}" step="0.01" required
+                                   value="{{ old('point') }}"
+                                   class="form-control @error('point') is-invalid @enderror">
+                            @error('point')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="small text-muted mt-2">
+                                Ruxsat etilgan oraliq: 0–{{ number_format($reviewerPointMaximum, 2) }} ball.
+                            </div>
+                        @endif
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
@@ -354,7 +369,7 @@
 @endsection
 
 @section('script')
-    @if($errors->has('point'))
+    @if($errors->has('point') || $errors->has('author_count'))
         <script>$('#ai-approve-modal').modal('show');</script>
     @elseif($errors->has('criterion_id'))
         <script>$('#transfer-criterion-modal').modal('show');</script>

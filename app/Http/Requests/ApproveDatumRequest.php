@@ -35,6 +35,7 @@ class ApproveDatumRequest extends FormRequest
         $criterionId = $datum instanceof Datum ? $datum->criterion_id : 0;
         $isManualCriterion = $criterion?->checking === 'manual';
         $isAiCriterion = $criterion?->checking === 'ai';
+        $isOakArticleCriterion = $criterion?->isOakArticleCriterion() === true;
         $activeScoreOptionCount = $isManualCriterion
             ? CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterionId)
@@ -58,12 +59,20 @@ class ApproveDatumRequest extends FormRequest
                         ->where('active', true)),
             ],
             'point' => [
-                Rule::requiredIf($isAiCriterion),
-                Rule::prohibitedIf(! $isAiCriterion),
+                Rule::requiredIf($isAiCriterion && ! $isOakArticleCriterion),
+                Rule::prohibitedIf(! $isAiCriterion || $isOakArticleCriterion),
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:'.$reviewerPointMaximum,
+            ],
+            'author_count' => [
+                Rule::requiredIf($isAiCriterion && $isOakArticleCriterion),
+                Rule::prohibitedIf(! $isAiCriterion || ! $isOakArticleCriterion),
+                'nullable',
+                'integer',
+                'min:1',
+                'max:1000',
             ],
         ];
     }
@@ -78,6 +87,8 @@ class ApproveDatumRequest extends FormRequest
             'point.required' => 'AI tekshiruvidan qolgan resurs uchun aniq ballni kiriting.',
             'point.prohibited' => 'Bu mezon uchun alohida ball yuborilmaydi.',
             'point.max' => 'Kiritilgan ball ushbu submission uchun ruxsat etilgan chegaradan oshdi.',
+            'author_count.required' => 'Tasdiqlash uchun maqoladagi jami mualliflar sonini kiriting.',
+            'author_count.prohibited' => 'Bu mezon uchun mualliflar soni alohida yuborilmaydi.',
         ];
     }
 }

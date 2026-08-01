@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\AiAuthorPointDistributor;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
+use App\Services\OakArticleScoreCalculator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -60,6 +61,7 @@ class AiSubmissionEvaluatorUrlTest extends TestCase
 
         $result = (new AiSubmissionEvaluator(
             new AiAuthorPointDistributor,
+            new OakArticleScoreCalculator,
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
         ))->evaluate($datum);

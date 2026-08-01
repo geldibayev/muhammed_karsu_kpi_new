@@ -23,6 +23,7 @@ class AiSubmissionEvaluator
 {
     public function __construct(
         private AiAuthorPointDistributor $aiAuthorPointDistributor,
+        private OakArticleScoreCalculator $oakArticleScoreCalculator,
         private DescribeAiFailure $describeAiFailure,
         private GeminiFileMimeTypeResolver $geminiFileMimeTypeResolver,
     ) {}
@@ -124,6 +125,10 @@ class AiSubmissionEvaluator
 
             $result = $this->enforceReportPeriod($datum, $result);
 
+            if ($criterion->isOakArticleCriterion()) {
+                return $this->oakArticleScoreCalculator->apply($result, $user->degree);
+            }
+
             return $this->aiAuthorPointDistributor->handle(
                 $result,
                 (string) $criterion->ai_prompt,
@@ -138,6 +143,17 @@ class AiSubmissionEvaluator
 
     private function maximumPoint(Datum $datum): ?float
     {
+        if ($datum->criterion?->isOakArticleCriterion() && $datum->user !== null) {
+            $evaluation = $datum->criterion->criterionEvaluations
+                ->firstWhere('evaluation', $datum->user->degree);
+
+            if ($evaluation === null || $evaluation->has !== '1') {
+                return null;
+            }
+
+            return $this->oakArticleScoreCalculator->basePoint($datum->user->degree);
+        }
+
         if ($datum->criterion?->ai_submission_max_point !== null) {
             return $datum->criterion->aiSubmissionMaximum();
         }

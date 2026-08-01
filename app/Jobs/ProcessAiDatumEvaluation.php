@@ -113,6 +113,7 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
             $lockedDatum->update([
                 'status' => $result->status,
                 'point' => $result->point,
+                'author_count' => $result->status === 'accepted' ? $result->authorCount : null,
                 'reason' => $result->status === 'checking'
                     ? Datum::PUBLIC_CHECKING_REASON
                     : $result->reason,

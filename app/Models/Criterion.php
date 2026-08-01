@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\OakArticleCriterionRule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -78,6 +79,11 @@ class Criterion extends Model
         return $this->reviewerAssignment()
             ->whereIn('criterion_code', [self::H_INDEX_CODE, '3/23'])
             ->exists();
+    }
+
+    public function isOakArticleCriterion(): bool
+    {
+        return $this->code === OakArticleCriterionRule::CODE;
     }
 
     public function manualScoreOptions(): HasMany

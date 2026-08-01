@@ -7,6 +7,7 @@ use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Models\User;
 use App\Services\HIndexScoreCalculator;
+use App\Services\OakArticleScoreCalculator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -16,6 +17,7 @@ class ReviewDatumSubmission
     public function __construct(
         private RecalculateReportPoints $recalculateReportPoints,
         private HIndexScoreCalculator $hIndexScoreCalculator,
+        private OakArticleScoreCalculator $oakArticleScoreCalculator,
     ) {}
 
     public function approve(
@@ -23,12 +25,14 @@ class ReviewDatumSubmission
         Datum $datum,
         ?int $scoreOptionId = null,
         ?float $reviewerPoint = null,
+        ?int $authorCount = null,
     ): Datum {
         $reviewedDatum = DB::transaction(function () use (
             $reviewer,
             $datum,
             $scoreOptionId,
             $reviewerPoint,
+            $authorCount,
         ): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'user'])
@@ -77,13 +81,20 @@ class ReviewDatumSubmission
                 $evaluation,
                 $scoreOptionId,
                 $reviewerPoint,
+                $authorCount,
             );
             $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
-                .'. Avtomatik xom ball: '.number_format($point, 2, '.', '').'.';
+                .'. Avtomatik xom ball: '.number_format(
+                    $point,
+                    $lockedDatum->criterion->isOakArticleCriterion() ? 4 : 2,
+                    '.',
+                    '',
+                ).'.';
 
             $lockedDatum->update([
                 'status' => 'accepted',
                 'point' => $point,
+                'author_count' => $lockedDatum->criterion->isOakArticleCriterion() ? $authorCount : null,
                 'reason' => $message,
                 'reviewer_hemis_id' => null,
             ]);
@@ -108,10 +119,26 @@ class ReviewDatumSubmission
         CriterionEvaluation $evaluation,
         ?int $scoreOptionId,
         ?float $reviewerPoint,
+        ?int $authorCount,
     ): array {
         $maximumPoint = max(0, (float) $evaluation->score);
 
         if ($datum->criterion->checking === 'ai') {
+            if ($datum->criterion->isOakArticleCriterion()) {
+                if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
+                    throw ValidationException::withMessages([
+                        'author_count' => 'Mualliflar soni 1 dan 1000 gacha bo‘lishi kerak.',
+                    ]);
+                }
+
+                $basePoint = $this->oakArticleScoreCalculator->basePoint($datum->user->degree);
+
+                return [
+                    'point' => $this->oakArticleScoreCalculator->calculate($datum->user->degree, $authorCount),
+                    'rule' => number_format($basePoint, 2, '.', '').' ball / '.$authorCount.' muallif',
+                ];
+            }
+
             $submissionMaximum = $datum->criterion->aiSubmissionMaximum($maximumPoint);
 
             if ($reviewerPoint === null || $reviewerPoint < 0 || $reviewerPoint > $submissionMaximum) {

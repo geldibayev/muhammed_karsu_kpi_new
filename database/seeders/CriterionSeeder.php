@@ -8,6 +8,7 @@ use App\Models\CriterionYear;
 use App\Models\Formula;
 use App\Models\Report;
 use App\Models\Year;
+use App\Support\OakArticleCriterionRule;
 use App\Support\ScopusCriterionRule;
 use Illuminate\Database\Seeder;
 use RuntimeException;
@@ -672,7 +673,7 @@ class CriterionSeeder extends Seeder
                             'en' => 'Scientific articles published in foreign and domestic scientific journals included in the HAC list (except for "Web of Science" and "Scopus") ',
                         ],
                         'desc' => [
-                            'uz' => 'Oliy attestatsiya komissiyasi ro‘yxatiga kiritilgan Xorijiy ilmiy jurnallarda («Web of Science», «Scopus»dan tashqari) chop etilgan ilmiy maqolalarga muvofiq baholanadi(xorijiy hamkorlikda chiqarilgan maqolalardan tashqari maqolalalar mualliflariga ball teng taqsimlanadi)',
+                            'uz' => OakArticleCriterionRule::DESCRIPTION_UZ,
                             'kaa' => 'Joqarı attestaciya komissiyası dizimine kirgizilgen Sırt el ilimiy jurnallarında ("Web of Science," "Scopus"dan tısqarı) basıp shıǵarılǵan ilimiy maqalalarǵa muwapıq bahalanadı(sırt elli birge islesiwde shıǵarılǵan maqalalardan tısqarı maqalalar avtorlarına ball teń bólistiriledi).',
                             'ru' => 'Оценивается в соответствии с научными статьями, опубликованными в зарубежных научных журналах (кроме "Web of Science," "Scopus"), включенных в список Высшей аттестационной комиссии(авторам статей, кроме статей, опубликованных в зарубежном сотрудничестве, баллы распределяются поровну).',
                             'en' => 'It is evaluated in accordance with scientific articles published in foreign scientific journals (except for "Web of Science" and "Scopus") included in the list of the Higher Attestation Commission(scores are distributed equally among the authors of articles, except for articles published in foreign cooperation).',
@@ -690,21 +691,10 @@ class CriterionSeeder extends Seeder
                             'physical' => 3,
                         ],
                         'year' => 2025,
-                        'formula_id' => 1,
+                        'formula_id' => 2,
+                        'divide_ai_point_by_authors' => true,
                         'ai_model' => 'gemini-2.5-pro',
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (ilmiy maqola matni, jurnal muqovasi, mundarija yoki nashr ma'lumotnomasi) tahlil qilib, professor-o'qituvchining maqolasi chop etilganligini baholang.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Maqola OAK (Oliy Attestatsiya Komissiyasi) ro'yxatiga kiritilgan xorijiy yoki mahalliy ilmiy jurnalda chop etilganligi tasdiqlanishi kerak.
-                        2. Jurnal «Web of Science» yoki «Scopus» bazalariga KIRMASLIGI shart (ular uchun alohida mezon bor).
-                        3. Ballni teng taqsimlash uchun maqoladagi barcha mualliflar (hammualliflar) sonini aniqlang.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar maqola OAK jurnalida chiqqanligi tasdiqlansa va u Scopus/WoS bo'lmasa: \"accepted\" statusini bering. \"point\" qismiga 1 yozing va \"author_count\" qismiga mualliflar sonini kiriting.
-                        - Agar hujjat xira bo'lsa, jurnal nomi yoki mualliflar ro'yxati to'liq ko'rinmasa, yoki jurnalning OAK ro'yxatida borligiga ishonch komil bo'lmasa (administrator tekshiruvi talab etilsa): \"checking\" statusini bering (\"point\": 0).
-                        - Agar hujjat maqola bo'lmasa, yoxud jurnal «Web of Science» yoki «Scopus» bazasida ekanligi aniq bo'lsa: \"cancelled\" statusini bering (\"point\": 0).
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, odatda 1 yoki 0>, \"author_count\": <mualliflar soni>, \"reason\": \"<Qabul qilingan qarorning sababi, jurnal nomi, nega aynan shu status berilganligi va mualliflar soni haqida qisqacha izoh>\"}",
+                        'ai_prompt' => OakArticleCriterionRule::PROMPT,
                     ],
                     [
                         'name' => [

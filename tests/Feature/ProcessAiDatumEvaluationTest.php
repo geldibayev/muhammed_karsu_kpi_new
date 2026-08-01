@@ -48,7 +48,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
         $evaluator->shouldReceive('evaluate')
             ->once()
-            ->andReturn(new AiEvaluationResult('accepted', 8.5, 'Talablar bajarilgan.'));
+            ->andReturn(new AiEvaluationResult('accepted', 8.5, 'Talablar bajarilgan.', authorCount: 4));
         $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
         $recalculateReportPoints->shouldReceive('handle')
             ->once()
@@ -59,6 +59,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $datum->refresh();
         $this->assertSame('accepted', $datum->status);
         $this->assertSame(8.5, $datum->point);
+        $this->assertSame(4, $datum->author_count);
         $this->assertSame('Talablar bajarilgan.', $datum->reason);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,

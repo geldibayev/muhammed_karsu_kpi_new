@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\AiAuthorPointDistributor;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
+use App\Services\OakArticleScoreCalculator;
 use App\Support\ScopusCriterionRule;
 use Gemini\Laravel\Facades\Gemini;
 use Gemini\Responses\GenerativeModel\GenerateContentResponse;
@@ -148,6 +149,7 @@ class AiReportPeriodValidationTest extends TestCase
 
         return (new AiSubmissionEvaluator(
             new AiAuthorPointDistributor,
+            new OakArticleScoreCalculator,
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
         ))->evaluate($datum);

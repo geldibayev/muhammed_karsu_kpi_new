@@ -14,6 +14,7 @@ use App\Models\Year;
 use App\Services\AiAuthorPointDistributor;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
+use App\Services\OakArticleScoreCalculator;
 use Gemini\Data\Blob;
 use Gemini\Data\GenerationConfig;
 use Gemini\Enums\MimeType;
@@ -106,6 +107,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
 
         $result = (new AiSubmissionEvaluator(
             new AiAuthorPointDistributor,
+            new OakArticleScoreCalculator,
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
         ))->evaluate($datum);
@@ -210,6 +212,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
 
         $result = (new AiSubmissionEvaluator(
             new AiAuthorPointDistributor,
+            new OakArticleScoreCalculator,
             new DescribeAiFailure,
             new GeminiFileMimeTypeResolver,
         ))->evaluate($datum);
