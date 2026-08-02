@@ -161,6 +161,14 @@ PROMPT;
             } else {
                 $responseText = $model->generateContent($contentParts)->text();
             }
+        } catch (UnexpectedValueException $exception) {
+            if ($resourceUrl !== null) {
+                return AiEvaluationResult::checking(
+                    'Gemini URL Context ushbu havola mazmuni bo\'yicha tekshiruv uchun yaroqli matnli javob qaytarmadi. Inson tekshiruvi zarur.',
+                );
+            }
+
+            throw $exception;
         } catch (ErrorException $exception) {
             if (! $this->describeAiFailure->isDocumentWithoutPages($exception)) {
                 throw $exception;

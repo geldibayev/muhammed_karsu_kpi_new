@@ -64,6 +64,20 @@ class AiSubmissionEvaluatorUrlTest extends TestCase
         $this->assertStringContainsString('muvaffaqiyatli yuklanganini tasdiqlamadi', $result->reason);
     }
 
+    public function test_url_is_sent_for_human_review_when_gemini_returns_no_evaluation_text(): void
+    {
+        $datum = $this->createUrlDatum('https://example.com/unreadable-evidence');
+        $payload = $this->urlPayload('https://example.com/unreadable-evidence');
+        unset($payload['candidates'][0]['content']['parts'][0]['text']);
+        $this->fakeUrlContext($payload);
+
+        $result = $this->evaluator()->evaluate($datum);
+
+        $this->assertSame('checking', $result->status);
+        $this->assertSame(0.0, $result->point);
+        $this->assertStringContainsString('matnli javob qaytarmadi', $result->reason);
+    }
+
     public function test_paywalled_url_is_cancelled_with_an_explicit_reason(): void
     {
         $url = 'https://example.com/paywalled-evidence';
