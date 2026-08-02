@@ -7,6 +7,7 @@ use App\Models\CriterionManualScoreOption;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\User;
+use Illuminate\Support\Facades\Gate;
 
 class DatumPolicy
 {
@@ -26,6 +27,7 @@ class DatumPolicy
         return $datum->status !== 'deleted'
             && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
                 || $this->isAssignedReviewer($user, $datum)
+                || (Gate::forUser($user)->allows('view-ai-status') && $datum->usesAiChecking())
                 || $this->isRatingSubmissionVisible($user, $datum));
     }
 

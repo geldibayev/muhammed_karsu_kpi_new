@@ -436,12 +436,16 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertDontSee('AI xizmatining urinishlari')
             ->assertDontSee('Hisoblash tartibi')
             ->assertDontSee('Hisobotlar kesimida AI holati')
-            ->assertDontSee('Oxirgi 3 ta AI tekshiruvi')
+            ->assertSee('Oxirgi 3 ta AI tekshiruvi')
+            ->assertSee('Uchinchi tekshiruv')
+            ->assertSee('Birinchi tekshiruv')
             ->assertDontSee('Worker va real queue holati')
             ->assertDontSee('Oxirgi worker heartbeat')
             ->assertDontSee('Qo‘lda tekshiriladigan kriteriya')
             ->assertViewMissing('statistics')
-            ->assertViewMissing('recentChecks')
+            ->assertViewHas('recentChecks', fn (array $recentChecks): bool => count($recentChecks) === 2
+                && $recentChecks[0]['message'] === 'Uchinchi tekshiruv'
+                && $recentChecks[1]['message'] === 'Birinchi tekshiruv')
             ->assertViewMissing('reportStatistics')
             ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 8
                 && $statistics['evaluated'] === 4
@@ -462,6 +466,46 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $status['waiting_resources'] === 2
                 && $status['failed_pending_resources'] === 2
                 && $status['legacy_untracked_resources'] === 0);
+    }
+
+    public function test_ai_status_shows_only_the_latest_three_checks_with_links_and_escaped_conclusions(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $oldest = $this->createAiHistory('ai_evaluation', 'success', 'Eng eski xulosa');
+        $second = $this->createAiHistory('ai_evaluation', 'success', 'Ikkinchi xulosa');
+        $third = $this->createAiHistory('ai_evaluation', 'success', 'Uchinchi xulosa');
+        $pendingDatum = $this->createDatum(['status' => 'checking']);
+        $newest = $pendingDatum->histories()->create([
+            'user_id' => $pendingDatum->user_id,
+            'type' => 'warning',
+            'message' => '<script>alert("unsafe")</script> Eng yangi xulosa',
+            'message_type' => 'ai_evaluation',
+        ]);
+        $oldest->update(['created_at' => now()->subMinutes(4)]);
+        $second->update(['created_at' => now()->subMinutes(3)]);
+        $third->update(['created_at' => now()->subMinutes(2)]);
+        $newest->update(['created_at' => now()->subMinute()]);
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('Oxirgi 3 ta AI tekshiruvi')
+            ->assertSee(route('upload.details', $pendingDatum))
+            ->assertSee(route('upload.details', $third->datum_id))
+            ->assertSee(route('upload.details', $second->datum_id))
+            ->assertDontSee(route('upload.details', $oldest->datum_id))
+            ->assertSee('&lt;script&gt;alert(&quot;unsafe&quot;)&lt;/script&gt; Eng yangi xulosa', false)
+            ->assertDontSee('<script>alert("unsafe")</script>', false)
+            ->assertViewHas('recentChecks', fn (array $recentChecks): bool => array_column($recentChecks, 'datum_id') === [
+                $pendingDatum->id,
+                $third->datum_id,
+                $second->datum_id,
+            ]);
+
+        $this->actingAs($statusViewer)
+            ->get(route('upload.details', $pendingDatum))
+            ->assertOk();
     }
 
     public function test_stale_audit_queue_without_a_real_job_is_shown_as_recovering(): void
@@ -814,6 +858,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->get(route('ai-status.index'))
             ->assertOk()
             ->assertSee('AI holati aniqlanmagan')
+            ->assertSee('AI tekshiruv natijalari hali mavjud emas.')
+            ->assertViewHas('recentChecks', [])
             ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 0
                 && $statistics['evaluated'] === 0
                 && $statistics['waiting'] === 0

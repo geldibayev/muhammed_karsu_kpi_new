@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Datum;
 use App\Models\DatumHistory;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Query\Builder;
 
 class GetAiReviewerDashboard
@@ -11,6 +12,7 @@ class GetAiReviewerDashboard
     /**
      * @return array{
      *     status: array<string, mixed>,
+     *     recentChecks: list<array{datum_id: int, message: string, checked_at: CarbonInterface}>,
      *     resourceStatistics: array{
      *         total: int,
      *         evaluated: int,
@@ -64,8 +66,31 @@ class GetAiReviewerDashboard
             $evaluationRate = min(99.9, $evaluationRate);
         }
 
+        $recentChecks = DatumHistory::query()
+            ->select([
+                'datum_histories.datum_id',
+                'datum_histories.message',
+                'datum_histories.created_at',
+            ])
+            ->join('data', 'data.id', '=', 'datum_histories.datum_id')
+            ->join('criteria', 'criteria.id', '=', 'data.criterion_id')
+            ->where('datum_histories.message_type', 'ai_evaluation')
+            ->where('criteria.checking', 'ai')
+            ->where('data.status', '!=', 'deleted')
+            ->latest('datum_histories.created_at')
+            ->latest('datum_histories.id')
+            ->limit(3)
+            ->get()
+            ->map(fn (DatumHistory $history): array => [
+                'datum_id' => (int) $history->datum_id,
+                'message' => (string) $history->message,
+                'checked_at' => $history->created_at,
+            ])
+            ->all();
+
         return [
             'status' => $this->getAiReviewerHealth->handle(),
+            'recentChecks' => $recentChecks,
             'resourceStatistics' => [
                 'total' => $totalResources,
                 'evaluated' => $evaluatedResources,

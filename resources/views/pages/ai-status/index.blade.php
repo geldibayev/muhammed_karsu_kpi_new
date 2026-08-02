@@ -199,6 +199,49 @@
                     </div>
                 </div>
             </div>
+
+            <div class="card card-outline card-secondary">
+                <div class="card-header">
+                    <h2 class="card-title font-weight-bold">Oxirgi 3 ta AI tekshiruvi</h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                            <tr>
+                                <th class="text-center" style="width: 14%;">Resurs ID</th>
+                                <th>AI xulosasi</th>
+                                <th class="text-center" style="width: 18%;">Tekshirilgan vaqt</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @forelse($recentChecks as $recentCheck)
+                                <tr>
+                                    <td class="text-center align-middle text-nowrap">
+                                        <a href="{{ route('upload.details', $recentCheck['datum_id']) }}"
+                                           class="font-weight-bold">
+                                            #{{ $recentCheck['datum_id'] }}
+                                        </a>
+                                    </td>
+                                    <td class="align-middle text-break">
+                                        {{ $recentCheck['message'] }}
+                                    </td>
+                                    <td class="text-center align-middle text-nowrap">
+                                        {{ $recentCheck['checked_at']->format('d.m.Y H:i:s') }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        AI tekshiruv natijalari hali mavjud emas.
+                                    </td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 @endsection
