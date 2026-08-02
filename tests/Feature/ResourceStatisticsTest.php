@@ -14,6 +14,93 @@ class ResourceStatisticsTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_configured_viewer_sees_per_criterion_statistics_column_on_home(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $viewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $otherUser = User::factory()->create(['hemis_id' => 9999999999]);
+        $firstOwner = User::factory()->create();
+        $secondOwner = User::factory()->create();
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Faol statistika hisoboti'],
+            'status' => '1',
+        ]);
+        $parent = Criterion::query()->create([
+            'name' => ['uz' => 'Statistika bo‘limi'],
+            'report_id' => $report->id,
+            'upload' => '0',
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'name' => ['uz' => 'Resursli kriteriya'],
+            'parent_id' => $parent->id,
+            'report_id' => $report->id,
+            'upload' => '1',
+            'status' => '1',
+        ]);
+        $emptyCriterion = Criterion::query()->create([
+            'name' => ['uz' => 'Bo‘sh kriteriya'],
+            'parent_id' => $parent->id,
+            'report_id' => $report->id,
+            'upload' => '1',
+            'status' => '1',
+        ]);
+
+        foreach ([
+            'received' => 1,
+            'checking' => 2,
+            'accepted' => 3,
+            'cancelled' => 4,
+            'deleted' => 5,
+        ] as $status => $count) {
+            foreach (range(1, $count) as $number) {
+                Datum::query()->create([
+                    'name' => "{$status} resurs {$number}",
+                    'user_id' => $number % 2 === 0 ? $firstOwner->id : $secondOwner->id,
+                    'criterion_id' => $criterion->id,
+                    'status' => $status,
+                    'point' => 0,
+                ]);
+            }
+        }
+
+        $this->actingAs($viewer)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('Resurslar statistikasi')
+            ->assertSee('Jami: 15')
+            ->assertSee('Tekshirilgan: 3')
+            ->assertSee('Tekshirilmagan: 3')
+            ->assertSee('Qaytarilgan: 4')
+            ->assertSee('O‘chirilgan: 5')
+            ->assertViewHas('showsCriterionResourceStatistics', true)
+            ->assertViewHas('criterionResourceStatistics', function ($statistics) use ($criterion, $emptyCriterion): bool {
+                return $statistics->get($criterion->id) === [
+                    'total' => 15,
+                    'checked' => 3,
+                    'unchecked' => 3,
+                    'returned' => 4,
+                    'deleted' => 5,
+                    'other' => 0,
+                ] && $statistics->get($emptyCriterion->id) === [
+                    'total' => 0,
+                    'checked' => 0,
+                    'unchecked' => 0,
+                    'returned' => 0,
+                    'deleted' => 0,
+                    'other' => 0,
+                ];
+            });
+
+        $this->actingAs($otherUser)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertDontSee('Resurslar statistikasi')
+            ->assertDontSee('Tekshirilgan: 3')
+            ->assertViewHas('showsCriterionResourceStatistics', false)
+            ->assertViewHas('criterionResourceStatistics', fn ($statistics): bool => $statistics->isEmpty());
+    }
+
     public function test_configured_hemis_user_sees_all_resource_status_statistics(): void
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
