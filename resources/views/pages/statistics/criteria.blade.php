@@ -23,6 +23,7 @@
                     <tr>
                         <th class="text-center" style="width: 10%;">Kod</th>
                         <th>Kriteriya</th>
+                        <th class="text-center">Mas’ul</th>
                         @foreach($columns as $column => $label)
                             @php($nextDirection = $sort === $column && $direction === 'desc' ? 'asc' : 'desc')
                             <th class="text-center text-nowrap">
@@ -52,6 +53,19 @@
                                 </div>
                                 {{ data_get($criterion->name, 'uz', 'Nomsiz kriteriya') }}
                             </td>
+                            <td class="align-middle text-center">
+                                @if($criterion->checking === 'ai')
+                                    <i class="fas fa-robot mr-1" aria-hidden="true"></i>
+                                    Sun’iy intellekt
+                                @elseif($criterion->reviewerAssignment)
+                                    <i class="fas fa-user-check mr-1" aria-hidden="true"></i>
+                                    {{ $criterion->reviewerAssignment->user?->full
+                                        ?: ($criterion->reviewerAssignment->user?->short
+                                            ?: 'HEMIS ID: '.$criterion->reviewerAssignment->hemis_id) }}
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
                             @foreach(array_keys($columns) as $column)
                                 <td class="align-middle text-center font-weight-bold">
                                     {{ number_format((int) $criterion->{$column}, 0, '.', ' ') }}
@@ -60,7 +74,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 Faol hisobot uchun kriteriyalar topilmadi.
                             </td>
                         </tr>

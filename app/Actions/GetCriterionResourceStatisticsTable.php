@@ -29,12 +29,16 @@ class GetCriterionResourceStatisticsTable
         $direction = $filters['direction'] ?? 'desc';
 
         return Criterion::query()
-            ->select(['id', 'code', 'name', 'parent_id', 'sort_order'])
+            ->select(['id', 'code', 'name', 'parent_id', 'sort_order', 'checking'])
             ->whereBelongsTo($report)
             ->whereNotNull('parent_id')
             ->where('status', '1')
             ->whereHas('parent', fn (Builder $query): Builder => $query->where('status', '1'))
-            ->with('parent:id,name,sort_order')
+            ->with([
+                'parent:id,name,sort_order',
+                'reviewerAssignment:id,criterion_id,hemis_id',
+                'reviewerAssignment.user:id,hemis_id,name',
+            ])
             ->withCount([
                 'files as total',
                 'files as checked' => fn (Builder $query): Builder => $query

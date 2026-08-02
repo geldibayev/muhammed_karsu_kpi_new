@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Criterion;
+use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\Report;
 use App\Models\User;
@@ -21,6 +22,15 @@ class ResourceStatisticsTest extends TestCase
         $otherUser = User::factory()->create(['hemis_id' => 9999999999]);
         $firstOwner = User::factory()->create();
         $secondOwner = User::factory()->create();
+        $responsible = User::factory()->create([
+            'name' => [
+                'full' => 'Mas’ul Tekshiruvchi',
+                'first' => 'Mas’ul',
+                'last' => 'Tekshiruvchi',
+                'third' => '',
+                'short' => 'Tekshiruvchi M.',
+            ],
+        ]);
         $report = Report::query()->create([
             'name' => ['uz' => 'Faol statistika hisoboti'],
             'status' => '1',
@@ -43,7 +53,13 @@ class ResourceStatisticsTest extends TestCase
             'parent_id' => $parent->id,
             'report_id' => $report->id,
             'upload' => '1',
+            'checking' => 'ai',
             'status' => '1',
+        ]);
+        CriterionReviewerAssignment::query()->create([
+            'criterion_id' => $criterion->id,
+            'hemis_id' => $responsible->hemis_id,
+            'criterion_code' => 'test-criterion',
         ]);
 
         foreach ([
@@ -76,6 +92,9 @@ class ResourceStatisticsTest extends TestCase
             ->assertOk()
             ->assertSee('Kriteriyalar bo‘yicha yuklangan resurslar')
             ->assertSee('Resursli kriteriya')
+            ->assertSee('Mas’ul')
+            ->assertSee('Mas’ul Tekshiruvchi')
+            ->assertSee('Sun’iy intellekt')
             ->assertSee('Jami')
             ->assertSee('Tekshirilgan')
             ->assertSee('Tekshirilmagan')
