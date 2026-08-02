@@ -16,7 +16,7 @@ class Datum extends Model
 
     protected $fillable = [
         'id', 'name', 'material', 'user_id', 'criterion_id', 'reviewer_hemis_id', 'status', 'year_id', 'language_id',
-        'point', 'author_count', 'page_count', 'reason',
+        'point', 'author_count', 'page_count', 'reason', 'duplicate_of_id',
     ];
 
     /** @return array<int, string> */
@@ -61,6 +61,21 @@ class Datum extends Model
     public function histories(): HasMany
     {
         return $this->hasMany(DatumHistory::class);
+    }
+
+    public function resourceIdentifiers(): HasMany
+    {
+        return $this->hasMany(DatumResourceIdentifier::class);
+    }
+
+    public function duplicateOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'duplicate_of_id');
+    }
+
+    public function duplicates(): HasMany
+    {
+        return $this->hasMany(self::class, 'duplicate_of_id');
     }
 
     public function storageDisk(): string
@@ -124,6 +139,19 @@ class Datum extends Model
             'author_count' => 'integer',
             'page_count' => 'integer',
             'reviewer_hemis_id' => 'integer',
+            'duplicate_of_id' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updated(function (Datum $datum): void {
+            if (! $datum->wasChanged('status')
+                || in_array($datum->status, self::statusesCountingTowardsUploadLimit(), true)) {
+                return;
+            }
+
+            $datum->resourceIdentifiers()->update(['active_value_hash' => null]);
+        });
     }
 }

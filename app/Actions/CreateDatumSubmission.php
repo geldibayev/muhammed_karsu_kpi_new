@@ -6,6 +6,7 @@ use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\Datum;
 use App\Models\User;
+use App\Services\DatumResourceFingerprintGenerator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,11 @@ use Throwable;
 
 class CreateDatumSubmission
 {
+    public function __construct(
+        private DatumResourceFingerprintGenerator $fingerprintGenerator,
+        private DatumResourceIdentifierRegistry $identifierRegistry,
+    ) {}
+
     /** @param array<string, mixed> $validated */
     public function handle(User $user, Criterion $criterion, array $validated): Datum
     {
@@ -25,8 +31,18 @@ class CreateDatumSubmission
 
         try {
             $material = $this->buildMaterial($validated, $storedPath);
+            $identifiers = $this->fingerprintGenerator->forMaterial(
+                $material,
+                (int) $validated['year'],
+            );
 
-            $datum = DB::transaction(function () use ($user, $criterion, $validated, $material): Datum {
+            $datum = DB::transaction(function () use (
+                $user,
+                $criterion,
+                $validated,
+                $material,
+                $identifiers,
+            ): Datum {
                 $lockedCriterion = Criterion::query()->lockForUpdate()->findOrFail($criterion->id);
 
                 Gate::forUser($user)->authorize('submit', $lockedCriterion);
@@ -60,6 +76,11 @@ class CreateDatumSubmission
                         default => 'URL havola',
                     },
                 ]);
+                $this->identifierRegistry->register(
+                    $datum,
+                    $lockedCriterion->report_id,
+                    $identifiers,
+                );
 
                 $datum->histories()->create([
                     'user_id' => $user->id,
@@ -141,6 +162,11 @@ class CreateDatumSubmission
                 throw new RuntimeException('Yuklangan faylni saqlab bo\'lmadi.');
             }
 
+            $sha256 = hash_file('sha256', $file->getRealPath());
+            if (! is_string($sha256)) {
+                throw new RuntimeException('Yuklangan fayl uchun nazorat summasi hisoblanmadi.');
+            }
+
             $material = [
                 'type' => 'file',
                 'disk' => 'local',
@@ -148,6 +174,7 @@ class CreateDatumSubmission
                 'original_name' => $file->getClientOriginalName(),
                 'extension' => mb_strtolower($file->getClientOriginalExtension()),
                 'mime' => $file->getMimeType(),
+                'sha256' => $sha256,
             ];
         }
 

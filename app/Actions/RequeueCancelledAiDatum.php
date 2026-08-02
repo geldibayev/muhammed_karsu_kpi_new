@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Gate;
 
 class RequeueCancelledAiDatum
 {
+    public function __construct(private DatumResourceIdentifierRegistry $identifierRegistry) {}
+
     public function handle(User $administrator, Datum $datum): Datum
     {
         return DB::transaction(function () use ($administrator, $datum): Datum {
@@ -19,6 +21,7 @@ class RequeueCancelledAiDatum
                 ->findOrFail($datum->getKey());
 
             Gate::forUser($administrator)->authorize('requeueAiEvaluation', $lockedDatum);
+            $this->identifierRegistry->activate($lockedDatum);
 
             $lockedDatum->update([
                 'status' => 'checking',
