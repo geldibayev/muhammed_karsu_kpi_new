@@ -6,6 +6,7 @@ use App\Models\Criterion;
 use App\Models\Option;
 use App\Models\Point;
 use App\Models\Report;
+use App\Support\RatingMethodPresenter;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -17,7 +18,7 @@ class HomeController extends Controller
         $this->middleware('auth');
     }
 
-    public function index(Request $request): View
+    public function index(Request $request, RatingMethodPresenter $ratingMethodPresenter): View
     {
         $degree = $request->user()->degree;
         $report = Report::query()->where('status', '1')->latest('id')->first();
@@ -31,6 +32,7 @@ class HomeController extends Controller
                     ->where('status', '1')
                     ->orderBy('sort_order')
                     ->orderBy('id'),
+                'children.formula:id,code,name',
                 'children.reviewerAssignment.user:id,hemis_id,name',
                 'children.criterionEvaluations' => fn (HasMany $query): HasMany => $query
                     ->where('evaluation', $degree)
@@ -39,6 +41,11 @@ class HomeController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
+        $ratingMethods = $criteria
+            ->flatMap(fn (Criterion $criterion) => $criterion->children)
+            ->mapWithKeys(fn (Criterion $criterion): array => [
+                $criterion->getKey() => $ratingMethodPresenter->describe($criterion, $degree),
+            ]);
         $points = $report === null
             ? collect()
             : Point::query()
@@ -53,7 +60,13 @@ class HomeController extends Controller
         ];
         $resourceUploadsEnabled = Option::resourceUploadsEnabled();
 
-        return view('home', compact(['criteria', 'points', 'breadcrumbs', 'resourceUploadsEnabled']));
+        return view('home', compact([
+            'criteria',
+            'points',
+            'breadcrumbs',
+            'resourceUploadsEnabled',
+            'ratingMethods',
+        ]));
     }
 
     public function profile()

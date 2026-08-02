@@ -10,13 +10,14 @@
         @endunless
 
         <div class="card">
-            <div class="card-body p-0">
+            <div class="card-body p-0 table-responsive">
                 <table class="table table-hover">
                     <thead>
                     <tr>
                         <th class="text-center" style="width: 5%;">#</th>
                         <th>Mezon</th>
                         <th class="text-center" style="width: 20%;">Masʼul</th>
+                        <th class="text-center" style="width: 15%;">Baholash usuli</th>
                         <th class="text-center" style="width: 10%;">Ball</th>
                         <th class="text-center" style="width: 10%;">Amallar</th>
                     </tr>
@@ -26,7 +27,7 @@
                     @foreach($criteria as $item)
                         <tr style="background-color: #eee">
                             <th class="align-middle text-center p-4">#{{ $main }}</th>
-                            <th colspan="4" class="align-middle">
+                            <th colspan="5" class="align-middle">
                                 {{ data_get($item->name, 'uz', 'Nomsiz bo\'lim') }}
                             </th>
                         </tr>
@@ -56,6 +57,12 @@
                                                     ?: 'HEMIS ID: '.$value->reviewerAssignment->hemis_id) }}
                                         </div>
                                     @endif
+                                </td>
+                                <td class="align-middle text-center">
+                                    <x-rating-method
+                                        :method="$ratingMethods->get($value->getKey())"
+                                        :criterion="$value"
+                                    />
                                 </td>
                                 <td class="align-middle text-center">
                                     <span class="font-weight-bold text-success">

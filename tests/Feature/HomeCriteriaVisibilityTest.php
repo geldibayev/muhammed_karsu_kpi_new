@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Evaluation;
+use App\Models\Formula;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\Year;
@@ -28,6 +29,11 @@ class HomeCriteriaVisibilityTest extends TestCase
         ]);
         $inactiveReport = Report::query()->create(['name' => ['uz' => 'Eski'], 'status' => '0']);
         $activeReport = Report::query()->create(['name' => ['uz' => 'Faol'], 'status' => '1']);
+        $maximumFormula = Formula::query()->create([
+            'code' => Formula::Maximum,
+            'name' => ['uz' => 'Maksimal ballgacha'],
+            'status' => '1',
+        ]);
         $inactiveParent = $this->createCriterion($inactiveReport, ['name' => ['uz' => 'Eski bo‘lim']]);
         $inactiveCriterion = $this->createCriterion($inactiveReport, [
             'name' => ['uz' => 'Eski hisobot mezoni'],
@@ -36,6 +42,7 @@ class HomeCriteriaVisibilityTest extends TestCase
         $activeParent = $this->createCriterion($activeReport, ['name' => ['uz' => 'Faol bo‘lim']]);
         $activeCriterion = $this->createCriterion($activeReport, [
             'name' => ['uz' => 'Faol hisobot mezoni'],
+            'formula_id' => $maximumFormula->getKey(),
             'parent_id' => $activeParent->getKey(),
         ]);
 
@@ -52,6 +59,12 @@ class HomeCriteriaVisibilityTest extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('Faol hisobot mezoni')
+            ->assertSee('Baholash usuli')
+            ->assertSee('Maksimal ballgacha')
+            ->assertSee('data-testid="rating-method-button"', false)
+            ->assertSee('data-target="#rating-method-'.$activeCriterion->getKey().'"', false)
+            ->assertSee('Sizning toifangiz uchun maksimal ball')
+            ->assertSee('To‘plangan ball 4.00 va maksimal ball 2.00 bo‘lsa')
             ->assertDontSee('Eski hisobot mezoni');
 
         $this->actingAs($user)
