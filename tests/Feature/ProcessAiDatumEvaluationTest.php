@@ -425,21 +425,29 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertSee('Oxirgi AI xabari')
             ->assertSee('2 ta resurs AI xatosidan keyin inson ko‘rigini kutmoqda.')
             ->assertDontSee('Hujjat ID:')
-            ->assertSee('Resurslar holati')
-            ->assertSee('TEKSHIRILGAN')
+            ->assertSee('AI tekshiruv statistikasi')
+            ->assertSee('AI TEKSHIRGAN')
             ->assertSee('NAVBATDA')
-            ->assertSee('XATO')
+            ->assertSee('E’TIBOR TALAB QILADI')
+            ->assertSee('QABUL QILINGAN')
+            ->assertSee('RAD ETILGAN')
+            ->assertSee('INSON TEKSHIRUVIDA')
+            ->assertSee('AI XATOSI')
             ->assertDontSee('AI xizmatining urinishlari')
             ->assertDontSee('Hisoblash tartibi')
             ->assertDontSee('Hisobotlar kesimida AI holati')
             ->assertDontSee('Oxirgi 3 ta AI tekshiruvi')
-            ->assertSee('Worker va real queue holati')
+            ->assertDontSee('Worker va real queue holati')
+            ->assertDontSee('Oxirgi worker heartbeat')
             ->assertDontSee('Qo‘lda tekshiriladigan kriteriya')
             ->assertViewMissing('statistics')
             ->assertViewMissing('recentChecks')
             ->assertViewMissing('reportStatistics')
             ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 8
                 && $statistics['evaluated'] === 4
+                && $statistics['accepted'] === 3
+                && $statistics['cancelled'] === 1
+                && $statistics['human_review'] === 0
                 && $statistics['waiting'] === 2
                 && $statistics['failed_pending'] === 2
                 && $statistics['legacy_untracked'] === 0
@@ -475,14 +483,14 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('Tiklanmoqda')
-            ->assertSee('Tizim uni avtomatik qayta navbatga qo‘yadi.');
+            ->assertSee('Tizim uni avtomatik qayta yuboradi.');
 
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('Navbat tiklanmoqda')
+            ->assertSee('Navbat qayta tiklanmoqda')
             ->assertSee('Joriy holat')
-            ->assertSee('Tizim uni avtomatik qayta navbatga qo‘yadi.')
+            ->assertSee('Tizim uni avtomatik qayta yuboradi.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'recovering'
                 && $status['waiting_resources'] === 1
                 && $status['queue_jobs'] === 0
@@ -510,7 +518,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI navbatni ishlamoqda')
+            ->assertSee('Tekshiruv davom etmoqda')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'processing'
                 && $status['worker_heartbeat_at'] !== null
                 && $status['worker_is_active']
@@ -531,9 +539,10 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI kutish rejimida')
-            ->assertSee('Navbat bo‘sh bo‘lsa kutadi va yangi resurs kelishi bilan avtomatik tekshiradi.')
-            ->assertSee('FAOL')
+            ->assertSee('Navbat bo‘sh')
+            ->assertSee('Barcha yuborilgan resurslar ko‘rib chiqilgan.')
+            ->assertDontSee('FAOL')
+            ->assertDontSee('heartbeat')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'idle'
                 && $status['worker_is_active']
                 && $status['queue_jobs'] === 0
@@ -561,7 +570,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->get(route('ai-status.index'))
             ->assertOk()
             ->assertSee('AI ishlamayapti')
-            ->assertSee('1 ta job real navbatda, lekin AI worker faol emas.')
+            ->assertSee('Navbatda 1 ta vazifa bor, ammo avtomatik tekshiruv hozir javob bermayapti.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
                 && ! $status['worker_is_active']
                 && $status['queue_jobs'] === 1
@@ -588,8 +597,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('Navbat tiklanmoqda')
-            ->assertSee('worker avtomatik qayta urinadi')
+            ->assertSee('Navbat qayta tiklanmoqda')
+            ->assertSee('Tizim avtomatik qayta urinadi')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'recovering'
                 && $status['worker_is_active']
                 && $status['queue_jobs'] === 1
@@ -657,7 +666,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI navbatni ishlamoqda')
+            ->assertSee('Tekshiruv davom etmoqda')
             ->assertSee('1 ta resurs AI tekshiruv navbatida.')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'processing'
                 && $status['waiting_resources'] === 1
@@ -677,13 +686,13 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('1 ta eski resursda AI navbat auditi')
-            ->assertDontSee('AI worker heartbeat hali qayd etilmagan.')
+            ->assertSee('1 ta eski resursda AI navbat tarixi')
+            ->assertDontSee('heartbeat')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unknown'
                 && $status['waiting_resources'] === 0
                 && $status['legacy_untracked_resources'] === 1
                 && $status['oldest_waiting_at'] === null
-                && str_contains((string) $status['reason'], 'joriy worker holatini bildirmaydi'))
+                && str_contains((string) $status['reason'], 'navbat tarixi mavjud emas'))
             ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 1
                 && $statistics['waiting'] === 0
                 && $statistics['legacy_untracked'] === 1);
@@ -780,6 +789,9 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertOk()
             ->assertViewHas('resourceStatistics', fn (array $statistics): bool => $statistics['total'] === 7
                 && $statistics['evaluated'] === 4
+                && $statistics['accepted'] === 2
+                && $statistics['cancelled'] === 1
+                && $statistics['human_review'] === 1
                 && $statistics['waiting'] === 2
                 && $statistics['failed_pending'] === 1
                 && $statistics['legacy_untracked'] === 0

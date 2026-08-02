@@ -13,23 +13,23 @@
             'idle' => [
                 'card' => 'card-success',
                 'badge' => 'badge-success',
-                'icon' => 'fa-hourglass-half text-success',
-                'label' => 'AI kutish rejimida',
-                'summary' => 'Worker faol va yangi resurs kelishi bilan tekshirishni boshlaydi.',
+                'icon' => 'fa-check-circle text-success',
+                'label' => 'Navbat bo‘sh',
+                'summary' => 'Barcha yuborilgan resurslar ko‘rib chiqilgan.',
             ],
             'processing' => [
                 'card' => 'card-warning',
                 'badge' => 'badge-warning',
                 'icon' => 'fa-spinner text-warning',
-                'label' => 'AI navbatni ishlamoqda',
-                'summary' => 'Resurslar AI tekshiruvini kutmoqda.',
+                'label' => 'Tekshiruv davom etmoqda',
+                'summary' => 'Navbatdagi resurslar avtomatik tekshirilmoqda.',
             ],
             'recovering' => [
                 'card' => 'card-warning',
                 'badge' => 'badge-warning',
                 'icon' => 'fa-sync-alt text-warning',
-                'label' => 'Navbat tiklanmoqda',
-                'summary' => 'Yo‘qolgan queue job avtomatik ravishda qayta navbatga qo‘yiladi.',
+                'label' => 'Navbat qayta tiklanmoqda',
+                'summary' => 'Uzilib qolgan vazifa avtomatik ravishda qayta yuboriladi.',
             ],
             'degraded' => [
                 'card' => 'card-warning',
@@ -66,22 +66,38 @@
             default => 'Joriy holat',
         };
 
-        $resourceCards = [
+        $summaryCards = [
+            [
+                'value' => $resourceStatistics['total'],
+                'label' => 'JAMI RESURSLAR',
+                'icon' => 'fa-folder-open',
+                'class' => 'info-box-icon bg-info',
+            ],
             [
                 'value' => $resourceStatistics['evaluated'],
-                'label' => 'TEKSHIRILGAN',
-                'class' => 'text-success',
+                'label' => 'AI TEKSHIRGAN',
+                'icon' => 'fa-check-double',
+                'class' => 'info-box-icon bg-success',
             ],
             [
                 'value' => $resourceStatistics['waiting'],
                 'label' => 'NAVBATDA',
-                'class' => 'text-warning',
+                'icon' => 'fa-clock',
+                'class' => 'info-box-icon bg-warning',
             ],
             [
-                'value' => $resourceStatistics['failed_pending'],
-                'label' => 'XATO',
-                'class' => 'text-danger',
+                'value' => $resourceStatistics['failed_pending'] + $resourceStatistics['legacy_untracked'],
+                'label' => 'E’TIBOR TALAB QILADI',
+                'icon' => 'fa-exclamation-triangle',
+                'class' => 'info-box-icon bg-danger',
             ],
+        ];
+
+        $detailCards = [
+            ['value' => $resourceStatistics['accepted'], 'label' => 'QABUL QILINGAN', 'class' => 'text-success'],
+            ['value' => $resourceStatistics['cancelled'], 'label' => 'RAD ETILGAN', 'class' => 'text-danger'],
+            ['value' => $resourceStatistics['human_review'], 'label' => 'INSON TEKSHIRUVIDA', 'class' => 'text-info'],
+            ['value' => $resourceStatistics['failed_pending'], 'label' => 'AI XATOSI', 'class' => 'text-warning'],
         ];
     @endphp
 
@@ -119,81 +135,52 @@
                 </div>
             </div>
 
-            <div class="card card-outline card-info">
-                <div class="card-header">
-                    <h2 class="card-title font-weight-bold">Worker va real queue holati</h2>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-12 col-md-4">
-                            <div class="description-block border-right">
-                                <h3 class="description-header {{ $status['worker_is_active'] ? 'text-success' : 'text-danger' }}">
-                                    {{ $status['worker_is_active'] ? 'FAOL' : 'FAOL EMAS' }}
-                                </h3>
-                                <span class="description-text">WORKER</span>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <div class="description-block border-right">
-                                <h3 class="description-header text-primary">
-                                    {{ $status['queue_jobs'] ?? 'N/A' }}
-                                </h3>
-                                <span class="description-text">REAL QUEUE JOBLARI</span>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <div class="description-block">
-                                <h3 class="description-header text-warning">
-                                    {{ $status['processing_jobs'] ?? 'N/A' }}
-                                </h3>
-                                <span class="description-text">Ishlayotgan ishlar</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="alert {{ $status['worker_is_active'] ? 'alert-success' : 'alert-warning' }} mb-0 mt-3">
-                        @if($status['worker_is_active'])
-                            Worker doimiy ishlamoqda. Navbat bo‘sh bo‘lsa kutadi va yangi resurs kelishi bilan avtomatik tekshiradi.
-                        @else
-                            Worker heartbeat aniqlanmadi. Production’da <code>ai-evaluations</code> queue workerini Supervisor orqali doimiy ishlating.
-                        @endif
-                        <div class="small mt-1">
-                            Oxirgi worker heartbeat:
-                            <strong>{{ $status['worker_heartbeat_at']?->format('d.m.Y H:i:s') ?? 'Qayd etilmagan' }}</strong>
-                        </div>
-                    </div>
-                    @if($status['orphaned_resources'] > 0)
-                        <div class="alert alert-warning mt-3 mb-0">
-                            <i class="fas fa-sync-alt mr-1"></i>
-                            Tizimda {{ $status['orphaned_resources'] }} ta resurs uchun navbat yozuvi qayta tiklanmoqda.
-                        </div>
-                    @endif
-                </div>
-            </div>
-
             <div class="card card-outline card-primary">
                 <div class="card-header">
-                    <h2 class="card-title font-weight-bold">Resurslar holati</h2>
-                    <div class="card-tools text-muted">
-                        Jami: <strong>{{ $resourceStatistics['total'] }}</strong>
-                    </div>
+                    <h2 class="card-title font-weight-bold">AI tekshiruv statistikasi</h2>
                 </div>
                 <div class="card-body">
-                    <div class="row text-center">
-                        @foreach ($resourceCards as $index => $resourceCard)
-                            <div class="col-12 col-md-4">
-                                <div class="description-block {{ $index < 2 ? 'border-right' : '' }}">
-                                    <h3 class="description-header {{ $resourceCard['class'] }}">
-                                        {{ $resourceCard['value'] }}
+                    <div class="row">
+                        @foreach ($summaryCards as $summaryCard)
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="info-box shadow-none border">
+                                    <span class="{{ $summaryCard['class'] }}">
+                                        <i class="fas {{ $summaryCard['icon'] }}"></i>
+                                    </span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">{{ $summaryCard['label'] }}</span>
+                                        <span class="info-box-number h4 mb-0">{{ number_format($summaryCard['value']) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="row text-center border-top pt-3 mt-1">
+                        @foreach ($detailCards as $index => $detailCard)
+                            <div class="col-6 col-lg-3">
+                                <div class="description-block {{ $index < 3 ? 'border-right' : '' }}">
+                                    <h3 class="description-header {{ $detailCard['class'] }}">
+                                        {{ number_format($detailCard['value']) }}
                                     </h3>
-                                    <span class="description-text">{{ $resourceCard['label'] }}</span>
+                                    <span class="description-text">{{ $detailCard['label'] }}</span>
                                 </div>
                             </div>
                         @endforeach
                     </div>
 
                     @if($resourceStatistics['legacy_untracked'] > 0)
-                        <div class="text-right text-muted small mt-2">
-                            Navbatga qo‘yilmagan eski resurslar: {{ $resourceStatistics['legacy_untracked'] }}
+                        <div class="alert alert-light border mt-3 mb-0">
+                            <i class="fas fa-info-circle text-muted mr-1"></i>
+                            Navbat tarixi mavjud bo‘lmagan eski resurslar:
+                            <strong>{{ number_format($resourceStatistics['legacy_untracked']) }}</strong>
+                        </div>
+                    @endif
+
+                    @if($resourceStatistics['waiting'] > 0 && $status['oldest_waiting_at'] !== null)
+                        <div class="small text-muted mt-3">
+                            Eng uzoq kutayotgan resurs navbatga qo‘yilgan vaqt:
+                            <strong>{{ $status['oldest_waiting_at']->format('d.m.Y H:i:s') }}</strong>
                         </div>
                     @endif
 

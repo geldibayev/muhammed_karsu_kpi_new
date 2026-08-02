@@ -136,20 +136,20 @@ class GetAiReviewerHealth
 
         $reason = match (true) {
             ! $aiEvaluationsEnabled => 'AI tekshiruvi administrator tomonidan vaqtincha o\'chirilgan.',
-            $isQueuePaused => 'AI queue administrator yoki tizim tomonidan vaqtincha pauza qilingan.',
+            $isQueuePaused => 'AI tekshiruvi administrator yoki tizim tomonidan vaqtincha to‘xtatilgan.',
             $isRetryingAfterAttemptFailure => is_string($workerLastFailureReason)
-                ? $workerLastFailureReason.' Job real navbatda va worker avtomatik qayta urinadi.'
-                : 'AI urinishida xato yuz berdi. Job real navbatda va worker avtomatik qayta urinadi.',
+                ? $workerLastFailureReason.' Tizim avtomatik qayta urinadi.'
+                : 'AI urinishida xato yuz berdi. Tizim avtomatik qayta urinadi.',
             $hasUnresolvedAttemptFailure => is_string($workerLastFailureReason)
                 ? $workerLastFailureReason
-                : 'AI worker jobni oldi, lekin urinish xato bilan yakunlandi.',
-            $hasStoppedWorker => "{$queueJobs} ta job real navbatda, lekin AI worker faol emas.",
-            $hasOrphanedQueue => "{$orphanedResources} ta resursning navbat yozuvi bor, ammo real job topilmadi. Tizim uni avtomatik qayta navbatga qo‘yadi.",
+                : 'AI tekshiruv urinishida xato yuz berdi.',
+            $hasStoppedWorker => "Navbatda {$queueJobs} ta vazifa bor, ammo avtomatik tekshiruv hozir javob bermayapti.",
+            $hasOrphanedQueue => "{$orphanedResources} ta resurs navbatda uzilib qolgan. Tizim uni avtomatik qayta yuboradi.",
             $failedPendingResources > 0 => "{$failedPendingResources} ta resurs AI xatosidan keyin inson ko‘rigini kutmoqda.",
             (is_int($queueJobs) && $queueJobs > 0) || $waitingResources > 0 => "{$waitingResources} ta resurs AI tekshiruv navbatida.",
-            $workerIsActive => 'AI worker faol. Navbat bo‘sh, yangi resurs kelishini kutmoqda.',
+            $workerIsActive => 'Navbat bo‘sh. Yangi resurs kelishi bilan tekshiruv avtomatik boshlanadi.',
             $latestCheck?->message_type === 'ai_failed' => $latestCheck->message,
-            $legacyUntrackedResources > 0 && $latestCheck === null => "{$legacyUntrackedResources} ta eski resursda AI navbat auditi mavjud emas. Ular joriy worker holatini bildirmaydi.",
+            $legacyUntrackedResources > 0 && $latestCheck === null => "{$legacyUntrackedResources} ta eski resursda AI navbat tarixi mavjud emas.",
             default => null,
         };
         $hasActualFailure = ($hasUnresolvedAttemptFailure && ! $isRetryingAfterAttemptFailure)

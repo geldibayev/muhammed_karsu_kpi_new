@@ -15,6 +15,7 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobTimedOut;
 use Illuminate\Queue\Events\Looping;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -53,6 +54,20 @@ class AppServiceProvider extends ServiceProvider
                     now()->toIso8601String(),
                     now()->addDays(30),
                 );
+            }
+
+            if (Cache::add('kpi:ai-queue:recovery-throttle', true, now()->addMinute())) {
+                try {
+                    Artisan::call('kpi:ai:queue-pending', [
+                        '--recover-stale' => true,
+                        '--limit' => 100,
+                        '--no-interaction' => true,
+                    ]);
+                } catch (Throwable $exception) {
+                    Log::error('AI navbatini worker orqali tiklashda xato yuz berdi.', [
+                        'exception' => $exception->getMessage(),
+                    ]);
+                }
             }
         });
         Queue::exceptionOccurred(function (JobExceptionOccurred $event): void {

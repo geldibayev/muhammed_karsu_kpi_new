@@ -13,6 +13,7 @@ use Gemini\Exceptions\ErrorException;
 use Illuminate\Contracts\Queue\Job as QueueJob;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Queue\Events\JobExceptionOccurred;
+use Illuminate\Queue\Events\Looping;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -126,6 +127,28 @@ class AiQueueCommandsTest extends TestCase
         $this->artisan('kpi:ai:queue-pending', ['--recover-stale' => true])
             ->expectsOutput('AI navbatiga qo‘yildi: 0')
             ->assertSuccessful();
+
+        Queue::assertPushed(ProcessAiDatumEvaluation::class, 1);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'message_type' => 'ai_queued',
+            'message' => 'Yo‘qolgan AI job avtomatik qayta navbatga qo‘yildi.',
+        ]);
+    }
+
+    public function test_ai_worker_loop_recovers_a_stale_orphan_without_the_scheduler(): void
+    {
+        config()->set('queue.default', 'database');
+        config()->set('kpi.ai_queue_stale_after_minutes', 10);
+        $datum = $this->createDatum();
+        $this->markAsQueued($datum);
+        $datum->histories()
+            ->where('message_type', 'submission_created')
+            ->update(['created_at' => now()->subMinutes(11)]);
+        Queue::fake();
+
+        event(new Looping('database', ProcessAiDatumEvaluation::QUEUE));
+        event(new Looping('database', ProcessAiDatumEvaluation::QUEUE));
 
         Queue::assertPushed(ProcessAiDatumEvaluation::class, 1);
         $this->assertDatabaseHas('datum_histories', [
@@ -355,6 +378,7 @@ class AiQueueCommandsTest extends TestCase
             'kpi:ai-worker:paused-reason',
             'kpi:ai-worker:heartbeat-at',
             'kpi:ai-worker:heartbeat-throttle',
+            'kpi:ai-queue:recovery-throttle',
         ] as $key) {
             Cache::forget($key);
         }

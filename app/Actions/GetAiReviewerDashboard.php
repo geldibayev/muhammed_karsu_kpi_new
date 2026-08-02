@@ -14,6 +14,9 @@ class GetAiReviewerDashboard
      *     resourceStatistics: array{
      *         total: int,
      *         evaluated: int,
+     *         accepted: int,
+     *         cancelled: int,
+     *         human_review: int,
      *         waiting: int,
      *         failed_pending: int,
      *         legacy_untracked: int,
@@ -43,6 +46,9 @@ class GetAiReviewerDashboard
             ->where('data.status', '!=', 'deleted')
             ->selectRaw('COUNT(*) AS total')
             ->selectRaw("SUM(CASE WHEN data.status IN ('accepted', 'cancelled') OR (data.status IN ('received', 'checking') AND COALESCE(ai_history.last_evaluation_id, 0) > COALESCE(ai_history.last_queue_id, 0) AND COALESCE(ai_history.last_evaluation_id, 0) > COALESCE(ai_history.last_failure_id, 0)) THEN 1 ELSE 0 END) AS evaluated")
+            ->selectRaw("SUM(CASE WHEN data.status = 'accepted' THEN 1 ELSE 0 END) AS accepted")
+            ->selectRaw("SUM(CASE WHEN data.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled")
+            ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.last_evaluation_id, 0) > COALESCE(ai_history.last_queue_id, 0) AND COALESCE(ai_history.last_evaluation_id, 0) > COALESCE(ai_history.last_failure_id, 0) THEN 1 ELSE 0 END) AS human_review")
             ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.last_queue_id, 0) > COALESCE(ai_history.last_evaluation_id, 0) AND COALESCE(ai_history.last_queue_id, 0) > COALESCE(ai_history.last_failure_id, 0) THEN 1 ELSE 0 END) AS waiting")
             ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.last_failure_id, 0) > COALESCE(ai_history.last_evaluation_id, 0) AND COALESCE(ai_history.last_failure_id, 0) > COALESCE(ai_history.last_queue_id, 0) THEN 1 ELSE 0 END) AS failed_pending")
             ->selectRaw("SUM(CASE WHEN data.status IN ('received', 'checking') AND COALESCE(ai_history.last_evaluation_id, 0) = 0 AND COALESCE(ai_history.last_failure_id, 0) = 0 AND COALESCE(ai_history.last_queue_id, 0) = 0 THEN 1 ELSE 0 END) AS legacy_untracked")
@@ -63,6 +69,9 @@ class GetAiReviewerDashboard
             'resourceStatistics' => [
                 'total' => $totalResources,
                 'evaluated' => $evaluatedResources,
+                'accepted' => (int) ($resourceAggregate->accepted ?? 0),
+                'cancelled' => (int) ($resourceAggregate->cancelled ?? 0),
+                'human_review' => (int) ($resourceAggregate->human_review ?? 0),
                 'waiting' => (int) ($resourceAggregate->waiting ?? 0),
                 'failed_pending' => (int) ($resourceAggregate->failed_pending ?? 0),
                 'legacy_untracked' => (int) ($resourceAggregate->legacy_untracked ?? 0),
