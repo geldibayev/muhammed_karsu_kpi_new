@@ -46,6 +46,22 @@
                                         <div class="text-muted text-break">
                                             {{ data_get($datum->criterion?->name, 'uz', 'Mezon topilmadi') }}
                                         </div>
+                                        @if($status === \App\Enums\DatumStatus::Deleted)
+                                            <div class="alert alert-warning px-3 py-2 mt-2 mb-0">
+                                                <div class="text-break">
+                                                    <i class="fas fa-info-circle mr-1" aria-hidden="true"></i>
+                                                    {{ $datum->reason ?: 'O‘chirish sababi ko‘rsatilmagan.' }}
+                                                </div>
+                                                @if($datum->duplicateOf !== null)
+                                                    <div class="mt-1">
+                                                        <span class="font-weight-bold">Qoldirilgan resurs:</span>
+                                                        <a href="{{ route('upload.details', $datum->duplicateOf) }}">
+                                                            #{{ $datum->duplicateOf->id }} — {{ $datum->duplicateOf->name }}
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endif
                                     </td>
                                     <td class="text-center align-middle">
                                         {{ $datum->year?->name ?? '—' }}
@@ -69,18 +85,20 @@
                                             <i class="fas fa-eye mr-1"></i> Ko‘rish
                                         </a>
 
-                                        @if($datum->storagePath() !== null)
-                                            <a href="{{ route('upload.file.download', $datum) }}"
-                                               class="btn btn-outline-secondary btn-xs" title="Faylni yuklab olish">
-                                                <i class="fas fa-download"></i>
-                                            </a>
-                                        @elseif($datum->externalUrl() !== null)
-                                            <a href="{{ $datum->externalUrl() }}" target="_blank"
-                                               rel="noopener noreferrer" class="btn btn-outline-secondary btn-xs"
-                                               title="Havolani ochish">
-                                                <i class="fas fa-external-link-alt"></i>
-                                            </a>
-                                        @endif
+                                        @can('download', $datum)
+                                            @if($datum->storagePath() !== null)
+                                                <a href="{{ route('upload.file.download', $datum) }}"
+                                                   class="btn btn-outline-secondary btn-xs" title="Faylni yuklab olish">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            @elseif($datum->externalUrl() !== null)
+                                                <a href="{{ $datum->externalUrl() }}" target="_blank"
+                                                   rel="noopener noreferrer" class="btn btn-outline-secondary btn-xs"
+                                                   title="Havolani ochish">
+                                                    <i class="fas fa-external-link-alt"></i>
+                                                </a>
+                                            @endif
+                                        @endcan
                                     </td>
                                 </tr>
                             @empty

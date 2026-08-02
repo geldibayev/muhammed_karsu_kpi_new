@@ -168,6 +168,13 @@
                                     <p>Qaytarilgan</p>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a href="{{ route('files.show', 'deleted') }}"
+                                   class="nav-link @if(request()->url() == route('files.show', 'deleted') || (($status ?? null) === \App\Enums\DatumStatus::Deleted)) active @endif">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>O‘chirilgan</p>
+                                </a>
+                            </li>
                         </ul>
                     </li>
                     @can('access-manual-reviews')

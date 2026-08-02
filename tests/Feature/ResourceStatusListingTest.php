@@ -48,12 +48,53 @@ class ResourceStatusListingTest extends TestCase
         }
     }
 
-    public function test_unknown_and_deleted_statuses_return_not_found(): void
+    public function test_unknown_status_returns_not_found(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)->get('/home/files/unknown')->assertNotFound();
-        $this->actingAs($user)->get('/home/files/deleted')->assertNotFound();
+    }
+
+    public function test_owner_can_see_deleted_duplicate_reason_and_retained_resource(): void
+    {
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $canonical = $this->createDatum(
+            $owner,
+            $criterion,
+            DatumStatus::Accepted,
+            'Qoldirilgan ilmiy maqola',
+            ['point' => 8],
+        );
+        $duplicate = $this->createDatum(
+            $owner,
+            $criterion,
+            DatumStatus::Deleted,
+            'Takroriy ilmiy maqola',
+            [
+                'duplicate_of_id' => $canonical->getKey(),
+                'reason' => 'Resurs dublikat deb topildi.',
+            ],
+        );
+
+        $this->actingAs($owner)
+            ->get(route('files.show', DatumStatus::Deleted))
+            ->assertOk()
+            ->assertSee('Takroriy ilmiy maqola')
+            ->assertSee('Resurs dublikat deb topildi.')
+            ->assertSee('Qoldirilgan resurs:')
+            ->assertSee('Qoldirilgan ilmiy maqola');
+
+        $this->actingAs($owner)
+            ->get(route('upload.details', $duplicate))
+            ->assertOk()
+            ->assertSee('Resurs hisobdan chiqarilgan')
+            ->assertSee('Resurs dublikat deb topildi.');
+
+        $this->actingAs($otherUser)
+            ->get(route('upload.details', $duplicate))
+            ->assertForbidden();
     }
 
     public function test_status_listing_is_paginated_with_bootstrap_markup(): void

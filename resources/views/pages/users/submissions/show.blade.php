@@ -32,6 +32,24 @@
                             </span>
                         </div>
                         <div class="card-body">
+                            @if($status === \App\Enums\DatumStatus::Deleted)
+                                <div class="alert alert-warning">
+                                    <h4 class="h6 font-weight-bold">
+                                        <i class="fas fa-info-circle mr-1" aria-hidden="true"></i>
+                                        Resurs hisobdan chiqarilgan
+                                    </h4>
+                                    <div class="text-break">{{ $datum->reason ?: 'O‘chirish sababi ko‘rsatilmagan.' }}</div>
+                                    @if($datum->duplicateOf !== null)
+                                        <div class="mt-2">
+                                            <span class="font-weight-bold">Qoldirilgan resurs:</span>
+                                            <a href="{{ route('upload.details', $datum->duplicateOf) }}">
+                                                #{{ $datum->duplicateOf->id }} — {{ $datum->duplicateOf->name }}
+                                            </a>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+
                             <dl class="row mb-0">
                                 <dt class="col-sm-4">Resurs nomi</dt>
                                 <dd class="col-sm-8 text-break">{{ $datum->name }}</dd>
@@ -78,17 +96,19 @@
                                 </form>
                             @endcan
 
-                            @if($datum->storagePath() !== null)
-                                <a href="{{ route('upload.file.download', $datum) }}"
-                                   class="btn btn-primary btn-sm float-right">
-                                    <i class="fas fa-download mr-1"></i> Faylni yuklab olish
-                                </a>
-                            @elseif($datum->externalUrl() !== null)
-                                <a href="{{ $datum->externalUrl() }}" target="_blank" rel="noopener noreferrer"
-                                   class="btn btn-primary btn-sm float-right">
-                                    <i class="fas fa-external-link-alt mr-1"></i> Havolani ochish
-                                </a>
-                            @endif
+                            @can('download', $datum)
+                                @if($datum->storagePath() !== null)
+                                    <a href="{{ route('upload.file.download', $datum) }}"
+                                       class="btn btn-primary btn-sm float-right">
+                                        <i class="fas fa-download mr-1"></i> Faylni yuklab olish
+                                    </a>
+                                @elseif($datum->externalUrl() !== null)
+                                    <a href="{{ $datum->externalUrl() }}" target="_blank" rel="noopener noreferrer"
+                                       class="btn btn-primary btn-sm float-right">
+                                        <i class="fas fa-external-link-alt mr-1"></i> Havolani ochish
+                                    </a>
+                                @endif
+                            @endcan
                         </div>
                     </div>
 

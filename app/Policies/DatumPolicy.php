@@ -19,6 +19,10 @@ class DatumPolicy
 
     public function view(User $user, Datum $datum): bool
     {
+        if ($datum->status === DatumStatus::Deleted->value) {
+            return $this->ownsDatumOrIsSuperAdmin($user, $datum);
+        }
+
         return $datum->status !== 'deleted'
             && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
                 || $this->isAssignedReviewer($user, $datum)

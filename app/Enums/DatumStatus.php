@@ -8,6 +8,7 @@ enum DatumStatus: string
     case Checking = 'checking';
     case Accepted = 'accepted';
     case Cancelled = 'cancelled';
+    case Deleted = 'deleted';
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum DatumStatus: string
             self::Checking => 'Tekshirilmoqda',
             self::Accepted => 'Tasdiqlangan',
             self::Cancelled => 'Qaytarilgan',
+            self::Deleted => 'O‘chirilgan',
         };
     }
 
@@ -26,6 +28,7 @@ enum DatumStatus: string
             self::Checking => 'badge-warning',
             self::Accepted => 'badge-success',
             self::Cancelled => 'badge-danger',
+            self::Deleted => 'badge-secondary',
         };
     }
 
@@ -36,6 +39,7 @@ enum DatumStatus: string
             self::Checking => 'Hozirda AI yoki mas’ul tekshiruvchi tomonidan ko‘rib chiqilayotgan resurslar.',
             self::Accepted => 'Talablarga mos deb topilib, tasdiqlangan resurslar.',
             self::Cancelled => 'Kamchiliklari sabab qaytarilgan resurslar.',
+            self::Deleted => 'Foydalanuvchi tomonidan o‘chirilgan yoki dublikat sifatida hisobdan chiqarilgan resurslar.',
         };
     }
 }

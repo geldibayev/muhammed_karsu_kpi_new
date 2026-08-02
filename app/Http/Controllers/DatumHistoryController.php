@@ -35,6 +35,7 @@ class DatumHistoryController extends Controller
         $data = $query
             ->with([
                 'criterion:id,name',
+                'duplicateOf:id,name,status',
                 'year:id,name',
             ])
             ->latest()
