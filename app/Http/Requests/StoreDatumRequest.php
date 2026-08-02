@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Criterion;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,16 +39,16 @@ class StoreDatumRequest extends FormRequest
             return [
                 'uploadResourceType' => ['required', Rule::in(['h_index'])],
                 'year' => $this->yearRules($criterion),
-                'h_index' => ['required', 'array:scopus,web_of_science,research_gate'],
-                'h_index.scopus' => ['required', 'array:link,value'],
-                'h_index.scopus.link' => ['required', 'url:http,https', 'max:255'],
-                'h_index.scopus.value' => ['required', 'integer', 'min:0'],
-                'h_index.web_of_science' => ['required', 'array:link,value'],
-                'h_index.web_of_science.link' => ['required', 'url:http,https', 'max:255'],
-                'h_index.web_of_science.value' => ['required', 'integer', 'min:0'],
-                'h_index.research_gate' => ['required', 'array:link,value'],
-                'h_index.research_gate.link' => ['required', 'url:http,https', 'max:255'],
-                'h_index.research_gate.value' => ['required', 'integer', 'min:0'],
+                'h_index' => ['required', 'array'],
+                'h_index.scopus' => ['nullable', 'array:link,value'],
+                'h_index.scopus.link' => ['nullable', 'required_with:h_index.scopus.value', 'url:http,https', 'max:255'],
+                'h_index.scopus.value' => ['nullable', 'required_with:h_index.scopus.link', 'integer', 'min:0'],
+                'h_index.web_of_science' => ['nullable', 'array:link,value'],
+                'h_index.web_of_science.link' => ['nullable', 'required_with:h_index.web_of_science.value', 'url:http,https', 'max:255'],
+                'h_index.web_of_science.value' => ['nullable', 'required_with:h_index.web_of_science.link', 'integer', 'min:0'],
+                'h_index.research_gate' => ['nullable', 'array:link,value'],
+                'h_index.research_gate.link' => ['nullable', 'required_with:h_index.research_gate.value', 'url:http,https', 'max:255'],
+                'h_index.research_gate.value' => ['nullable', 'required_with:h_index.research_gate.link', 'integer', 'min:0'],
             ];
         }
 
@@ -90,6 +91,41 @@ class StoreDatumRequest extends FormRequest
         ];
 
         return array_replace($rules, $this->templateRules($criterion));
+    }
+
+    /**
+     * @return array<string, callable>
+     */
+    public function after(): array
+    {
+        if (! $this->route('upload') instanceof Criterion || ! $this->route('upload')->isHIndexCriterion()) {
+            return [];
+        }
+
+        return [
+            function (Validator $validator): void {
+                $profiles = ['scopus', 'web_of_science', 'research_gate'];
+                $hasCompleteProfile = false;
+
+                foreach ($profiles as $profile) {
+                    $link = (string) $this->input("h_index.$profile.link");
+                    $value = (string) $this->input("h_index.$profile.value");
+
+                    if (trim($link) !== '' && trim($value) !== '') {
+                        $hasCompleteProfile = true;
+
+                        break;
+                    }
+                }
+
+                if (! $hasCompleteProfile) {
+                    $validator->errors()->add(
+                        'h_index',
+                        'Kamida bitta platforma uchun h-index profili toliq kiritilishi kerak.',
+                    );
+                }
+            },
+        ];
     }
 
     /**

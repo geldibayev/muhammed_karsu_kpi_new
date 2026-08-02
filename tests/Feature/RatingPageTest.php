@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AcademicDegree;
 use App\Models\AcademicRank;
 use App\Models\Criterion;
+use App\Models\CriterionEvaluation;
 use App\Models\Datum;
 use App\Models\DatumHistory;
 use App\Models\Department;
@@ -12,6 +13,8 @@ use App\Models\EmployeeStatus;
 use App\Models\EmployeeType;
 use App\Models\EmploymentForm;
 use App\Models\EmploymentStaff;
+use App\Models\Evaluation;
+use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
 use App\Models\StaffPosition;
@@ -472,6 +475,23 @@ class RatingPageTest extends TestCase
 
     public function test_rating_details_show_criterion_scores_and_attributed_evaluators(): void
     {
+        $competitionFormula = Formula::query()->firstOrCreate(
+            ['code' => Formula::Competition],
+            ['name' => ['uz' => 'Raqobat asosida'], 'status' => '1'],
+        );
+        $maximumFormula = Formula::query()->firstOrCreate(
+            ['code' => Formula::Maximum],
+            ['name' => ['uz' => 'Maksimal ballgacha'], 'status' => '1'],
+        );
+        $unlimitedFormula = Formula::query()->firstOrCreate(
+            ['code' => Formula::Unlimited],
+            ['name' => ['uz' => 'Cheklanmagan yig‘indi'], 'status' => '1'],
+        );
+        Evaluation::query()->firstOrCreate(
+            ['code' => 'hold_degrees'],
+            ['name' => ['uz' => 'Ilmiy darajali'], 'status' => '1'],
+        );
+
         $viewer = User::factory()->create();
         $ratedUser = User::factory()->create([
             'name' => $this->userName('Baholangan Ustoz'),
@@ -492,15 +512,18 @@ class RatingPageTest extends TestCase
         $aiCriterion = $this->createCriterion($activeReport, 'AI baholagan kriteriya', [
             'checking' => 'ai',
             'ai_model' => 'gpt-test',
+            'formula_id' => $competitionFormula->getKey(),
             'parent_id' => $firstSection->getKey(),
         ]);
         $systemCriterion = $this->createCriterion($activeReport, 'Auditsiz kriteriya', [
             'checking' => 'site:test',
+            'formula_id' => $unlimitedFormula->getKey(),
             'parent_id' => $firstSection->getKey(),
         ]);
         $aiWithoutAuditCriterion = $this->createCriterion($activeReport, 'Auditsiz AI kriteriya', [
             'checking' => 'ai',
             'ai_model' => 'gpt-fallback',
+            'formula_id' => $maximumFormula->getKey(),
             'parent_id' => $firstSection->getKey(),
         ]);
         $pendingCriterion = $this->createCriterion($activeReport, 'Baholanishi kutilayotgan kriteriya', [
@@ -513,11 +536,23 @@ class RatingPageTest extends TestCase
         $unuploadedCriterion = $this->createCriterion($activeReport, 'Yuklanmagan kriteriya', [
             'parent_id' => $secondSection->getKey(),
         ]);
+        $hIndexCriterion = $this->createCriterion($activeReport, 'H-index kriteriyasi', [
+            'code' => Criterion::H_INDEX_CODE,
+            'formula_id' => $maximumFormula->getKey(),
+            'parent_id' => $secondSection->getKey(),
+        ]);
         $oldCriterion = $this->createCriterion($oldReport, 'Eski kriteriya', [
             'parent_id' => $oldSection->getKey(),
         ]);
         $oldPendingCriterion = $this->createCriterion($oldReport, 'Eski baholanmagan kriteriya', [
             'parent_id' => $oldSection->getKey(),
+        ]);
+
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $aiCriterion->getKey(),
+            'evaluation' => 'hold_degrees',
+            'has' => '1',
+            'score' => 5,
         ]);
 
         $this->createPoint($ratedUser, $manualCriterion, $activeReport, 4.25);
@@ -575,6 +610,19 @@ class RatingPageTest extends TestCase
             ->assertSee('Mas’ul Baholovchi')
             ->assertSee('AI baholagan kriteriya')
             ->assertSee('3.50')
+            ->assertSee('data-testid="rating-method-button"', false)
+            ->assertSee('data-target="#rating-method-'.$aiCriterion->getKey().'"', false)
+            ->assertSee('Baholash usuli')
+            ->assertSee('Raqobat asosida')
+            ->assertSee('Maksimal ballgacha')
+            ->assertSee('Cheklanmagan yig‘indi')
+            ->assertSee('H-index bo‘yicha')
+            ->assertSee('Faqat linki va H-index qiymati to‘liq kiritilgan platformalar hisobga olinadi')
+            ->assertSee('data-target="#rating-method-'.$hIndexCriterion->getKey().'"', false)
+            ->assertSee('Qanday hisoblanadi?')
+            ->assertSee('Sizning toifangiz uchun maksimal ball')
+            ->assertSee('Oddiy misol')
+            ->assertSee('5.00 × 8 ÷ 10 = 4.00 ball')
             ->assertSee('Sun’iy intellekt tomonidan baholangan')
             ->assertSee('Auditsiz kriteriya')
             ->assertSee('Auditda qayd etilmagan')

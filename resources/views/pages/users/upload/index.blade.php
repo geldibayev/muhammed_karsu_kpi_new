@@ -97,14 +97,16 @@
                                         <div class="col-md-4 mb-3">
                                             <label class="font-weight-bold">{{ $profileLabel }}</label>
                                             <input type="url" name="h_index[{{ $profileKey }}][link]"
-                                                   class="form-control mb-2" placeholder="Profil havolasi" required
+                                                   class="form-control mb-2" placeholder="Profil havolasi"
                                                    value="{{ old('h_index.'.$profileKey.'.link') }}">
                                             <input type="number" name="h_index[{{ $profileKey }}][value]"
-                                                   class="form-control" min="0" placeholder="h-index" required
+                                                   class="form-control" min="0" placeholder="h-index"
                                                    value="{{ old('h_index.'.$profileKey.'.value') }}">
                                         </div>
                                     @endforeach
                                 </div>
+                                <div class="text-muted small">Kamida bitta platformada link va h-index qiymatini to'liq kiriting.</div>
+                                <div id="hIndexProfileError" class="text-danger small mt-1 d-none"></div>
                                 <div class="row">
                                     <div class="col-md-4 ml-auto">
                                         <label class="small mb-0" for="h_index_year_id">Resurs yili</label>
@@ -426,6 +428,75 @@
                 $submitBtn.prop('disabled', false);
                 $limitError.hide();
                 if ($dragZone.length) $dragZone.css('border-color', '#ced4da');
+            }
+
+            var $hIndexForm = $('#hIndexForm');
+            if ($hIndexForm.length) {
+                var hIndexProfiles = ['scopus', 'web_of_science', 'research_gate'];
+
+                function hasValue(value) {
+                    return (value || '').toString().trim() !== '';
+                }
+
+                function getProfileValues(profile) {
+                    return {
+                        link: $hIndexForm.find('input[name="h_index[' + profile + '][link]"]').val(),
+                        value: $hIndexForm.find('input[name="h_index[' + profile + '][value]"]').val(),
+                    };
+                }
+
+                function hasCompleteProfile() {
+                    return hIndexProfiles.some(function (profile) {
+                        var data = getProfileValues(profile);
+
+                        return hasValue(data.link) && hasValue(data.value);
+                    });
+                }
+
+                function hasPartialProfile() {
+                    return hIndexProfiles.some(function (profile) {
+                        var data = getProfileValues(profile);
+                        var linkFilled = hasValue(data.link);
+                        var valueFilled = hasValue(data.value);
+
+                        return linkFilled !== valueFilled;
+                    });
+                }
+
+                function clearProfileValidation() {
+                    $('#hIndexProfileError').addClass('d-none').text('');
+                    hIndexProfiles.forEach(function (profile) {
+                        $hIndexForm.find('input[name="h_index[' + profile + '][link]"]').removeClass('is-invalid');
+                        $hIndexForm.find('input[name="h_index[' + profile + '][value]"]').removeClass('is-invalid');
+                    });
+                }
+
+                $hIndexForm.on('submit', function () {
+                    clearProfileValidation();
+
+                    if (!hasCompleteProfile()) {
+                        var $error = $('#hIndexProfileError');
+
+                        if (hasPartialProfile()) {
+                            $error.text('Har bir tanlangan platforma uchun link va h-index qiymatini birga kiriting.');
+                        } else {
+                            $error.text('Iltimos, kamida bitta platforma uchun to\'liq profil kiriting.');
+                        }
+
+                        $error.removeClass('d-none');
+
+                        hIndexProfiles.forEach(function (profile) {
+                            var data = getProfileValues(profile);
+
+                            if (hasValue(data.link) !== hasValue(data.value)) {
+                                $hIndexForm.find('input[name="h_index[' + profile + '][link]"]').addClass('is-invalid');
+                                $hIndexForm.find('input[name="h_index[' + profile + '][value]"]').addClass('is-invalid');
+                            }
+                        });
+
+                        return false;
+                    }
+                });
             }
 
             // Yuklash animatsiyasi

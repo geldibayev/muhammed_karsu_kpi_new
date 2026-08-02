@@ -30,4 +30,16 @@ class HIndexScoreCalculatorTest extends TestCase
 
         $this->assertSame(8.0, $result['total']);
     }
+
+    public function test_it_scores_only_profiles_that_were_entered(): void
+    {
+        $calculator = new HIndexScoreCalculator;
+
+        $result = $calculator->calculate([
+            'scopus' => ['link' => 'https://scopus.example/profile', 'value' => 4],
+        ], 3);
+
+        $this->assertSame(2.25, $result['total']);
+        $this->assertSame('Scopus h=4: 2.25 ball', $result['summary']);
+    }
 }

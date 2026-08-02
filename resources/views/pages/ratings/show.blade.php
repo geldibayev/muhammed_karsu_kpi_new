@@ -71,7 +71,7 @@
                                 <article data-testid="rating-criterion-row"
                                          @class(['px-3 py-3', 'border-bottom' => ! $loop->last])>
                                     <div class="row align-items-start">
-                                        <div class="col-lg-4 col-md-12 mb-3 mb-lg-0">
+                                        <div class="col-lg-3 col-md-12 mb-3 mb-lg-0">
                                             <div class="d-flex align-items-start">
                                                 <span class="badge badge-light border text-primary text-nowrap mr-2 mt-1">
                                                     {{ $score['code'] }}
@@ -107,7 +107,17 @@
                                             @endif
                                         </div>
 
-                                        <div class="col-lg-3 col-md-8 mb-3 mb-lg-0">
+                                        <div class="col-lg-2 col-md-4 mb-3 mb-lg-0">
+                                            <div class="small text-muted text-uppercase font-weight-bold mb-2">
+                                                Baholash usuli
+                                            </div>
+                                            <x-rating-method
+                                                :method="$score['rating_method']"
+                                                :criterion="$score['criterion']"
+                                            />
+                                        </div>
+
+                                        <div class="col-lg-2 col-md-8 mb-3 mb-lg-0">
                                             <div class="small text-muted text-uppercase font-weight-bold mb-2">
                                                 Resurslar
                                             </div>

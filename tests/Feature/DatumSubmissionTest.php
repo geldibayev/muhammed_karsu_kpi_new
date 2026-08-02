@@ -63,6 +63,78 @@ class DatumSubmissionTest extends TestCase
             ->assertDownload('proof.pdf');
     }
 
+    public function test_h_index_submission_can_be_created_with_single_profile(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => Criterion::H_INDEX_CODE,
+            'checking' => 'manual',
+        ]);
+        $year = $this->createActiveYear();
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'h_index',
+                'year' => $year->id,
+                'h_index' => [
+                    'scopus' => [
+                        'link' => 'https://www.scopus.com/user',
+                        'value' => 12,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('upload.show', $criterion))
+            ->assertSessionHasNoErrors();
+
+        $datum = Datum::query()->sole();
+
+        $this->assertSame('h_index', data_get($datum->material, 'type'));
+        $this->assertArrayHasKey('scopus', data_get($datum->material, 'profiles'));
+        $this->assertSame('https://www.scopus.com/user', data_get($datum->material, 'profiles.scopus.link'));
+        $this->assertSame(12, data_get($datum->material, 'profiles.scopus.value'));
+    }
+
+    public function test_h_index_submission_requires_at_least_one_complete_profile(): void
+    {
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => Criterion::H_INDEX_CODE,
+            'checking' => 'manual',
+        ]);
+        $year = $this->createActiveYear();
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'h_index',
+                'year' => $year->id,
+                'h_index' => [],
+            ])
+            ->assertSessionHasErrors('h_index');
+    }
+
+    public function test_h_index_submission_rejects_partial_profile_data(): void
+    {
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => Criterion::H_INDEX_CODE,
+            'checking' => 'manual',
+        ]);
+        $year = $this->createActiveYear();
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'h_index',
+                'year' => $year->id,
+                'h_index' => [
+                    'scopus' => [
+                        'link' => 'https://www.scopus.com/user',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('h_index.scopus.value');
+    }
+
     public function test_submission_resource_type_and_active_year_are_enforced(): void
     {
         Storage::fake('local');

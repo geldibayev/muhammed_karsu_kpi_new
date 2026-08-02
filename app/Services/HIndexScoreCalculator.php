@@ -11,6 +11,7 @@ class HIndexScoreCalculator
     public function calculate(array $profiles, float $maximumShare): array
     {
         $scores = [];
+        $summary = [];
         $labels = [
             'scopus' => 'Scopus',
             'web_of_science' => 'Web of Science',
@@ -18,15 +19,16 @@ class HIndexScoreCalculator
         ];
 
         foreach ($labels as $key => $label) {
-            $value = (int) data_get($profiles, $key.'.value', 0);
-            $scores[] = $this->score($value, $maximumShare);
-            $scores[count($scores) - 1] = round($scores[count($scores) - 1], 2);
-        }
+            $profile = $profiles[$key] ?? null;
 
-        $summary = [];
-        foreach ($labels as $key => $label) {
-            $summary[] = $label.' h='.((int) data_get($profiles, $key.'.value', 0)).': '
-                .number_format($scores[array_search($key, array_keys($labels), true)], 2, '.', '').' ball';
+            if (! is_array($profile) || ! filled($profile['link'] ?? null) || ! array_key_exists('value', $profile)) {
+                continue;
+            }
+
+            $value = (int) data_get($profiles, $key.'.value', 0);
+            $score = round($this->score($value, $maximumShare), 2);
+            $scores[] = $score;
+            $summary[] = $label." h={$value}: ".number_format($score, 2, '.', '').' ball';
         }
 
         return [
