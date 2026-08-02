@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\InternationalCooperationCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -86,6 +87,11 @@ class Criterion extends Model
     public function isOakArticleCriterion(): bool
     {
         return $this->code === OakArticleCriterionRule::CODE;
+    }
+
+    public function isInternationalCooperationCriterion(): bool
+    {
+        return $this->code === InternationalCooperationCriterionRule::CODE;
     }
 
     public function isPrintedEducationalLiteratureCriterion(): bool

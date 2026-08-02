@@ -8,6 +8,7 @@ use App\Models\CriterionYear;
 use App\Models\Formula;
 use App\Models\Report;
 use App\Models\Year;
+use App\Support\InternationalCooperationCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use App\Support\ScopusCriterionRule;
 use Illuminate\Database\Seeder;
@@ -629,7 +630,8 @@ class CriterionSeeder extends Seeder
                         'report_id' => 1,
                         'checking' => 'ai',
                         'template' => '0',
-                        'res_type' => 'all',
+                        'res_type' => 'file',
+                        'file_limit' => 1,
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 3,
@@ -639,20 +641,9 @@ class CriterionSeeder extends Seeder
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
+                        'divide_ai_point_by_authors' => false,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (xorijiy OTM bilan shartnomalar, chaqiruv xatlari, dars mashg'ulotlarini o'tkazish haqidagi buyruqlar, xorijlik talabalarni jalb qilishga oid hujjatlar) tahlil qiling.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Xorijiy OTMning QS, THE yoki ARWU reytingidagi o'rnini aniqlang (Top-100, 300, 500 yoki 1000).
-                        2. Ballar: Top-100 = 3 ball; Top-300 = 2.5 ball; Top-500 = 2 ball; Top-1000 = 1.5 ball.
-                        3. Xorijlik talabalarni jalb qilgan bo'lsa: 3 ball.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar hujjatlar (shartnoma, chaqiruv xati, buyruq) xalqaro aloqani yoki talaba jalb qilinganini aniq tasdiqlasa: \"accepted\" statusini bering va mos ballni \"point\" qismiga yozing.
-                        - Agar hujjatlar xira bo'lsa, xorijiy OTMning reytingdagi o'rnini aniqlab bo'lmasa, yoki hujjatlar yetishmovchiligi sababli inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
-                        - Agar hujjatlar mezonga aloqasi bo'lmasa, soxta bo'lsa yoki universitet Top-1000 reytingiga kirmasa: \"cancelled\" statusini bering (\"point\": 0).
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, masalan 3, 2.5, 2, 1.5 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, OTM nomi, uning reyting o'rni va ishtirok darajasi haqida qisqacha izoh>\"}",
+                        'ai_prompt' => InternationalCooperationCriterionRule::PROMPT,
                     ],
                 ],
             ],

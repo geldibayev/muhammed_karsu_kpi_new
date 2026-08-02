@@ -14,6 +14,7 @@ use App\Services\AiResourceDatePolicy;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
 use App\Services\GeminiUrlContextGateway;
+use App\Services\InternationalCooperationScoreValidator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use Gemini\Laravel\Facades\Gemini;
@@ -188,6 +189,7 @@ class AiSubmissionEvaluatorUrlTest extends TestCase
             new AiResourceDatePolicy,
             new GeminiUrlContextGateway,
             new PrintedEducationalLiteratureScoreCalculator,
+            new InternationalCooperationScoreValidator,
         );
     }
 

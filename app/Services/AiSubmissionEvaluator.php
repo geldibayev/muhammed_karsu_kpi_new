@@ -28,6 +28,7 @@ class AiSubmissionEvaluator
         private AiResourceDatePolicy $aiResourceDatePolicy,
         private GeminiUrlContextGateway $geminiUrlContextGateway,
         private PrintedEducationalLiteratureScoreCalculator $printedEducationalLiteratureScoreCalculator,
+        private InternationalCooperationScoreValidator $internationalCooperationScoreValidator,
     ) {}
 
     public function evaluate(Datum $datum): AiEvaluationResult
@@ -193,6 +194,10 @@ PROMPT;
 
             if ($criterion->isOakArticleCriterion()) {
                 return $this->oakArticleScoreCalculator->apply($result, $user->degree);
+            }
+
+            if ($criterion->isInternationalCooperationCriterion()) {
+                return $this->internationalCooperationScoreValidator->handle($result, $maximumPoint);
             }
 
             return $this->aiAuthorPointDistributor->handle(
