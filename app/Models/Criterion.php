@@ -99,6 +99,25 @@ class Criterion extends Model
         return in_array($this->code, self::PRINTED_EDUCATIONAL_LITERATURE_CODES, true);
     }
 
+    /** @return array<int, 'file'|'url'> */
+    public function allowedSubmissionResourceTypes(): array
+    {
+        if ($this->checking === 'ai') {
+            return ['file'];
+        }
+
+        return match ($this->res_type) {
+            'file' => ['file'],
+            'url' => ['url'],
+            default => ['file', 'url'],
+        };
+    }
+
+    public function usesHIndexSubmission(): bool
+    {
+        return $this->checking !== 'ai' && $this->isHIndexCriterion();
+    }
+
     public function manualScoreOptions(): HasMany
     {
         return $this->hasMany(CriterionManualScoreOption::class)

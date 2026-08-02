@@ -21,4 +21,5 @@ return [
     'ai_queue_stale_after_minutes' => 10,
     'ai_worker_stale_after_seconds' => (int) env('KPI_AI_WORKER_STALE_AFTER_SECONDS', 90),
     'ai_requests_per_minute' => (int) env('KPI_AI_REQUESTS_PER_MINUTE', 10),
+    'upload_max_file_size_mb' => 5,
 ];

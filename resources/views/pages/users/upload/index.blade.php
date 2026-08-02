@@ -80,7 +80,7 @@
                     @endif
                 </div>
                 <div class="card-body p-0">
-                    @if($upload->isHIndexCriterion())
+                    @if($upload->usesHIndexSubmission())
                         <form action="{{ route('upload.store', $upload) }}" method="post" id="hIndexForm">
                             @csrf
                             <input type="hidden" name="uploadResourceType" value="h_index">
@@ -125,6 +125,7 @@
                         </form>
                     @elseif($upload->upload == '1')
                         @if($upload->file_limit == 0 || $files < $upload->file_limit)
+                            @php($allowedResourceTypes = $upload->allowedSubmissionResourceTypes())
                             <form action="{{ route('upload.store', $upload) }}" method="post"
                                   enctype="multipart/form-data" id="fileForm">
                                 @csrf
@@ -134,7 +135,7 @@
                                             @include('pages.users.upload.template.' . $upload->template)
                                         @endif
 
-                                        @if($upload->res_type == 'all')
+                                        @if(count($allowedResourceTypes) > 1)
                                             <div class="col-md-2 mb-2">
                                                 <label class="small mb-0">Resurs turi</label>
                                                 <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
@@ -149,15 +150,20 @@
                                             </div>
                                         @else
                                             <input type="hidden" name="uploadResourceType"
-                                                   value="{{ $upload->res_type }}">
+                                                   value="{{ $allowedResourceTypes[0] }}">
                                         @endif
 
-                                        <div class="{{ $upload->res_type == 'all' ? 'col-md-8' : 'col-md-10' }} mb-2">
+                                        <div class="{{ count($allowedResourceTypes) > 1 ? 'col-md-8' : 'col-md-10' }} mb-2">
                                             <label class="small mb-0">Resurs manbai</label>
+                                            @if($upload->checking === 'ai')
+                                                <div class="small text-muted mb-1">
+                                                    AI tekshiruvi uchun PDF, JPG, JPEG yoki PNG fayl yuklang.
+                                                </div>
+                                            @endif
 
-                                            @if(in_array($upload->res_type, ['all', 'file']))
+                                            @if(in_array('file', $allowedResourceTypes, true))
                                                 <div id="fileUploadBlock"
-                                                     style="border: 1px solid #ddd; padding: 6px; border-radius: 5px; display: {{ $upload->res_type == 'all' ? 'block' : 'block' }};">
+                                                     style="border: 1px solid #ddd; padding: 6px; border-radius: 5px; display: block;">
                                                     <label for="uploadResourceFile" class="drag-area mb-0"
                                                            id="dragZone">
                                                         <span id="file-name" class="small text-muted">
@@ -166,21 +172,22 @@
                                                     </label>
                                                     <input type="file" id="uploadResourceFile" name="uploadResourceFile"
                                                            class="d-none"
-                                                           accept=".pdf,.jpg,.jpeg,.png" {{ $upload->res_type == 'file' ? 'required' : '' }}>
+                                                           accept=".pdf,.jpg,.jpeg,.png" {{ count($allowedResourceTypes) === 1 ? 'required' : '' }}>
                                                 </div>
                                                 <div class="text-danger small mt-1" id="limit_error"
                                                      style="display: none;">
                                                     <i class="fas fa-exclamation-triangle mr-1"></i> Fayl limiti 2
-                                                    megabaytdan oshib ketdi.
+                                                    megabaytdan oshib ketdi. Maksimal hajm:
+                                                    {{ (int) config('kpi.upload_max_file_size_mb', 5) }} MB.
                                                 </div>
                                             @endif
 
-                                            @if(in_array($upload->res_type, ['all', 'url']))
+                                            @if(in_array('url', $allowedResourceTypes, true))
                                                 <div id="urlUploadBlock"
-                                                     style="display: {{ $upload->res_type == 'url' ? 'block' : 'none' }};">
+                                                     style="display: {{ count($allowedResourceTypes) === 1 ? 'block' : 'none' }};">
                                                     <input type="url" id="uploadResourceUrl" name="uploadResourceUrl"
                                                            class="form-control"
-                                                           placeholder="Masalan: https://example.com/resurs.pdf" {{ $upload->res_type == 'url' ? 'required' : '' }}>
+                                                           placeholder="Masalan: https://example.com/resurs.pdf" {{ count($allowedResourceTypes) === 1 ? 'required' : '' }}>
                                                 </div>
                                             @endif
                                         </div>
@@ -409,7 +416,7 @@
 
             // --- 3. FAYLNI TEKSHIRISH FUNKSIYALARI ---
             function validateAndShowFile(file) {
-                var maxSize = 2 * 1024 * 1024; // 2 MB
+                var maxSize = {{ (int) config('kpi.upload_max_file_size_mb', 5) }} * 1024 * 1024;
                 $fileName.html('<strong>' + file.name + '</strong>');
 
                 if (file.size > maxSize) {

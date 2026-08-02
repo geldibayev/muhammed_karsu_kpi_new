@@ -31,11 +31,12 @@ class StoreDatumRequest extends FormRequest
     public function rules(): array
     {
         $criterion = $this->route('upload');
-        $allowedResourceTypes = $criterion instanceof Criterion && $criterion->res_type !== 'all'
-            ? [$criterion->res_type]
+        $maximumFileSizeMb = max(1, (int) config('kpi.upload_max_file_size_mb', 5));
+        $allowedResourceTypes = $criterion instanceof Criterion
+            ? $criterion->allowedSubmissionResourceTypes()
             : ['file', 'url'];
 
-        if ($criterion instanceof Criterion && $criterion->isHIndexCriterion()) {
+        if ($criterion instanceof Criterion && $criterion->usesHIndexSubmission()) {
             return [
                 'uploadResourceType' => ['required', Rule::in(['h_index'])],
                 'year' => $this->yearRules($criterion),
@@ -59,7 +60,7 @@ class StoreDatumRequest extends FormRequest
                 'nullable',
                 Rule::requiredIf($this->input('uploadResourceType') === 'file'),
                 Rule::prohibitedIf($this->input('uploadResourceType') !== 'file'),
-                File::types(['pdf', 'jpg', 'jpeg', 'png'])->max('2mb'),
+                File::types(['pdf', 'jpg', 'jpeg', 'png'])->max($maximumFileSizeMb * 1024),
             ],
             'uploadResourceUrl' => [
                 'nullable',
@@ -98,7 +99,7 @@ class StoreDatumRequest extends FormRequest
      */
     public function after(): array
     {
-        if (! $this->route('upload') instanceof Criterion || ! $this->route('upload')->isHIndexCriterion()) {
+        if (! $this->route('upload') instanceof Criterion || ! $this->route('upload')->usesHIndexSubmission()) {
             return [];
         }
 
@@ -191,7 +192,10 @@ class StoreDatumRequest extends FormRequest
             'uploadResourceType.in' => 'Bu mezon uchun tanlangan resurs turiga ruxsat berilmagan.',
             'uploadResourceFile.required' => 'Yuklanadigan faylni tanlang.',
             'uploadResourceFile.mimes' => 'Faqat PDF, JPG, JPEG yoki PNG fayl yuklash mumkin.',
-            'uploadResourceFile.max' => 'Fayl hajmi 2 MB dan oshmasligi kerak.',
+            'uploadResourceFile.max' => sprintf(
+                'Fayl hajmi %d MB dan oshmasligi kerak.',
+                max(1, (int) config('kpi.upload_max_file_size_mb', 5)),
+            ),
             'uploadResourceUrl.required' => 'Resurs havolasini kiriting.',
             'year.exists' => 'Faqat ushbu mezonga biriktirilgan faol yilni tanlash mumkin.',
         ];

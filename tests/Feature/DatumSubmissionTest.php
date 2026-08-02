@@ -27,7 +27,7 @@ class DatumSubmissionTest extends TestCase
         Storage::fake('local');
         $teacher = User::factory()->create();
         $criterion = $this->createCriterion([
-            'res_type' => 'file',
+            'res_type' => 'all',
             'checking' => 'ai',
             'ai_prompt' => 'Resursni %pointing% ballgacha baholang.',
             'ai_model' => 'gemini-test',
@@ -61,6 +61,81 @@ class DatumSubmissionTest extends TestCase
         $this->actingAs($teacher)
             ->get(route('upload.file.download', $datum))
             ->assertDownload('proof.pdf');
+    }
+
+    public function test_file_upload_limit_accepts_five_megabytes_and_rejects_larger_files(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion(['res_type' => 'file']);
+        $year = $this->createActiveYear();
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create(
+                    'five-megabytes.pdf',
+                    5 * 1024,
+                    'application/pdf',
+                ),
+                'year' => $year->id,
+            ])
+            ->assertRedirect(route('upload.show', $criterion))
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create(
+                    'too-large.pdf',
+                    (5 * 1024) + 1,
+                    'application/pdf',
+                ),
+                'year' => $year->id,
+            ])
+            ->assertSessionHasErrors('uploadResourceFile');
+
+        $this->assertDatabaseCount('data', 1);
+    }
+
+    public function test_ai_criterion_only_offers_files_and_rejects_a_crafted_url_submission(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'res_type' => 'all',
+            'checking' => 'ai',
+            'ai_prompt' => 'Tekshiring.',
+            'ai_model' => 'gemini-test',
+        ]);
+        $year = $this->createActiveYear();
+        Queue::fake();
+
+        $this->actingAs($teacher)
+            ->get(route('upload.show', $criterion))
+            ->assertOk()
+            ->assertSee('AI tekshiruvi uchun PDF, JPG, JPEG yoki PNG fayl yuklang.')
+            ->assertSee('id="uploadResourceFile"', false)
+            ->assertDontSee('value="url"', false)
+            ->assertDontSee('id="uploadResourceUrl"', false);
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'url',
+                'uploadResourceUrl' => 'https://example.com/resource',
+                'year' => $year->id,
+            ])
+            ->assertSessionHasErrors('uploadResourceType');
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'year' => $year->id,
+            ])
+            ->assertSessionHasErrors('uploadResourceFile');
+
+        $this->assertDatabaseCount('data', 0);
+        Queue::assertNothingPushed();
     }
 
     public function test_h_index_submission_can_be_created_with_single_profile(): void
@@ -191,7 +266,7 @@ class DatumSubmissionTest extends TestCase
         Storage::fake('local');
         $teacher = User::factory()->create();
         $criterion = $this->createCriterion([
-            'res_type' => 'url',
+            'res_type' => 'file',
             'checking' => 'ai',
             'ai_prompt' => 'Tekshiring.',
             'ai_model' => 'gemini-test',
@@ -203,8 +278,8 @@ class DatumSubmissionTest extends TestCase
 
         $this->actingAs($teacher)
             ->post(route('upload.store', $criterion), [
-                'uploadResourceType' => 'url',
-                'uploadResourceUrl' => 'https://example.com/resource',
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create('proof.pdf', 100, 'application/pdf'),
                 'year' => $year->id,
             ])
             ->assertRedirect();
@@ -285,6 +360,56 @@ class DatumSubmissionTest extends TestCase
             'status' => 'received',
             'name' => 'URL havola',
         ]);
+    }
+
+    public function test_cancelled_ai_url_can_be_resubmitted_as_a_file(): void
+    {
+        Storage::fake('local');
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'res_type' => 'url',
+            'checking' => 'ai',
+            'ai_prompt' => 'Tekshiring.',
+            'ai_model' => 'gemini-test',
+            'file_limit' => 1,
+        ]);
+        $year = $this->createActiveYear();
+        $cancelledDatum = Datum::query()->create([
+            'name' => 'Qaytarilgan URL',
+            'material' => ['type' => 'url', 'link' => 'https://example.com/rejected'],
+            'user_id' => $teacher->id,
+            'criterion_id' => $criterion->id,
+            'year_id' => $year->id,
+            'status' => 'cancelled',
+            'reason' => 'Fayl ko‘rinishida qayta yuboring.',
+        ]);
+        Queue::fake();
+
+        $this->actingAs($teacher)
+            ->get(route('upload.show', $criterion))
+            ->assertOk()
+            ->assertSee('id="uploadResourceFile"', false)
+            ->assertDontSee('id="uploadResourceUrl"', false);
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create('replacement.pdf', 100, 'application/pdf'),
+                'year' => $year->id,
+            ])
+            ->assertRedirect(route('upload.show', $criterion))
+            ->assertSessionHasNoErrors();
+
+        $replacement = Datum::query()->whereKeyNot($cancelledDatum)->sole();
+
+        $this->assertSame('cancelled', $cancelledDatum->fresh()->status);
+        $this->assertSame('checking', $replacement->status);
+        $this->assertSame('file', data_get($replacement->material, 'type'));
+        Storage::disk('local')->assertExists($replacement->storagePath());
+        Queue::assertPushed(
+            ProcessAiDatumEvaluation::class,
+            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $replacement->id,
+        );
     }
 
     public function test_manual_url_submission_is_received_without_ai_job(): void
