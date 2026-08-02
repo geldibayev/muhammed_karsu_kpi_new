@@ -10,12 +10,26 @@
                 'label' => 'AI ishlayapti',
                 'summary' => 'Oxirgi tekshiruv muvaffaqiyatli yakunlangan.',
             ],
+            'idle' => [
+                'card' => 'card-success',
+                'badge' => 'badge-success',
+                'icon' => 'fa-hourglass-half text-success',
+                'label' => 'AI kutish rejimida',
+                'summary' => 'Worker faol va yangi resurs kelishi bilan tekshirishni boshlaydi.',
+            ],
             'processing' => [
                 'card' => 'card-warning',
                 'badge' => 'badge-warning',
                 'icon' => 'fa-spinner text-warning',
                 'label' => 'AI navbatni ishlamoqda',
                 'summary' => 'Resurslar AI tekshiruvini kutmoqda.',
+            ],
+            'recovering' => [
+                'card' => 'card-warning',
+                'badge' => 'badge-warning',
+                'icon' => 'fa-sync-alt text-warning',
+                'label' => 'Navbat tiklanmoqda',
+                'summary' => 'Yo‘qolgan queue job avtomatik ravishda qayta navbatga qo‘yiladi.',
             ],
             'degraded' => [
                 'card' => 'card-warning',
@@ -82,6 +96,59 @@
                                     </div>
                                 @endif
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-outline card-info">
+                <div class="card-header">
+                    <h2 class="card-title font-weight-bold">Worker va real queue holati</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6 col-lg-3">
+                            <div class="description-block border-right">
+                                <h3 class="description-header {{ $status['worker_is_active'] ? 'text-success' : 'text-danger' }}">
+                                    {{ $status['worker_is_active'] ? 'FAOL' : 'FAOL EMAS' }}
+                                </h3>
+                                <span class="description-text">WORKER</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="description-block border-right">
+                                <h3 class="description-header text-primary">
+                                    {{ $status['queue_jobs'] ?? 'N/A' }}
+                                </h3>
+                                <span class="description-text">REAL QUEUE JOBLARI</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="description-block border-right">
+                                <h3 class="description-header text-warning">
+                                    {{ $status['processing_jobs'] ?? 'N/A' }}
+                                </h3>
+                                <span class="description-text">ISHLANMOQDA</span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="description-block">
+                                <h3 class="description-header text-warning">
+                                    {{ $status['orphaned_resources'] }}
+                                </h3>
+                                <span class="description-text">QAYTA TIKLANADI</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert {{ $status['worker_is_active'] ? 'alert-success' : 'alert-warning' }} mb-0 mt-3">
+                        @if($status['worker_is_active'])
+                            Worker doimiy ishlamoqda. Navbat bo‘sh bo‘lsa kutadi va yangi resurs kelishi bilan avtomatik tekshiradi.
+                        @else
+                            Worker heartbeat aniqlanmadi. Production’da <code>ai-evaluations</code> queue workerini Supervisor orqali doimiy ishlating.
+                        @endif
+                        <div class="small mt-1">
+                            Oxirgi worker heartbeat:
+                            <strong>{{ $status['worker_heartbeat_at']?->format('d.m.Y H:i:s') ?? 'Qayd etilmagan' }}</strong>
                         </div>
                     </div>
                 </div>

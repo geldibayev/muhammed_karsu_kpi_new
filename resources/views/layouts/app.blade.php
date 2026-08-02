@@ -199,10 +199,20 @@
                                     'icon' => 'fa-check-circle',
                                     'label' => 'Ishlayapti',
                                 ],
+                                'idle' => [
+                                    'badge' => 'badge-success',
+                                    'icon' => 'fa-hourglass-half',
+                                    'label' => 'Kutmoqda',
+                                ],
                                 'processing' => [
                                     'badge' => 'badge-warning',
                                     'icon' => 'fa-spinner',
                                     'label' => 'Navbatda',
+                                ],
+                                'recovering' => [
+                                    'badge' => 'badge-warning',
+                                    'icon' => 'fa-sync-alt',
+                                    'label' => 'Tiklanmoqda',
                                 ],
                                 'degraded' => [
                                     'badge' => 'badge-warning',

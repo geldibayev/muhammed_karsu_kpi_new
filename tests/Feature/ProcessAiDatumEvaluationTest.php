@@ -15,6 +15,7 @@ use App\Models\Report;
 use App\Models\User;
 use App\Services\AiSubmissionEvaluator;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Queue\Events\Looping;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
@@ -38,6 +39,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'kpi:ai-worker:last-failure-reason',
             'kpi:ai-worker:last-failure-datum-id',
             'kpi:ai-worker:last-failure-attempt',
+            'kpi:ai-worker:heartbeat-at',
+            'kpi:ai-worker:heartbeat-throttle',
         ] as $key) {
             Cache::forget($key);
         }
@@ -395,7 +398,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->createAiHistory('ai_evaluation', 'success', 'Birinchi tekshiruv');
         $this->createAiHistory('ai_failed', 'warning', 'Ikkinchi xato');
         $this->createAiHistory('ai_evaluation', 'success', 'Uchinchi tekshiruv');
-        $latestFailure = $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
+        $this->createAiHistory('ai_failed', 'warning', 'To‘rtinchi xato');
         $this->markAsSubmitted($this->createDatum(['status' => 'received']));
         $this->markAsSubmitted($this->createDatum(['status' => 'checking']));
         $this->createDatum(['status' => 'accepted']);
@@ -412,17 +415,16 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->get(route('home'))
             ->assertOk()
             ->assertSee('AI holati')
-            ->assertSee('Ishlamayapti')
+            ->assertSee('E’tibor kerak')
             ->assertSee(route('ai-status.index'));
 
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI ishlamayapti')
+            ->assertSee('AI ishlayapti, ammo xatolar bor')
             ->assertSee('Oxirgi AI xabari')
-            ->assertSee('To‘rtinchi xato')
-            ->assertSee('Hujjat ID:')
-            ->assertSee((string) $latestFailure->datum_id)
+            ->assertSee('2 ta resurs AI xatosidan keyin inson ko‘rigini kutmoqda.')
+            ->assertDontSee('Hujjat ID:')
             ->assertSee('Resurslar holati')
             ->assertSee('TEKSHIRILGAN')
             ->assertSee('NAVBATDA')
@@ -432,7 +434,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertDontSee('Hisoblash tartibi')
             ->assertDontSee('Hisobotlar kesimida AI holati')
             ->assertDontSee('Oxirgi 3 ta AI tekshiruvi')
-            ->assertDontSee('Worker heartbeat')
+            ->assertSee('Worker va real queue holati')
             ->assertDontSee('Qo‘lda tekshiriladigan kriteriya')
             ->assertViewMissing('statistics')
             ->assertViewMissing('recentChecks')
@@ -443,11 +445,11 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $statistics['failed_pending'] === 2
                 && $statistics['legacy_untracked'] === 0
                 && $statistics['evaluation_rate'] === 50.0)
-            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
-                && $status['reason'] === 'To‘rtinchi xato'
-                && $status['last_message'] === 'To‘rtinchi xato'
+            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'degraded'
+                && $status['reason'] === '2 ta resurs AI xatosidan keyin inson ko‘rigini kutmoqda.'
+                && $status['last_message'] === '2 ta resurs AI xatosidan keyin inson ko‘rigini kutmoqda.'
                 && $status['last_message_type'] === 'failure'
-                && $status['last_message_datum_id'] === $latestFailure->datum_id
+                && $status['last_message_datum_id'] === null
                 && $status['last_message_at'] !== null
                 && $status['pending_resources'] === 4
                 && $status['waiting_resources'] === 2
@@ -455,10 +457,11 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 && $status['legacy_untracked_resources'] === 0);
     }
 
-    public function test_stale_ai_queue_is_shown_as_unavailable_with_a_clear_reason(): void
+    public function test_stale_audit_queue_without_a_real_job_is_shown_as_recovering(): void
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
         config()->set('kpi.ai_queue_stale_after_minutes', 10);
+        config()->set('queue.default', 'database');
         $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
         $datum = $this->createDatum(['status' => 'checking']);
         $this->markAsSubmitted($datum);
@@ -472,41 +475,127 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->actingAs($statusViewer)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('Ishlamayapti')
-            ->assertSee('AI worker heartbeat hali qayd etilmagan.');
+            ->assertSee('Tiklanmoqda')
+            ->assertSee('Tizim uni avtomatik qayta navbatga qo‘yadi.');
 
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
-            ->assertSee('AI ishlamayapti')
-            ->assertSee('Oxirgi AI xabari')
-            ->assertSee('AI worker heartbeat hali qayd etilmagan.')
-            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
+            ->assertSee('Navbat tiklanmoqda')
+            ->assertSee('Joriy holat')
+            ->assertSee('Tizim uni avtomatik qayta navbatga qo‘yadi.')
+            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'recovering'
                 && $status['waiting_resources'] === 1
+                && $status['queue_jobs'] === 0
+                && $status['orphaned_resources'] === 1
+                && $status['last_message_type'] === 'status'
                 && $status['oldest_waiting_at'] !== null
                 && $status['oldest_waiting_at']->lte(now()->subMinutes(10))
-                && str_contains((string) $status['reason'], 'heartbeat'));
+                && str_contains((string) $status['reason'], 'avtomatik'));
     }
 
     public function test_recent_worker_heartbeat_keeps_an_old_backlog_in_processing_state(): void
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
         config()->set('kpi.ai_queue_stale_after_minutes', 10);
+        config()->set('queue.default', 'database');
         $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
         $datum = $this->createDatum(['status' => 'checking']);
         $this->markAsSubmitted($datum);
         $datum->histories()
             ->where('message_type', 'submission_created')
             ->update(['created_at' => now()->subHour()]);
-        Cache::put('kpi:ai-worker:last-seen-at', now()->toIso8601String(), now()->addHour());
+        ProcessAiDatumEvaluation::dispatch($datum->id, $datum->criterion_id);
+        Cache::put('kpi:ai-worker:heartbeat-at', now()->toIso8601String(), now()->addHour());
 
         $this->actingAs($statusViewer)
             ->get(route('ai-status.index'))
             ->assertOk()
             ->assertSee('AI navbatni ishlamoqda')
             ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'processing'
-                && $status['worker_last_seen_at'] !== null
+                && $status['worker_heartbeat_at'] !== null
+                && $status['worker_is_active']
+                && $status['queue_jobs'] === 1
                 && $status['waiting_resources'] === 1);
+    }
+
+    public function test_idle_worker_heartbeat_is_shown_as_waiting_for_a_new_resource(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        config()->set('queue.default', 'database');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+
+        event(new Looping('database', ProcessAiDatumEvaluation::QUEUE));
+
+        $this->assertNotNull(Cache::get('kpi:ai-worker:heartbeat-at'));
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('AI kutish rejimida')
+            ->assertSee('Navbat bo‘sh bo‘lsa kutadi va yangi resurs kelishi bilan avtomatik tekshiradi.')
+            ->assertSee('FAOL')
+            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'idle'
+                && $status['worker_is_active']
+                && $status['queue_jobs'] === 0
+                && $status['processing_jobs'] === 0
+                && $status['orphaned_resources'] === 0);
+    }
+
+    public function test_non_ai_worker_loop_does_not_create_an_ai_heartbeat(): void
+    {
+        event(new Looping('database', 'default'));
+
+        $this->assertNull(Cache::get('kpi:ai-worker:heartbeat-at'));
+    }
+
+    public function test_real_queue_with_no_worker_heartbeat_is_shown_as_unavailable(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        config()->set('queue.default', 'database');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $datum = $this->createDatum();
+        $this->markAsSubmitted($datum);
+        ProcessAiDatumEvaluation::dispatch($datum->id, $datum->criterion_id);
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('AI ishlamayapti')
+            ->assertSee('1 ta job real navbatda, lekin AI worker faol emas.')
+            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'unavailable'
+                && ! $status['worker_is_active']
+                && $status['queue_jobs'] === 1
+                && $status['last_message_type'] === 'status');
+    }
+
+    public function test_retryable_attempt_failure_with_a_live_worker_is_shown_as_recovering(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        config()->set('queue.default', 'database');
+        $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $datum = $this->createDatum();
+        $this->markAsSubmitted($datum);
+        ProcessAiDatumEvaluation::dispatch($datum->id, $datum->criterion_id);
+        Cache::put('kpi:ai-worker:heartbeat-at', now()->toIso8601String(), now()->addHour());
+        Cache::put('kpi:ai-worker:last-failure-at', now()->toIso8601String(), now()->addHour());
+        Cache::put('kpi:ai-worker:last-failure-datum-id', $datum->id, now()->addHour());
+        Cache::put(
+            'kpi:ai-worker:last-failure-reason',
+            'AI xizmatidan belgilangan vaqt ichida javob kelmadi.',
+            now()->addHour(),
+        );
+
+        $this->actingAs($statusViewer)
+            ->get(route('ai-status.index'))
+            ->assertOk()
+            ->assertSee('Navbat tiklanmoqda')
+            ->assertSee('worker avtomatik qayta urinadi')
+            ->assertViewHas('status', fn (array $status): bool => $status['state'] === 'recovering'
+                && $status['worker_is_active']
+                && $status['queue_jobs'] === 1
+                && $status['last_message_type'] === 'status'
+                && $status['last_message_datum_id'] === $datum->id);
     }
 
     public function test_latest_worker_attempt_failure_is_shown_immediately(): void

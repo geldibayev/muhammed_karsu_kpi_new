@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Actions\DescribeAiFailure;
+use App\Actions\GetAiQueueMetrics;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\Datum;
@@ -22,8 +23,10 @@ class DiagnoseAiQueue extends Command
 
     protected $description = 'AI konfiguratsiyasi va queue holatini maxfiy ma’lumotlarni chiqarmasdan tekshiradi';
 
-    public function handle(DescribeAiFailure $describeAiFailure): int
-    {
+    public function handle(
+        DescribeAiFailure $describeAiFailure,
+        GetAiQueueMetrics $getAiQueueMetrics,
+    ): int {
         $connection = (string) config('queue.default');
         $driver = (string) config("queue.connections.{$connection}.driver", 'unknown');
         $isQueuePaused = Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE);
@@ -39,7 +42,12 @@ class DiagnoseAiQueue extends Command
             )
             ->count();
 
-        $queueMetrics = $this->queueMetrics($connection, $driver);
+        $rawQueueMetrics = $getAiQueueMetrics->handle();
+        $queueMetrics = [
+            'total' => $rawQueueMetrics['total'] ?? 'N/A',
+            'reserved' => $rawQueueMetrics['reserved'] ?? 'N/A',
+            'oldest' => $rawQueueMetrics['oldest_at']?->format('d.m.Y H:i:s') ?? 'Mavjud emas',
+        ];
         $failedMetrics = $this->failedMetrics($describeAiFailure);
 
         $hasGeminiKey = $this->hasConfiguredGeminiKey();
@@ -48,6 +56,7 @@ class DiagnoseAiQueue extends Command
         $workerLastSeenAt = is_string($workerHeartbeat)
             ? CarbonImmutable::parse($workerHeartbeat)
             : null;
+        $workerProcessHeartbeatAt = $this->cachedDate('kpi:ai-worker:heartbeat-at');
         $lastSuccessAt = $this->cachedDate('kpi:ai-worker:last-success-at');
         $lastAttemptFailureAt = $this->cachedDate('kpi:ai-worker:last-failure-at');
         $lastAttemptFailureReason = Cache::get('kpi:ai-worker:last-failure-reason');
@@ -69,9 +78,10 @@ class DiagnoseAiQueue extends Command
             ['Queue’dagi AI joblar', $queueMetrics['total']],
             ['Ishlanayotgan AI joblar', $queueMetrics['reserved']],
             ['Eng eski AI job', $queueMetrics['oldest']],
-            ['Worker heartbeat', $workerLastSeenAt instanceof CarbonInterface
+            ['Oxirgi AI job boshlangan', $workerLastSeenAt instanceof CarbonInterface
                 ? $workerLastSeenAt->format('d.m.Y H:i:s')
                 : 'Hali qayd etilmagan'],
+            ['Worker process heartbeat', $workerProcessHeartbeatAt?->format('d.m.Y H:i:s') ?? 'Hali qayd etilmagan'],
             ['Oxirgi muvaffaqiyatli job', $lastSuccessAt?->format('d.m.Y H:i:s') ?? 'Mavjud emas'],
             ['Oxirgi urinish xatosi', $lastAttemptFailureAt?->format('d.m.Y H:i:s') ?? 'Mavjud emas'],
             ['Urinishdagi xavfsiz sabab', is_string($lastAttemptFailureReason)
@@ -91,7 +101,7 @@ class DiagnoseAiQueue extends Command
             $unprocessedResources,
             $queueMetrics,
             $failedMetrics,
-            $workerLastSeenAt,
+            $workerProcessHeartbeatAt,
             $hasUnresolvedAttemptFailure,
             is_string($lastAttemptFailureReason) ? $lastAttemptFailureReason : null,
             $isQueuePaused,
@@ -187,13 +197,16 @@ class DiagnoseAiQueue extends Command
         int $unprocessedResources,
         array $queueMetrics,
         array $failedMetrics,
-        ?CarbonInterface $workerLastSeenAt,
+        ?CarbonInterface $workerProcessHeartbeatAt,
         bool $hasUnresolvedAttemptFailure,
         ?string $lastAttemptFailureReason,
         bool $isQueuePaused,
         string $connection,
         bool $aiEvaluationsEnabled,
     ): string {
+        $workerStaleAfterSeconds = max(75, (int) config('kpi.ai_worker_stale_after_seconds', 90));
+        $workerIsActive = $workerProcessHeartbeatAt?->gt(now()->subSeconds($workerStaleAfterSeconds)) ?? false;
+
         if (! $aiEvaluationsEnabled) {
             return 'Xulosa: AI tekshiruvi Sozlamalar menyusidan vaqtincha o\'chirilgan. Navbat saqlanadi va AI yoqilganda davom etadi.';
         }
@@ -209,6 +222,10 @@ class DiagnoseAiQueue extends Command
         }
 
         if ($hasUnresolvedAttemptFailure) {
+            if (is_int($queueMetrics['total']) && $queueMetrics['total'] > 0 && $workerIsActive) {
+                return 'Xulosa: oxirgi AI urinishida xato bo‘lgan, ammo job real navbatda va faol worker avtomatik qayta urinadi.';
+            }
+
             return 'Xulosa: AI worker jobni oldi, lekin urinish xato bilan yakunlandi. Sabab: '
                 .($lastAttemptFailureReason ?? 'noma’lum xato.');
         }
@@ -220,18 +237,22 @@ class DiagnoseAiQueue extends Command
         if (is_int($queueMetrics['total'])
             && $queueMetrics['total'] > 0
             && $queueMetrics['reserved'] === 0
-            && ($workerLastSeenAt?->lte(now()->subMinutes(2)) ?? true)) {
+            && ! $workerIsActive) {
             return 'Xulosa: AI joblar navbatda, lekin hech biri worker tomonidan olinmagan. Worker to‘xtagan yoki ai-evaluations queue’ini tinglamayapti.';
         }
 
         if (is_int($queueMetrics['total'])
             && $queueMetrics['total'] > 0
-            && $workerLastSeenAt?->gt(now()->subMinutes(2))) {
+            && $workerIsActive) {
             return 'Xulosa: AI worker faol va navbatdagi resurslarni olayapti.';
         }
 
         if ($unprocessedResources > 0 && $queueMetrics['total'] === 0) {
-            return 'Xulosa: AI natijasiz resurslar bor, ammo queue bo‘sh. Backfill komandasini ishga tushirish kerak.';
+            return 'Xulosa: AI natijasiz resurslar bor, ammo real queue bo‘sh. Reconciliation ularni avtomatik qayta navbatga qo‘yadi.';
+        }
+
+        if ($unprocessedResources === 0 && $queueMetrics['total'] === 0 && $workerIsActive) {
+            return 'Xulosa: AI worker faol. Navbat bo‘sh va worker yangi resurs kelishini kutmoqda.';
         }
 
         return 'Xulosa: Laravel queue ma’lumotlarida aniq nosozlik ko‘rinmadi. Supervisor holati va worker logini tekshiring.';

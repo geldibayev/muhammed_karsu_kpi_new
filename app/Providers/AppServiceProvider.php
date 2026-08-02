@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobTimedOut;
+use Illuminate\Queue\Events\Looping;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -39,6 +40,21 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFour();
+        Queue::looping(function (Looping $event): void {
+            $queues = array_map('trim', explode(',', $event->queue));
+
+            if (! in_array(ProcessAiDatumEvaluation::QUEUE, $queues, true)) {
+                return;
+            }
+
+            if (Cache::add('kpi:ai-worker:heartbeat-throttle', true, now()->addSeconds(15))) {
+                Cache::put(
+                    'kpi:ai-worker:heartbeat-at',
+                    now()->toIso8601String(),
+                    now()->addDays(30),
+                );
+            }
+        });
         Queue::exceptionOccurred(function (JobExceptionOccurred $event): void {
             if ($event->job->resolveName() !== ProcessAiDatumEvaluation::class) {
                 return;

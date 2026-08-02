@@ -19,5 +19,6 @@ return [
         '4.1.6' => env('KPI_REVIEWER_4_1_6_HEMIS_ID', '3461612013'),
     ],
     'ai_queue_stale_after_minutes' => 10,
+    'ai_worker_stale_after_seconds' => (int) env('KPI_AI_WORKER_STALE_AFTER_SECONDS', 90),
     'ai_requests_per_minute' => (int) env('KPI_AI_REQUESTS_PER_MINUTE', 10),
 ];

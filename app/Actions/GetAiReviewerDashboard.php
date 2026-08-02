@@ -50,6 +50,13 @@ class GetAiReviewerDashboard
 
         $totalResources = (int) ($resourceAggregate->total ?? 0);
         $evaluatedResources = (int) ($resourceAggregate->evaluated ?? 0);
+        $evaluationRate = $totalResources > 0
+            ? round(($evaluatedResources / $totalResources) * 100, 1)
+            : 0.0;
+
+        if ($evaluatedResources < $totalResources) {
+            $evaluationRate = min(99.9, $evaluationRate);
+        }
 
         return [
             'status' => $this->getAiReviewerHealth->handle(),
@@ -59,9 +66,7 @@ class GetAiReviewerDashboard
                 'waiting' => (int) ($resourceAggregate->waiting ?? 0),
                 'failed_pending' => (int) ($resourceAggregate->failed_pending ?? 0),
                 'legacy_untracked' => (int) ($resourceAggregate->legacy_untracked ?? 0),
-                'evaluation_rate' => $totalResources > 0
-                    ? round(($evaluatedResources / $totalResources) * 100, 1)
-                    : 0.0,
+                'evaluation_rate' => $evaluationRate,
             ],
         ];
     }

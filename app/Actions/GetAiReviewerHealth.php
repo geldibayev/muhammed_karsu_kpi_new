@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Datum;
 use App\Models\DatumHistory;
 use App\Models\Option;
@@ -9,12 +10,15 @@ use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 
 class GetAiReviewerHealth
 {
+    public function __construct(private GetAiQueueMetrics $getAiQueueMetrics) {}
+
     /**
      * @return array{
-     *     state: 'operational'|'processing'|'degraded'|'unavailable'|'disabled'|'unknown',
+     *     state: 'operational'|'idle'|'processing'|'recovering'|'degraded'|'unavailable'|'disabled'|'unknown',
      *     checked_at: CarbonInterface|null,
      *     reason: string|null,
      *     last_message: string|null,
@@ -26,6 +30,11 @@ class GetAiReviewerHealth
      *     failed_pending_resources: int,
      *     legacy_untracked_resources: int,
      *     worker_last_seen_at: CarbonInterface|null,
+     *     worker_heartbeat_at: CarbonInterface|null,
+     *     worker_is_active: bool,
+     *     queue_jobs: int|null,
+     *     processing_jobs: int|null,
+     *     orphaned_resources: int,
      *     oldest_waiting_at: CarbonInterface|null
      * }
      */
@@ -79,6 +88,13 @@ class GetAiReviewerHealth
         $workerLastFailureAt = $this->toDate(Cache::get('kpi:ai-worker:last-failure-at'));
         $workerLastFailureReason = Cache::get('kpi:ai-worker:last-failure-reason');
         $workerLastFailureDatumId = Cache::get('kpi:ai-worker:last-failure-datum-id');
+        $workerHeartbeatAt = $this->toDate(Cache::get('kpi:ai-worker:heartbeat-at'));
+        $workerStaleAfterSeconds = max(75, (int) config('kpi.ai_worker_stale_after_seconds', 90));
+        $workerIsActive = $workerHeartbeatAt?->gt(now()->subSeconds($workerStaleAfterSeconds)) ?? false;
+        $queueMetrics = $this->getAiQueueMetrics->handle();
+        $queueJobs = $queueMetrics['total'];
+        $processingJobs = $queueMetrics['reserved'];
+        $isQueuePaused = Queue::isPaused($queueMetrics['connection'], ProcessAiDatumEvaluation::QUEUE);
         $hasUnresolvedAttemptFailure = $workerLastFailureAt !== null
             && ($workerLastSuccessAt === null || $workerLastFailureAt->gt($workerLastSuccessAt));
         $workerLastAttemptAt = match (true) {
@@ -89,48 +105,73 @@ class GetAiReviewerHealth
         };
         $staleAfterMinutes = max(1, (int) config('kpi.ai_queue_stale_after_minutes', 10));
         $staleThreshold = now()->subMinutes($staleAfterMinutes);
-        $hasStaleQueue = ($oldestWaitingAt?->lte($staleThreshold) ?? false)
-            && ($workerLastSeenAt?->lte($staleThreshold) ?? true);
+        $hasOrphanedQueue = $queueMetrics['supported']
+            && $waitingResources > 0
+            && $queueJobs === 0
+            && ($oldestWaitingAt?->lte($staleThreshold) ?? false);
+        $orphanedResources = $hasOrphanedQueue ? $waitingResources : 0;
+        $hasStoppedWorker = $queueMetrics['supported']
+            && is_int($queueJobs)
+            && $queueJobs > 0
+            && ! $workerIsActive;
+        $isRetryingAfterAttemptFailure = $hasUnresolvedAttemptFailure
+            && is_int($queueJobs)
+            && $queueJobs > 0
+            && $workerIsActive;
 
         $state = match (true) {
             ! $aiEvaluationsEnabled => 'disabled',
+            $isQueuePaused => 'unavailable',
+            $isRetryingAfterAttemptFailure => 'recovering',
             $hasUnresolvedAttemptFailure => 'unavailable',
-            $hasStaleQueue => 'unavailable',
-            $latestCheck?->message_type === 'ai_failed' => 'unavailable',
+            $hasStoppedWorker => 'unavailable',
+            $hasOrphanedQueue => 'recovering',
             $failedPendingResources > 0 => 'degraded',
-            $waitingResources > 0 => 'processing',
+            (is_int($queueJobs) && $queueJobs > 0) || $waitingResources > 0 => 'processing',
+            $workerIsActive => 'idle',
             $latestCheck?->message_type === 'ai_evaluation' => 'operational',
+            $latestCheck?->message_type === 'ai_failed' => 'degraded',
             default => 'unknown',
         };
 
         $reason = match (true) {
             ! $aiEvaluationsEnabled => 'AI tekshiruvi administrator tomonidan vaqtincha o\'chirilgan.',
+            $isQueuePaused => 'AI queue administrator yoki tizim tomonidan vaqtincha pauza qilingan.',
+            $isRetryingAfterAttemptFailure => is_string($workerLastFailureReason)
+                ? $workerLastFailureReason.' Job real navbatda va worker avtomatik qayta urinadi.'
+                : 'AI urinishida xato yuz berdi. Job real navbatda va worker avtomatik qayta urinadi.',
             $hasUnresolvedAttemptFailure => is_string($workerLastFailureReason)
                 ? $workerLastFailureReason
                 : 'AI worker jobni oldi, lekin urinish xato bilan yakunlandi.',
-            $hasStaleQueue => $workerLastSeenAt === null
-                ? "{$waitingResources} ta resurs navbatda, lekin AI worker heartbeat hali qayd etilmagan."
-                : "{$waitingResources} ta resurs navbatda. AI worker oxirgi marta {$workerLastSeenAt->format('d.m.Y H:i:s')} da faol bo‘lgan.",
-            $latestCheck?->message_type === 'ai_failed' => $latestCheck->message,
+            $hasStoppedWorker => "{$queueJobs} ta job real navbatda, lekin AI worker faol emas.",
+            $hasOrphanedQueue => "{$orphanedResources} ta resursning navbat yozuvi bor, ammo real job topilmadi. Tizim uni avtomatik qayta navbatga qo‘yadi.",
             $failedPendingResources > 0 => "{$failedPendingResources} ta resurs AI xatosidan keyin inson ko‘rigini kutmoqda.",
-            $waitingResources > 0 => "{$waitingResources} ta resurs AI tekshiruv navbatida.",
+            (is_int($queueJobs) && $queueJobs > 0) || $waitingResources > 0 => "{$waitingResources} ta resurs AI tekshiruv navbatida.",
+            $workerIsActive => 'AI worker faol. Navbat bo‘sh, yangi resurs kelishini kutmoqda.',
+            $latestCheck?->message_type === 'ai_failed' => $latestCheck->message,
             $legacyUntrackedResources > 0 && $latestCheck === null => "{$legacyUntrackedResources} ta eski resursda AI navbat auditi mavjud emas. Ular joriy worker holatini bildirmaydi.",
             default => null,
         };
-        $isProblemState = in_array($state, ['unavailable', 'degraded'], true);
+        $hasActualFailure = ($hasUnresolvedAttemptFailure && ! $isRetryingAfterAttemptFailure)
+            || $failedPendingResources > 0
+            || ($state === 'degraded' && $latestCheck?->message_type === 'ai_failed');
         $lastMessage = match (true) {
             $state === 'disabled' => $reason,
-            $isProblemState => $reason,
+            $reason !== null => $reason,
             default => $latestCheck?->message ?? $reason,
         };
         $lastMessageAt = match (true) {
             $hasUnresolvedAttemptFailure => $workerLastFailureAt,
-            $isProblemState && $latestCheck?->message_type === 'ai_failed' => $latestCheck->created_at,
+            $hasStoppedWorker => $workerHeartbeatAt,
+            $hasOrphanedQueue => $oldestWaitingAt,
+            $hasActualFailure && $latestCheck?->message_type === 'ai_failed' => $latestCheck->created_at,
+            $workerIsActive => $workerHeartbeatAt,
             $state === 'operational' && $latestCheck !== null => $latestCheck->created_at,
             default => $workerLastAttemptAt ?? $latestCheck?->created_at,
         };
         $lastMessageType = match (true) {
-            $isProblemState => 'failure',
+            $hasActualFailure => 'failure',
+            $reason !== null => 'status',
             $latestCheck?->message_type === 'ai_evaluation' => 'success',
             $lastMessage !== null => 'status',
             default => null,
@@ -139,17 +180,19 @@ class GetAiReviewerHealth
             $hasUnresolvedAttemptFailure => is_numeric($workerLastFailureDatumId)
                 ? (int) $workerLastFailureDatumId
                 : null,
-            $hasStaleQueue => null,
-            $latestCheck?->message_type === 'ai_failed' => (int) $latestCheck->datum_id,
-            $failedPendingResources > 0,
+            $hasStoppedWorker,
+            $hasOrphanedQueue => null,
+            $failedPendingResources > 0 => null,
+            $hasActualFailure && $latestCheck?->message_type === 'ai_failed' => (int) $latestCheck->datum_id,
             $waitingResources > 0 => null,
+            $reason !== null => null,
             $latestCheck?->message_type === 'ai_evaluation' => (int) $latestCheck->datum_id,
             default => null,
         };
 
         return [
             'state' => $state,
-            'checked_at' => $workerLastAttemptAt ?? $latestCheck?->created_at,
+            'checked_at' => $workerHeartbeatAt ?? $workerLastAttemptAt ?? $latestCheck?->created_at,
             'reason' => $reason,
             'last_message' => $lastMessage,
             'last_message_at' => $lastMessageAt,
@@ -160,6 +203,11 @@ class GetAiReviewerHealth
             'failed_pending_resources' => $failedPendingResources,
             'legacy_untracked_resources' => $legacyUntrackedResources,
             'worker_last_seen_at' => $workerLastSeenAt,
+            'worker_heartbeat_at' => $workerHeartbeatAt,
+            'worker_is_active' => $workerIsActive,
+            'queue_jobs' => $queueJobs,
+            'processing_jobs' => $processingJobs,
+            'orphaned_resources' => $orphanedResources,
             'oldest_waiting_at' => $oldestWaitingAt,
         ];
     }

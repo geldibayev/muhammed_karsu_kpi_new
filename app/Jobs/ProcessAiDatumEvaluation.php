@@ -31,8 +31,6 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 60;
 
-    public int $uniqueFor = 604800;
-
     public int $maxExceptions = 3;
 
     public function __construct(
@@ -186,6 +184,11 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
     public function retryUntil(): DateTimeInterface
     {
         return now()->addDays(7);
+    }
+
+    public function uniqueFor(): int
+    {
+        return max(60, (int) config('kpi.ai_queue_stale_after_minutes', 10) * 60);
     }
 
     public function uniqueId(): string
