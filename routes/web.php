@@ -5,6 +5,7 @@ use App\Http\Controllers\AiReviewerStatusController;
 use App\Http\Controllers\CriterionController;
 use App\Http\Controllers\CriterionPointController;
 use App\Http\Controllers\CriterionRatingController;
+use App\Http\Controllers\CriterionResourceStatisticsController;
 use App\Http\Controllers\DatumController;
 use App\Http\Controllers\DatumHistoryController;
 use App\Http\Controllers\HemisController;
@@ -33,6 +34,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/statistics', ResourceStatisticsController::class)
         ->middleware('can:view-resource-statistics')
         ->name('statistics.index');
+    Route::get('/criterion-resource-statistics', CriterionResourceStatisticsController::class)
+        ->middleware('can:view-resource-statistics')
+        ->name('criterion-resource-statistics.index');
     Route::get('/settings', [SystemSettingsController::class, 'index'])
         ->middleware('can:manage-kpi-settings')
         ->name('settings.index');

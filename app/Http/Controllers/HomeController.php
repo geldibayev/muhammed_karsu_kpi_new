@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\GetCriterionResourceStatistics;
 use App\Models\Criterion;
 use App\Models\Option;
 use App\Models\Point;
@@ -22,7 +21,6 @@ class HomeController extends Controller
     public function index(
         Request $request,
         RatingMethodPresenter $ratingMethodPresenter,
-        GetCriterionResourceStatistics $getCriterionResourceStatistics,
     ): View {
         $degree = $request->user()->degree;
         $report = Report::query()->where('status', '1')->latest('id')->first();
@@ -50,12 +48,6 @@ class HomeController extends Controller
             ->mapWithKeys(fn (Criterion $criterion): array => [
                 $criterion->getKey() => $ratingMethodPresenter->describe($criterion, $degree),
             ]);
-        $showsCriterionResourceStatistics = $request->user()->can('view-resource-statistics');
-        $criterionResourceStatistics = $showsCriterionResourceStatistics
-            ? $getCriterionResourceStatistics->handle(
-                $criteria->flatMap(fn (Criterion $criterion) => $criterion->children->modelKeys()),
-            )
-            : collect();
         $points = $report === null
             ? collect()
             : Point::query()
@@ -76,8 +68,6 @@ class HomeController extends Controller
             'breadcrumbs',
             'resourceUploadsEnabled',
             'ratingMethods',
-            'showsCriterionResourceStatistics',
-            'criterionResourceStatistics',
         ]));
     }
 

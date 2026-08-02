@@ -18,9 +18,6 @@
                         <th>Mezon</th>
                         <th class="text-center" style="width: 20%;">Masʼul</th>
                         <th class="text-center" style="width: 15%;">Baholash usuli</th>
-                        @if($showsCriterionResourceStatistics)
-                            <th class="text-center" style="width: 24%;">Resurslar statistikasi</th>
-                        @endif
                         <th class="text-center" style="width: 10%;">Ball</th>
                         <th class="text-center" style="width: 10%;">Amallar</th>
                     </tr>
@@ -30,7 +27,7 @@
                     @foreach($criteria as $item)
                         <tr style="background-color: #eee">
                             <th class="align-middle text-center p-4">#{{ $main }}</th>
-                            <th colspan="{{ $showsCriterionResourceStatistics ? 6 : 5 }}" class="align-middle">
+                            <th colspan="5" class="align-middle">
                                 {{ data_get($item->name, 'uz', 'Nomsiz bo\'lim') }}
                             </th>
                         </tr>
@@ -67,33 +64,6 @@
                                         :criterion="$value"
                                     />
                                 </td>
-                                @if($showsCriterionResourceStatistics)
-                                    @php($resourceStatistics = $criterionResourceStatistics->get($value->getKey()))
-                                    <td class="align-middle text-center">
-                                        <div class="d-flex flex-wrap justify-content-center">
-                                            <span class="badge badge-secondary mr-1 mb-1 px-2 py-1">
-                                                Jami: {{ $resourceStatistics['total'] }}
-                                            </span>
-                                            <span class="badge badge-success mr-1 mb-1 px-2 py-1">
-                                                Tekshirilgan: {{ $resourceStatistics['checked'] }}
-                                            </span>
-                                            <span class="badge badge-warning mr-1 mb-1 px-2 py-1">
-                                                Tekshirilmagan: {{ $resourceStatistics['unchecked'] }}
-                                            </span>
-                                            <span class="badge badge-danger mr-1 mb-1 px-2 py-1">
-                                                Qaytarilgan: {{ $resourceStatistics['returned'] }}
-                                            </span>
-                                            <span class="badge badge-dark mr-1 mb-1 px-2 py-1">
-                                                O‘chirilgan: {{ $resourceStatistics['deleted'] }}
-                                            </span>
-                                            @if($resourceStatistics['other'] > 0)
-                                                <span class="badge badge-info mr-1 mb-1 px-2 py-1">
-                                                    Boshqa: {{ $resourceStatistics['other'] }}
-                                                </span>
-                                            @endif
-                                        </div>
-                                    </td>
-                                @endif
                                 <td class="align-middle text-center">
                                     <span class="font-weight-bold text-success">
                                         {{ number_format($points->get($value->id, 0), 2) }}

@@ -14,7 +14,7 @@ class ResourceStatisticsTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_configured_viewer_sees_per_criterion_statistics_column_on_home(): void
+    public function test_configured_viewer_sees_per_criterion_statistics_on_its_own_page(): void
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
         $viewer = User::factory()->create(['hemis_id' => 3172011004]);
@@ -67,38 +67,117 @@ class ResourceStatisticsTest extends TestCase
         $this->actingAs($viewer)
             ->get(route('home'))
             ->assertOk()
-            ->assertSee('Resurslar statistikasi')
-            ->assertSee('Jami: 15')
-            ->assertSee('Tekshirilgan: 3')
-            ->assertSee('Tekshirilmagan: 3')
-            ->assertSee('Qaytarilgan: 4')
-            ->assertSee('O‘chirilgan: 5')
-            ->assertViewHas('showsCriterionResourceStatistics', true)
-            ->assertViewHas('criterionResourceStatistics', function ($statistics) use ($criterion, $emptyCriterion): bool {
-                return $statistics->get($criterion->id) === [
-                    'total' => 15,
-                    'checked' => 3,
-                    'unchecked' => 3,
-                    'returned' => 4,
-                    'deleted' => 5,
-                    'other' => 0,
-                ] && $statistics->get($emptyCriterion->id) === [
-                    'total' => 0,
-                    'checked' => 0,
-                    'unchecked' => 0,
-                    'returned' => 0,
-                    'deleted' => 0,
-                    'other' => 0,
-                ];
+            ->assertDontSee('Resurslar statistikasi')
+            ->assertSee('Kriteriyalar statistikasi')
+            ->assertSee(route('criterion-resource-statistics.index'));
+
+        $this->actingAs($viewer)
+            ->get(route('criterion-resource-statistics.index'))
+            ->assertOk()
+            ->assertSee('Kriteriyalar bo‘yicha yuklangan resurslar')
+            ->assertSee('Resursli kriteriya')
+            ->assertSee('Jami')
+            ->assertSee('Tekshirilgan')
+            ->assertSee('Tekshirilmagan')
+            ->assertSee('Qaytarilgan')
+            ->assertSee('O‘chirilgan')
+            ->assertViewHas('criteria', function ($criteria) use ($criterion, $emptyCriterion): bool {
+                $statistics = $criteria->keyBy('id');
+
+                return (int) $statistics->get($criterion->id)->total === 15
+                    && (int) $statistics->get($criterion->id)->checked === 3
+                    && (int) $statistics->get($criterion->id)->unchecked === 3
+                    && (int) $statistics->get($criterion->id)->returned === 4
+                    && (int) $statistics->get($criterion->id)->deleted === 5
+                    && (int) $statistics->get($criterion->id)->other === 0
+                    && (int) $statistics->get($emptyCriterion->id)->total === 0;
             });
 
         $this->actingAs($otherUser)
             ->get(route('home'))
             ->assertOk()
-            ->assertDontSee('Resurslar statistikasi')
-            ->assertDontSee('Tekshirilgan: 3')
-            ->assertViewHas('showsCriterionResourceStatistics', false)
-            ->assertViewHas('criterionResourceStatistics', fn ($statistics): bool => $statistics->isEmpty());
+            ->assertDontSee(route('criterion-resource-statistics.index'));
+
+        $this->actingAs($otherUser)
+            ->get(route('criterion-resource-statistics.index'))
+            ->assertForbidden();
+    }
+
+    public function test_each_criterion_statistic_column_has_a_sort_link_and_counts_are_sorted(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $viewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $owner = User::factory()->create();
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Saralash hisoboti'],
+            'status' => '1',
+        ]);
+        $parent = Criterion::query()->create([
+            'name' => ['uz' => 'Saralash bo‘limi'],
+            'report_id' => $report->id,
+            'upload' => '0',
+            'status' => '1',
+        ]);
+        $firstCriterion = Criterion::query()->create([
+            'name' => ['uz' => 'Kam resursli kriteriya'],
+            'parent_id' => $parent->id,
+            'report_id' => $report->id,
+            'upload' => '1',
+            'status' => '1',
+        ]);
+        $secondCriterion = Criterion::query()->create([
+            'name' => ['uz' => 'Ko‘p resursli kriteriya'],
+            'parent_id' => $parent->id,
+            'report_id' => $report->id,
+            'upload' => '1',
+            'status' => '1',
+        ]);
+
+        foreach ([$firstCriterion, $secondCriterion, $secondCriterion] as $criterion) {
+            Datum::query()->create([
+                'name' => 'Tasdiqlangan resurs',
+                'user_id' => $owner->id,
+                'criterion_id' => $criterion->id,
+                'status' => 'accepted',
+                'point' => 0,
+            ]);
+        }
+
+        $ascendingResponse = $this->actingAs($viewer)
+            ->get(route('criterion-resource-statistics.index', [
+                'sort' => 'checked',
+                'direction' => 'asc',
+            ]))
+            ->assertOk()
+            ->assertViewHas('criteria', fn ($criteria): bool => $criteria->modelKeys() === [
+                $firstCriterion->id,
+                $secondCriterion->id,
+            ]);
+
+        foreach (['total', 'checked', 'unchecked', 'returned', 'deleted', 'other'] as $column) {
+            $ascendingResponse->assertSee(route('criterion-resource-statistics.index', [
+                'sort' => $column,
+                'direction' => 'desc',
+            ]));
+        }
+
+        $this->actingAs($viewer)
+            ->get(route('criterion-resource-statistics.index', [
+                'sort' => 'checked',
+                'direction' => 'desc',
+            ]))
+            ->assertOk()
+            ->assertViewHas('criteria', fn ($criteria): bool => $criteria->modelKeys() === [
+                $secondCriterion->id,
+                $firstCriterion->id,
+            ]);
+
+        $this->actingAs($viewer)
+            ->get(route('criterion-resource-statistics.index', [
+                'sort' => 'not_allowed',
+                'direction' => 'desc',
+            ]))
+            ->assertSessionHasErrors('sort');
     }
 
     public function test_configured_hemis_user_sees_all_resource_status_statistics(): void

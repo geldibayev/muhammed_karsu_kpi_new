@@ -123,6 +123,13 @@
                     @endcan
                     @can('view-resource-statistics')
                         <li class="nav-item">
+                            <a href="{{ route('criterion-resource-statistics.index') }}"
+                               class="nav-link @if(request()->routeIs('criterion-resource-statistics.*')) active @endif">
+                                <i class="nav-icon fas fa-table"></i>
+                                <p>Kriteriyalar statistikasi</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="{{ route('statistics.index') }}"
                                class="nav-link @if(request()->routeIs('statistics.*')) active @endif">
                                 <i class="nav-icon fas fa-chart-pie"></i>
