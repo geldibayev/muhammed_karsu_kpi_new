@@ -89,7 +89,7 @@ class ReviewDatumSubmission
                 $pageCount,
             );
             $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
-                .'. Avtomatik xom ball: '.number_format(
+                .'. Hisoblangan ball: '.number_format(
                     $point,
                     ($lockedDatum->criterion->isOakArticleCriterion()
                         || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()) ? 4 : 2,

@@ -792,7 +792,7 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
-            'message' => 'Mas’ul tomonidan tasdiqlandi. Qoida: Videodars. Avtomatik xom ball: 1.50.',
+            'message' => 'Mas’ul tomonidan tasdiqlandi. Qoida: Videodars. Hisoblangan ball: 1.50.',
         ]);
         $this->assertSame(6.0, (float) Point::query()
             ->where('user_id', $owner->id)

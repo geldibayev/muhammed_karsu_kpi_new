@@ -623,6 +623,8 @@ class RatingPageTest extends TestCase
             ->assertSee('Sizning toifangiz uchun maksimal ball')
             ->assertSee('Oddiy misol')
             ->assertSee('5.00 × 8 ÷ 10 = 4.00 ball')
+            ->assertDontSee('xom')
+            ->assertDontSee('Xom')
             ->assertSee('Sun’iy intellekt tomonidan baholangan')
             ->assertSee('Auditsiz kriteriya')
             ->assertSee('Auditda qayd etilmagan')

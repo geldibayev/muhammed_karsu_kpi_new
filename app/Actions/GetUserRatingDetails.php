@@ -267,7 +267,7 @@ class GetUserRatingDetails
             Formula::Competition => [
                 'key' => Formula::Competition,
                 'label' => 'Raqobat asosida',
-                'explanation' => 'Kriteriyadagi eng yuqori xom natija maksimal ballni oladi, qolgan natijalar unga nisbatan mutanosib hisoblanadi.',
+                'explanation' => 'Kriteriyadagi eng yuqori natija maksimal ballni oladi, qolgan natijalar unga nisbatan mutanosib hisoblanadi.',
                 'note' => 'Eng yuqori natija o‘zgarsa, shu kriteriyadagi barcha foydalanuvchilarning yakuniy ballari qayta hisoblanadi.',
                 'example' => "Eng yuqori natija 10, foydalanuvchi natijasi 8 va maksimal ball {$formattedMaximum} bo‘lsa: {$formattedMaximum} × 8 ÷ 10 = ".number_format($exampleMaximum * 0.8, 2, '.', '').' ball.',
                 'maximum' => $maximum,
@@ -275,15 +275,15 @@ class GetUserRatingDetails
             Formula::Maximum => [
                 'key' => Formula::Maximum,
                 'label' => 'Maksimal ballgacha',
-                'explanation' => 'Tasdiqlangan resurslardan yig‘ilgan xom ball toifa uchun belgilangan maksimal chegaragacha hisoblanadi.',
-                'note' => 'Yig‘ilgan xom ball chegaradan oshsa, yakuniy natija maksimal ball bilan cheklanadi.',
-                'example' => 'Xom ball '.number_format($exampleMaximum + 2, 2, '.', '')." va maksimal ball {$formattedMaximum} bo‘lsa, yakuniy natija {$formattedMaximum} ball bo‘ladi.",
+                'explanation' => 'Tasdiqlangan resurslardan to‘plangan ball foydalanuvchi toifasi uchun belgilangan maksimal chegaragacha hisoblanadi.',
+                'note' => 'To‘plangan ball chegaradan oshsa, yakuniy natija maksimal ball bilan cheklanadi.',
+                'example' => 'To‘plangan ball '.number_format($exampleMaximum + 2, 2, '.', '')." va maksimal ball {$formattedMaximum} bo‘lsa, yakuniy natija {$formattedMaximum} ball bo‘ladi.",
                 'maximum' => $maximum,
             ],
             Formula::Unlimited => [
                 'key' => Formula::Unlimited,
                 'label' => 'Cheklanmagan yig‘indi',
-                'explanation' => 'Barcha tasdiqlangan resurslarning xom ballari qo‘shiladi va yakuniy natijaga to‘liq o‘tadi.',
+                'explanation' => 'Barcha tasdiqlangan resurslarning ballari qo‘shiladi va yakuniy natijaga to‘liq o‘tadi.',
                 'note' => 'Bu usulda kriteriya bo‘yicha umumiy ballga yuqori chegara qo‘yilmaydi.',
                 'example' => 'Ikki resurs 2 va 3 ball olsa, yakuniy natija 2 + 3 = 5 ball bo‘ladi.',
                 'maximum' => $maximum,
