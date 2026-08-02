@@ -65,6 +65,24 @@
             'success' => 'Oxirgi tekshiruv',
             default => 'Joriy holat',
         };
+
+        $resourceCards = [
+            [
+                'value' => $resourceStatistics['evaluated'],
+                'label' => 'TEKSHIRILGAN',
+                'class' => 'text-success',
+            ],
+            [
+                'value' => $resourceStatistics['waiting'],
+                'label' => 'NAVBATDA',
+                'class' => 'text-warning',
+            ],
+            [
+                'value' => $resourceStatistics['failed_pending'],
+                'label' => 'XATO',
+                'class' => 'text-danger',
+            ],
+        ];
     @endphp
 
     <section class="content">
@@ -107,7 +125,7 @@
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
-                        <div class="col-6 col-lg-3">
+                        <div class="col-12 col-md-4">
                             <div class="description-block border-right">
                                 <h3 class="description-header {{ $status['worker_is_active'] ? 'text-success' : 'text-danger' }}">
                                     {{ $status['worker_is_active'] ? 'FAOL' : 'FAOL EMAS' }}
@@ -115,7 +133,7 @@
                                 <span class="description-text">WORKER</span>
                             </div>
                         </div>
-                        <div class="col-6 col-lg-3">
+                        <div class="col-12 col-md-4">
                             <div class="description-block border-right">
                                 <h3 class="description-header text-primary">
                                     {{ $status['queue_jobs'] ?? 'N/A' }}
@@ -123,20 +141,12 @@
                                 <span class="description-text">REAL QUEUE JOBLARI</span>
                             </div>
                         </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="description-block border-right">
+                        <div class="col-12 col-md-4">
+                            <div class="description-block">
                                 <h3 class="description-header text-warning">
                                     {{ $status['processing_jobs'] ?? 'N/A' }}
                                 </h3>
-                                <span class="description-text">ISHLANMOQDA</span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="description-block">
-                                <h3 class="description-header text-warning">
-                                    {{ $status['orphaned_resources'] }}
-                                </h3>
-                                <span class="description-text">QAYTA TIKLANADI</span>
+                                <span class="description-text">Ishlayotgan ishlar</span>
                             </div>
                         </div>
                     </div>
@@ -151,6 +161,12 @@
                             <strong>{{ $status['worker_heartbeat_at']?->format('d.m.Y H:i:s') ?? 'Qayd etilmagan' }}</strong>
                         </div>
                     </div>
+                    @if($status['orphaned_resources'] > 0)
+                        <div class="alert alert-warning mt-3 mb-0">
+                            <i class="fas fa-sync-alt mr-1"></i>
+                            Tizimda {{ $status['orphaned_resources'] }} ta resurs uchun navbat yozuvi qayta tiklanmoqda.
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -163,39 +179,23 @@
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
-                        <div class="col-6 col-lg-3">
-                            <div class="description-block border-right">
-                                <h3 class="description-header text-success">
-                                    {{ $resourceStatistics['evaluated'] }}
-                                </h3>
-                                <span class="description-text">TEKSHIRILGAN</span>
+                        @foreach ($resourceCards as $index => $resourceCard)
+                            <div class="col-12 col-md-4">
+                                <div class="description-block {{ $index < 2 ? 'border-right' : '' }}">
+                                    <h3 class="description-header {{ $resourceCard['class'] }}">
+                                        {{ $resourceCard['value'] }}
+                                    </h3>
+                                    <span class="description-text">{{ $resourceCard['label'] }}</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="description-block border-right">
-                                <h3 class="description-header text-warning">
-                                    {{ $resourceStatistics['waiting'] }}
-                                </h3>
-                                <span class="description-text">NAVBATDA</span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="description-block border-right">
-                                <h3 class="description-header text-danger">
-                                    {{ $resourceStatistics['failed_pending'] }}
-                                </h3>
-                                <span class="description-text">XATO</span>
-                            </div>
-                        </div>
-                        <div class="col-6 col-lg-3">
-                            <div class="description-block">
-                                <h3 class="description-header text-secondary">
-                                    {{ $resourceStatistics['legacy_untracked'] }}
-                                </h3>
-                                <span class="description-text">NAVBATGA QO‘YILMAGAN</span>
-                            </div>
-                        </div>
+                        @endforeach
                     </div>
+
+                    @if($resourceStatistics['legacy_untracked'] > 0)
+                        <div class="text-right text-muted small mt-2">
+                            Navbatga qo‘yilmagan eski resurslar: {{ $resourceStatistics['legacy_untracked'] }}
+                        </div>
+                    @endif
 
                     <div class="progress progress-sm mt-3" aria-label="AI tekshirgan resurslar ulushi">
                         <div class="progress-bar bg-success"

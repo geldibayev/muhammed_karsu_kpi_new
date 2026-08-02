@@ -11,6 +11,7 @@ use App\Http\Controllers\HemisController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ManualReviewController;
 use App\Http\Controllers\RatingController;
+use App\Http\Controllers\RequeueCancelledAiDatumController;
 use App\Http\Controllers\ResourceStatisticsController;
 use App\Http\Controllers\ReviewerAssignmentController;
 use App\Http\Controllers\SystemSettingsController;
@@ -72,6 +73,8 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/upload/{upload}', [DatumController::class, 'show'])->name('upload.show');
     Route::post('/upload/{upload}', [DatumController::class, 'store'])->name('upload.store');
     Route::get('/submissions/{datum}', [DatumController::class, 'details'])->name('upload.details');
+    Route::post('/submissions/{datum}/requeue-ai', RequeueCancelledAiDatumController::class)
+        ->name('upload.ai-requeue');
     Route::delete('/submissions/{datum}', [DatumController::class, 'destroy'])->name('upload.destroy');
     Route::get('/files/{status}', [DatumHistoryController::class, 'index'])->name('files.show');
     Route::get('/submissions/{datum}/download', [DatumController::class, 'download'])->name('upload.file.download');

@@ -429,7 +429,6 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertSee('TEKSHIRILGAN')
             ->assertSee('NAVBATDA')
             ->assertSee('XATO')
-            ->assertSee('NAVBATGA QO‘YILMAGAN')
             ->assertDontSee('AI xizmatining urinishlari')
             ->assertDontSee('Hisoblash tartibi')
             ->assertDontSee('Hisobotlar kesimida AI holati')

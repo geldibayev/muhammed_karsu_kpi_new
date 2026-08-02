@@ -44,6 +44,34 @@ class DatumPolicy
             && $this->isAssignedReviewer($user, $datum);
     }
 
+    public function requeueAiEvaluation(User $user, Datum $datum): bool
+    {
+        if (! $user->isSuperAdmin()
+            || (string) $user->hemis_id !== (string) config('kpi.settings_manager_hemis_id')
+            || $datum->status !== DatumStatus::Cancelled->value
+            || ! $datum->usesAiChecking()) {
+            return false;
+        }
+
+        $lastAiEvaluationId = (int) $datum->histories()
+            ->where('message_type', 'ai_evaluation')
+            ->max('id');
+        $lastAiQueueId = (int) $datum->histories()
+            ->whereIn('message_type', ['submission_created', 'ai_queued'])
+            ->max('id');
+        $lastHumanDecisionId = (int) $datum->histories()
+            ->whereIn('message_type', [
+                'manual_review_approved',
+                'manual_review_rejected',
+                'h_index_review_approved',
+                'criterion_transferred',
+            ])
+            ->max('id');
+
+        return $lastAiEvaluationId > $lastAiQueueId
+            && $lastAiEvaluationId > $lastHumanDecisionId;
+    }
+
     public function transferCriterion(User $user, Datum $datum): bool
     {
         return $this->review($user, $datum)

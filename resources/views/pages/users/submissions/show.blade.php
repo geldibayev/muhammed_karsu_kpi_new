@@ -67,6 +67,17 @@
                                 <i class="fas fa-arrow-left mr-1"></i> Ro‘yxatga qaytish
                             </a>
 
+                            @can('requeueAiEvaluation', $datum)
+                                <form action="{{ route('upload.ai-requeue', $datum) }}" method="post"
+                                      class="d-inline-block ml-2">
+                                    @csrf
+                                    <button type="submit" class="btn btn-warning btn-sm">
+                                        <i class="fas fa-robot mr-1" aria-hidden="true"></i>
+                                        AI tekshiruviga qayta yuborish
+                                    </button>
+                                </form>
+                            @endcan
+
                             @if($datum->storagePath() !== null)
                                 <a href="{{ route('upload.file.download', $datum) }}"
                                    class="btn btn-primary btn-sm float-right">

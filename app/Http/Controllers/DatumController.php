@@ -84,7 +84,7 @@ class DatumController extends Controller
         $this->authorize('view', $datum);
 
         $datum->load([
-            'criterion:id,name',
+            'criterion:id,name,checking',
             'user:id,name',
             'year:id,name',
             'histories' => fn ($query) => $query->latest(),
