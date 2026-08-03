@@ -85,6 +85,26 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertNotNull(Cache::get('kpi:ai-worker:last-success-at'));
     }
 
+    public function test_job_enforces_fixed_category_point_before_persisting_ai_result(): void
+    {
+        $datum = $this->createDatum();
+        $datum->criterion->update(['code' => '3.1.12']);
+        $datum->user->update(['degree' => 'no_degrees']);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturn(new AiEvaluationResult('accepted', 1, 'Talablar bajarilgan.'));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(Report::class));
+
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+
+        $this->assertSame('accepted', $datum->fresh()->status);
+        $this->assertSame(3.0, $datum->fresh()->point);
+    }
+
     public function test_job_assigns_ai_human_review_result_to_global_reviewer_regardless_of_criterion(): void
     {
         $datum = $this->createDatum();

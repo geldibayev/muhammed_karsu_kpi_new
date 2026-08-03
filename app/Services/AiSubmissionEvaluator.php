@@ -6,6 +6,7 @@ use App\Actions\DescribeAiFailure;
 use App\Data\AiEvaluationResult;
 use App\Models\Datum;
 use App\Models\Formula;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use Gemini\Data\Blob;
 use Gemini\Data\Content;
 use Gemini\Data\GenerationConfig;
@@ -213,6 +214,14 @@ PROMPT;
 
             if ($criterion->isIndustryFundingCriterion()) {
                 return $this->industryFundingScoreCalculator->apply($result);
+            }
+
+            if (FixedPerResourceHumanReviewCriterionRule::supports($criterion->code)) {
+                return FixedPerResourceHumanReviewCriterionRule::normalizeAiResult(
+                    $result,
+                    (string) $criterion->code,
+                    (string) $user->degree,
+                );
             }
 
             return $this->aiAuthorPointDistributor->handle(

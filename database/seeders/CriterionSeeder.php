@@ -8,6 +8,7 @@ use App\Models\CriterionYear;
 use App\Models\Formula;
 use App\Models\Report;
 use App\Models\Year;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\OakArticleCriterionRule;
@@ -1097,18 +1098,7 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 2,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (to'garak tashkil etish to'g'risidagi buyruq va to'garakning tasdiqlangan ish rejasi) tahlil qiling.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Hujjatlar orasida professor-o'qituvchi nomiga rasmiylashtirilgan to'garak tashkil etish to'g'risidagi buyruq (yoki ruxsatnoma) bo'lishi shart.
-                        2. Hujjatlar orasida to'garakning mavzular va muddatlar ko'rsatilgan tasdiqlangan ish rejasi bo'lishi shart.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar ham rasmiy buyruq, ham tasdiqlangan ish rejasi mavjud bo'lsa: \"accepted\" statusini bering va \"point\" qismiga 1 yozing.
-                        - Agar hujjatlar xira bo'lsa, o'qib bo'lmasa, yoki hujjatlarning biri (buyruq yoki reja) yetishmayotgan bo'lsa (administrator ko'rib chiqishi uchun): \"checking\" statusini bering.
-                        - Agar hujjatlarning ushbu mezonga umuman aloqasi bo'lmasa yoki soxta bo'lsa: \"cancelled\" statusini bering.
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam: 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi va hujjatlardagi holat haqida qisqacha izoh>\"}",
+                        'ai_prompt' => FixedPerResourceHumanReviewCriterionRule::threeOneTwelvePrompt(),
                     ],
                     [
                         'name' => [

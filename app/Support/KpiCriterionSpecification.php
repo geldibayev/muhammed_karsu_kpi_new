@@ -78,7 +78,13 @@ class KpiCriterionSpecification
             '3.1.9' => self::rule(self::Competition, 2, 'current', [1, 2, 2, 2]),
             '3.1.10' => self::rule(self::Maximum, 1, 'current', [2, 4, 2, 2]),
             '3.1.11' => self::rule(self::Unlimited, 1, 'current', [3, 4, 4, 4], 4),
-            '3.1.12' => self::rule(self::Maximum, 1, 'current', [3, 3, 3, 3]),
+            '3.1.12' => self::rule(
+                self::Maximum,
+                1,
+                'current',
+                [3, 3, 3, 3],
+                aiPrompt: FixedPerResourceHumanReviewCriterionRule::threeOneTwelvePrompt(),
+            ),
             '3.1.13' => self::rule(
                 self::Unlimited,
                 0,

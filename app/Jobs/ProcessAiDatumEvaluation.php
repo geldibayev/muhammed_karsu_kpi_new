@@ -8,6 +8,7 @@ use App\Models\AiHumanReviewAssignment;
 use App\Models\Datum;
 use App\Models\Option;
 use App\Services\AiSubmissionEvaluator;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -87,6 +88,11 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
         try {
             $result = $evaluator->evaluate($datum);
+            $result = FixedPerResourceHumanReviewCriterionRule::normalizeAiResult(
+                $result,
+                (string) $datum->criterion->code,
+                (string) $datum->user->degree,
+            );
         } catch (Throwable $exception) {
             Cache::put(
                 'kpi:ai-worker:last-failure-datum-id',

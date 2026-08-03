@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Data\AiEvaluationResult;
+
 class FixedPerResourceHumanReviewCriterionRule
 {
     /** @var array<string, array<string, float>> */
@@ -46,5 +48,51 @@ class FixedPerResourceHumanReviewCriterionRule
     public static function pointFor(string $criterionCode, string $evaluationCategory): ?float
     {
         return self::POINTS[$criterionCode][$evaluationCategory] ?? null;
+    }
+
+    public static function normalizeAiResult(
+        AiEvaluationResult $result,
+        string $criterionCode,
+        string $evaluationCategory,
+    ): AiEvaluationResult {
+        if (! self::supports($criterionCode)) {
+            return $result;
+        }
+
+        $fixedPoint = self::pointFor($criterionCode, $evaluationCategory);
+
+        if ($fixedPoint === null) {
+            return AiEvaluationResult::checking(
+                'Foydalanuvchi baholash toifasi uchun qat’iy ball sozlanmagan.',
+            );
+        }
+
+        return new AiEvaluationResult(
+            status: $result->status,
+            point: $result->status === 'accepted' ? $fixedPoint : 0,
+            reason: $result->reason,
+            authorCount: $result->authorCount,
+            resourceDate: $result->resourceDate,
+            pageCount: $result->pageCount,
+            receivedAmount: $result->receivedAmount,
+        );
+    }
+
+    public static function threeOneTwelvePrompt(): string
+    {
+        return <<<'PROMPT'
+Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (to'garak tashkil etish to'g'risidagi buyruq va to'garakning tasdiqlangan ish rejasi) tahlil qiling.
+Baholash qoidalari jami %pointing% ballgacha:
+1. Hujjatlar orasida professor-o'qituvchi nomiga rasmiylashtirilgan to'garak tashkil etish to'g'risidagi buyruq (yoki ruxsatnoma) bo'lishi shart.
+2. Hujjatlar orasida to'garakning mavzular va muddatlar ko'rsatilgan tasdiqlangan ish rejasi bo'lishi shart.
+
+Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
+- Agar ham rasmiy buyruq, ham tasdiqlangan ish rejasi mavjud bo'lsa: "accepted" statusini bering va "point" qismiga 3 yozing.
+- Agar hujjatlar xira bo'lsa, o'qib bo'lmasa, yoki hujjatlarning biri (buyruq yoki reja) yetishmayotgan bo'lsa (administrator ko'rib chiqishi uchun): "checking" statusini bering.
+- Agar hujjatlarning ushbu mezonga umuman aloqasi bo'lmasa yoki soxta bo'lsa: "cancelled" statusini bering.
+
+Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
+{"status": "accepted|checking|cancelled", "point": <raqam: 3 yoki 0>, "reason": "<Qabul qilingan qarorning sababi va hujjatlardagi holat haqida qisqacha izoh>"}
+PROMPT;
     }
 }

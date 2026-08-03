@@ -37,6 +37,83 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_fixed_resource_rule_overrides_an_ai_accepted_point(): void
+    {
+        Storage::fake('local');
+        $image = UploadedFile::fake()->image('club-order.jpg', 10, 10);
+        Storage::disk('local')->put('club-order.jpg', $image->getContent());
+        $user = User::factory()->create(['degree' => 'no_degrees']);
+        Evaluation::query()->create([
+            'code' => 'no_degrees',
+            'name' => ['uz' => 'Ilmiy darajasiz'],
+            'status' => '1',
+        ]);
+        $report = Report::query()->create([
+            'name' => ['uz' => 'KPI hisoboti'],
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'code' => '3.1.12',
+            'name' => ['uz' => 'Ilmiy to‘garak'],
+            'report_id' => $report->getKey(),
+            'upload' => '1',
+            'status' => '1',
+            'checking' => 'ai',
+            'ai_prompt' => 'Accepted bo‘lsa eski prompt bo‘yicha 1 ball qaytaring.',
+            'ai_model' => 'gemini-test',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 3,
+        ]);
+        $datum = Datum::query()->create([
+            'name' => 'club-order.jpg',
+            'material' => [
+                'type' => 'file',
+                'disk' => 'local',
+                'path' => 'club-order.jpg',
+                'mime' => 'image/jpeg',
+            ],
+            'user_id' => $user->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'checking',
+        ]);
+
+        Gemini::fake([
+            GenerateContentResponse::fake([
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [[
+                            'text' => json_encode([
+                                'status' => 'accepted',
+                                'point' => 1,
+                                'resource_date' => '2026-01-10',
+                                'reason' => 'Buyruq va ish rejasi mavjud.',
+                            ], JSON_THROW_ON_ERROR),
+                        ]],
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $result = (new AiSubmissionEvaluator(
+            new AiAuthorPointDistributor,
+            new OakArticleScoreCalculator,
+            new DescribeAiFailure,
+            new GeminiFileMimeTypeResolver,
+            new AiResourceDatePolicy,
+            new GeminiUrlContextGateway,
+            new PrintedEducationalLiteratureScoreCalculator,
+            new InternationalCooperationScoreValidator,
+            new IndustryFundingScoreCalculator,
+        ))->evaluate($datum);
+
+        $this->assertSame('accepted', $result->status);
+        $this->assertSame(3.0, $result->point);
+    }
+
     public function test_request_contains_trusted_context_and_detects_jpeg_from_stored_bytes(): void
     {
         $this->travelTo(Carbon::parse('2026-07-30 12:00:00', 'Asia/Tashkent'));

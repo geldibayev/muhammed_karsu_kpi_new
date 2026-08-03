@@ -105,6 +105,39 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
             ->value('point'));
     }
 
+    public function test_backfill_command_corrects_existing_accepted_points_idempotently(): void
+    {
+        $fixture = $this->createCriteria();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $datum = Datum::query()->create([
+            'name' => 'Eski AI tasdiqlagan resurs',
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $fixture['criteria']['3.1.12']->getKey(),
+            'status' => 'accepted',
+            'point' => 1,
+        ]);
+
+        $this->artisan('kpi:criteria:backfill-fixed-resource-points', ['--dry-run' => true])
+            ->expectsOutput('Qayta hisoblanadigan accepted resurslar: 1')
+            ->assertSuccessful();
+        $this->assertSame(1.0, $datum->fresh()->point);
+
+        $this->artisan('kpi:criteria:backfill-fixed-resource-points')->assertSuccessful();
+        $this->artisan('kpi:criteria:backfill-fixed-resource-points')
+            ->expectsOutput('Qayta hisoblangan accepted resurslar: 0')
+            ->assertSuccessful();
+
+        $this->assertSame(3.0, $datum->fresh()->point);
+        $this->assertSame(1, $datum->histories()
+            ->where('message_type', 'fixed_resource_point_recalculated')
+            ->count());
+        $this->assertSame(3.0, (float) Point::query()
+            ->where('report_id', $fixture['report']->getKey())
+            ->where('criterion_id', $fixture['criteria']['3.1.12']->getKey())
+            ->where('user_id', $owner->getKey())
+            ->value('point'));
+    }
+
     /**
      * @return array{report: Report, criteria: array<string, Criterion>}
      */
