@@ -14,6 +14,12 @@ class FixedPerResourceHumanReviewCriterionRule
             'foreign_lang' => 3.0,
             'physical' => 3.0,
         ],
+        '3.1.14' => [
+            'hold_degrees' => 4.0,
+            'no_degrees' => 1.0,
+            'foreign_lang' => 1.0,
+            'physical' => 1.0,
+        ],
         '4.1.3' => [
             'hold_degrees' => 0.5,
             'no_degrees' => 0.75,
@@ -93,6 +99,25 @@ Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
 
 Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
 {"status": "accepted|checking|cancelled", "point": <raqam: 3 yoki 0>, "reason": "<Qabul qilingan qarorning sababi va hujjatlardagi holat haqida qisqacha izoh>"}
+PROMPT;
+    }
+
+    public static function threeOneFourteenPrompt(): string
+    {
+        return <<<'PROMPT'
+Siz 3.1.14 davlat grantlari asosidagi ilmiy-tadqiqot loyihalarini tekshiruvchi qat'iy AI yordamchisiz.
+
+VAZIFA:
+- Loyiha aynan universitet tomonidan bajarilayotganini rasmiy hujjat orqali tekshiring. Boshqa OTM tomonidan bajarilayotgan loyiha hisobga olinmaydi.
+- Professor-o'qituvchining shu loyihada rahbar, a'zo yoki ijrochi sifatida ishtiroki aniq tasdiqlanishi shart.
+- Ballni o'zingiz tanlamang. Tasdiqlangan bitta resurs uchun server foydalanuvchi toifasiga qarab ilmiy darajalilarga 4 ball, qolgan toifalarga 1 ball beradi.
+
+QAROR:
+- Loyiha universitet tomonidan bajarilayotgani va professor-o'qituvchining ishtiroki aniq tasdiqlansa accepted qaytaring.
+- Hujjat xira, kesilgan, universitet nomi yoki ishtirok noaniq bo'lsa checking qaytaring.
+- Loyiha boshqa OTM tomonidan bajarilayotgani, professor-o'qituvchi unda ishtirok etmagani yoki hujjat mezonga aloqasizligi aniq bo'lsa cancelled qaytaring.
+
+Point maydoniga accepted holatida ham 0 yozing: yakuniy 4 yoki 1 ballni server ishonchli foydalanuvchi toifasi asosida hisoblaydi. Reason ichida loyiha nomi, uni universitet bajarayotganining dalili va professor-o'qituvchining ishtirokini qisqa yozing.
 PROMPT;
     }
 }

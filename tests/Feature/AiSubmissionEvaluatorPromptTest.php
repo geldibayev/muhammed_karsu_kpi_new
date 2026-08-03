@@ -37,15 +37,15 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_fixed_resource_rule_overrides_an_ai_accepted_point(): void
+    public function test_university_project_rule_overrides_ai_point_with_degree_category_point(): void
     {
         Storage::fake('local');
         $image = UploadedFile::fake()->image('club-order.jpg', 10, 10);
         Storage::disk('local')->put('club-order.jpg', $image->getContent());
-        $user = User::factory()->create(['degree' => 'no_degrees']);
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
         Evaluation::query()->create([
-            'code' => 'no_degrees',
-            'name' => ['uz' => 'Ilmiy darajasiz'],
+            'code' => 'hold_degrees',
+            'name' => ['uz' => 'Ilmiy darajali'],
             'status' => '1',
         ]);
         $report = Report::query()->create([
@@ -53,18 +53,18 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
-            'code' => '3.1.12',
-            'name' => ['uz' => 'Ilmiy to‘garak'],
+            'code' => '3.1.14',
+            'name' => ['uz' => 'Universitet ilmiy loyihasi'],
             'report_id' => $report->getKey(),
             'upload' => '1',
             'status' => '1',
             'checking' => 'ai',
-            'ai_prompt' => 'Accepted bo‘lsa eski prompt bo‘yicha 1 ball qaytaring.',
+            'ai_prompt' => 'Universitet bajarayotgan loyiha tasdiqlansa accepted va 0 ball qaytaring.',
             'ai_model' => 'gemini-test',
         ]);
         CriterionEvaluation::query()->create([
             'criterion_id' => $criterion->getKey(),
-            'evaluation' => 'no_degrees',
+            'evaluation' => 'hold_degrees',
             'has' => '1',
             'score' => 3,
         ]);
@@ -88,7 +88,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
                         'parts' => [[
                             'text' => json_encode([
                                 'status' => 'accepted',
-                                'point' => 1,
+                                'point' => 0,
                                 'resource_date' => '2026-01-10',
                                 'reason' => 'Buyruq va ish rejasi mavjud.',
                             ], JSON_THROW_ON_ERROR),
@@ -111,7 +111,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
         ))->evaluate($datum);
 
         $this->assertSame('accepted', $result->status);
-        $this->assertSame(3.0, $result->point);
+        $this->assertSame(4.0, $result->point);
     }
 
     public function test_request_contains_trusted_context_and_detects_jpeg_from_stored_bytes(): void

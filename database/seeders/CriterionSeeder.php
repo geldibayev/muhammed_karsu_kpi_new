@@ -1156,21 +1156,9 @@ class CriterionSeeder extends Seeder
                             'physical' => 1,
                         ],
                         'year' => 2025,
-                        'formula_id' => 1,
+                        'formula_id' => 2,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (davlat granti shartnomasi, loyihada ishtirok etish to'g'risidagi buyruq yoki ilmiy loyiha hisoboti) tahlil qiling.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Loyiha aynan sizning universitet doirasida amalga oshirilayotganligi tasdiqlanishi shart. Boshqa OTMlardagi loyihalar mezon talabiga javob bermaydi.
-                        2. O'qituvchining ushbu loyihada \"rahbar\" yoki \"a'zo\" ekanligi aniq bo'lishi kerak.
-                        3. Ballar: Loyiha rahbari bo'lsa - 2 ball, loyiha a'zosi bo'lsa - 1 ball.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar hujjatlar loyihaning universitetga tegishli ekanligini va o'qituvchining ishtirokini tasdiqlasa: \"accepted\" statusini bering. \"point\" qismiga rahbarlik uchun 2, a'zolik uchun 1 yozing.
-                        - Agar hujjatlar xira bo'lsa, universitet nomi ko'rinmasa yoki loyiha qaysi OTMga tegishliligi shubhali bo'lib, administrator tekshiruvi zarur bo'lsa: \"checking\" statusini bering (\"point\": 0).
-                        - Agar loyiha boshqa OTMga tegishli bo'lsa, soxta bo'lsa yoki umuman grantga aloqasi bo'lmasa: \"cancelled\" statusini bering (\"point\": 0).
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam: 2, 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, loyiha nomi, universitet doirasidaligi va ishtirok darajasi haqida izoh>\"}",
+                        'ai_prompt' => FixedPerResourceHumanReviewCriterionRule::threeOneFourteenPrompt(),
                     ],
                     [
                         'name' => [

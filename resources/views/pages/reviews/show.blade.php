@@ -133,6 +133,8 @@
                                     <i class="fas fa-check mr-1"></i>
                                     @if($isPrintedLiteratureCriterion)
                                         Sahifa va mualliflar bilan tasdiqlash
+                                    @elseif($isIndustryFundingCriterion)
+                                        Summa va hammualliflar bilan tasdiqlash
                                     @elseif($isOakArticleCriterion || $usesAuthorDividedScore)
                                         Mualliflar soni bilan tasdiqlash
                                     @elseif($usesImpactFactorScore)

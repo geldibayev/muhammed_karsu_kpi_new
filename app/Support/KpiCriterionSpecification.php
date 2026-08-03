@@ -95,7 +95,13 @@ class KpiCriterionSpecification
                 'Xo‘jalik shartnomasi asosida jalb qilingan har 1 million so‘m uchun 1 ball beriladi. Umumiy ball hammualliflar soniga bo‘linadi.',
                 IndustryFundingCriterionRule::PROMPT,
             ),
-            '3.1.14' => self::rule(self::Competition, 1, 'project_finished', [4, 1, 1, 1]),
+            '3.1.14' => self::rule(
+                self::Maximum,
+                1,
+                'project_finished',
+                [4, 1, 1, 1],
+                aiPrompt: FixedPerResourceHumanReviewCriterionRule::threeOneFourteenPrompt(),
+            ),
             '3.1.15' => self::rule(self::Maximum, 1, 'end_of_council', [2, null, null, null]),
 
             '4.1.1' => self::rule(self::Competition, 4, 'current', [3, 3, 2, 3]),

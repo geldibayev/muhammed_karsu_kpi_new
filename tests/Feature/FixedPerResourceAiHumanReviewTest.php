@@ -18,13 +18,20 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_configured_reviewer_receives_all_four_criteria(): void
+    public function test_configured_reviewer_receives_all_fixed_resource_criteria(): void
     {
         $fixture = $this->createCriteria();
+        $expectedReviewers = [
+            '3.1.12' => 3462211323,
+            '3.1.14' => 3462011188,
+            '4.1.3' => 3462211323,
+            '4.1.4' => 3462211323,
+            '4.1.5' => 3462211323,
+        ];
 
         foreach ($fixture['criteria'] as $criterion) {
             $this->assertSame(
-                3462211323,
+                $expectedReviewers[$criterion->code],
                 AiHumanReviewAssignment::reviewerHemisIdFor($criterion),
                 "{$criterion->code} mezoni noto‘g‘ri tekshiruvchiga biriktirilgan.",
             );
@@ -41,6 +48,12 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
                 'no_degrees' => 3.0,
                 'foreign_lang' => 3.0,
                 'physical' => 3.0,
+            ],
+            '3.1.14' => [
+                'hold_degrees' => 4.0,
+                'no_degrees' => 1.0,
+                'foreign_lang' => 1.0,
+                'physical' => 1.0,
             ],
             '4.1.3' => [
                 'hold_degrees' => 0.5,
@@ -160,11 +173,12 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
         ]);
         $maximums = [
             '3.1.12' => [3, 3, 3, 3],
+            '3.1.14' => [4, 1, 1, 1],
             '4.1.3' => [2, 3, 1, 3],
             '4.1.4' => [2, 3, 2, 4],
             '4.1.5' => [2, 1, 2, 2],
         ];
-        $fileLimits = ['3.1.12' => 1, '4.1.3' => 4, '4.1.4' => 4, '4.1.5' => 2];
+        $fileLimits = ['3.1.12' => 1, '3.1.14' => 1, '4.1.3' => 4, '4.1.4' => 4, '4.1.5' => 2];
         $categories = ['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'];
 
         foreach ($categories as $category) {
