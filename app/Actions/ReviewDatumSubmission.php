@@ -174,6 +174,13 @@ class ReviewDatumSubmission
                 ];
             }
 
+            if ($datum->criterion->usesAutomaticAiHumanReviewScore()) {
+                return [
+                    'point' => $maximumPoint,
+                    'rule' => 'foydalanuvchining baholash toifasi bo‘yicha avtomatik ball',
+                ];
+            }
+
             $submissionMaximum = $datum->criterion->aiSubmissionMaximum($maximumPoint);
 
             if ($reviewerPoint === null || $reviewerPoint < 0 || $reviewerPoint > $submissionMaximum) {

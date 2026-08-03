@@ -124,6 +124,35 @@ class ProcessAiDatumEvaluationTest extends TestCase
         ]);
     }
 
+    public function test_job_assigns_criterion_specific_ai_human_reviewer_before_global_reviewer(): void
+    {
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            '2.1.1' => 3462611061,
+        ]);
+        $datum = $this->createDatum();
+        $datum->criterion->update(['code' => '2.1.1']);
+        AiHumanReviewAssignment::query()->create([
+            'hemis_id' => 3172011004,
+            'active_slot' => 1,
+            'assigned_at' => now(),
+        ]);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturn(AiEvaluationResult::checking('Inson tekshiruvi kerak.'));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+
+        $this->assertSame(3462611061, $datum->fresh()->reviewer_hemis_id);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'message_type' => 'ai_human_review_assigned',
+            'message' => 'AI inson tekshiruvi HEMIS ID 3462611061 mas’ulga biriktirildi.',
+        ]);
+    }
+
     public function test_job_rejects_a_clear_ai_failure_without_assigning_human_review(): void
     {
         $datum = $this->createDatum(['reviewer_hemis_id' => 3172011004]);

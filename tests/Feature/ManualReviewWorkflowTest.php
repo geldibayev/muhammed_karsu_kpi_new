@@ -550,7 +550,10 @@ class ManualReviewWorkflowTest extends TestCase
         ])
             ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 1')
             ->assertSuccessful();
-        $this->artisan('kpi:ai:assign-human-reviews', ['--reassign' => true])
+        $this->artisan('kpi:ai:assign-human-reviews', [
+            '--criterion' => '2.1.1',
+            '--reassign' => true,
+        ])
             ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 1')
             ->assertSuccessful();
         $this->assertSame(3172011004, $previouslyAssigned->fresh()->reviewer_hemis_id);
@@ -573,6 +576,42 @@ class ManualReviewWorkflowTest extends TestCase
             ->expectsOutput('Global AI inson tekshiruvchisi sozlanmagan.')
             ->assertFailed();
         $this->assertNull($humanReview->fresh()->reviewer_hemis_id);
+    }
+
+    public function test_assignment_command_reassigns_existing_criterion_specific_ai_human_reviews(): void
+    {
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            '2.1.1' => 3462611061,
+        ]);
+        $criterionReviewer = User::factory()->create(['hemis_id' => 3462611061]);
+        $globalReviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $owner = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $criterion->update([
+            'code' => '2.1.1',
+            'checking' => 'ai',
+        ]);
+        $this->assignAiHumanReviewer($globalReviewer);
+        $datum = $this->createDatum($owner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $globalReviewer->hemis_id,
+        ]);
+        $datum->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'Inson tekshiruvi kerak.',
+            'message_type' => 'ai_evaluation',
+        ]);
+
+        $this->artisan('kpi:ai:assign-human-reviews', ['--reassign' => true])
+            ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 1')
+            ->assertSuccessful();
+
+        $this->assertSame($criterionReviewer->hemis_id, $datum->fresh()->reviewer_hemis_id);
+        $this->actingAs($criterionReviewer)
+            ->get(route('ai-human-reviews.index'))
+            ->assertOk()
+            ->assertSee($datum->name);
     }
 
     public function test_global_ai_human_reviewer_can_be_configured_and_changed_by_hemis_id(): void
@@ -1099,6 +1138,78 @@ class ManualReviewWorkflowTest extends TestCase
             'id' => $datum->id,
             'status' => 'accepted',
             'point' => 5,
+        ]);
+    }
+
+    public function test_criterion_2_1_1_ai_human_approval_uses_degree_score_without_manual_point(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3462611061]);
+        $withDegreeOwner = User::factory()->create(['degree' => 'hold_degrees']);
+        $withoutDegreeOwner = User::factory()->create(['degree' => 'no_degrees']);
+        $criterion = $this->createCriterion();
+        $criterion->update([
+            'code' => '2.1.1',
+            'checking' => 'ai',
+        ]);
+        $this->assignAiHumanReviewer($reviewer);
+        Evaluation::query()->create([
+            'code' => 'hold_degrees',
+            'name' => ['uz' => 'Ilmiy darajali'],
+            'status' => '1',
+        ]);
+        Evaluation::query()->create([
+            'code' => 'no_degrees',
+            'name' => ['uz' => 'Ilmiy darajasiz'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'hold_degrees',
+            'has' => '1',
+            'score' => 1,
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 2,
+        ]);
+        $withDegreeDatum = $this->createDatum($withDegreeOwner, $criterion, [
+            'name' => 'Ilmiy darajali resurs',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $withoutDegreeDatum = $this->createDatum($withoutDegreeOwner, $criterion, [
+            'name' => 'Ilmiy darajasiz resurs',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $withDegreeDatum))
+            ->assertOk()
+            ->assertSee('Tasdiqlash')
+            ->assertDontSee('name="point"', false)
+            ->assertDontSee('Ball bilan tasdiqlash');
+
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $withDegreeDatum))
+            ->patch(route('reviews.approve', $withDegreeDatum), ['point' => 1])
+            ->assertSessionHasErrors('point');
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $withDegreeDatum))
+            ->assertRedirect(route('ai-human-reviews.index'));
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $withoutDegreeDatum))
+            ->assertRedirect(route('ai-human-reviews.index'));
+
+        $this->assertSame(1.0, $withDegreeDatum->fresh()->point);
+        $this->assertSame(2.0, $withoutDegreeDatum->fresh()->point);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $withDegreeDatum->id,
+            'user_id' => $reviewer->id,
+            'message_type' => 'manual_review_approved',
         ]);
     }
 

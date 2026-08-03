@@ -27,6 +27,28 @@ class AiHumanReviewAssignment extends Model
         return is_numeric($hemisId) ? (int) $hemisId : null;
     }
 
+    public static function reviewerHemisIdFor(Criterion $criterion, bool $sharedLock = false): ?int
+    {
+        $criterionReviewers = config('kpi.ai_human_review_criterion_reviewers', []);
+        $criterionReviewerHemisId = is_array($criterionReviewers)
+            ? ($criterionReviewers[$criterion->code] ?? null)
+            : null;
+
+        if (is_numeric($criterionReviewerHemisId) && (int) $criterionReviewerHemisId > 0) {
+            return (int) $criterionReviewerHemisId;
+        }
+
+        $query = static::query()->active();
+
+        if ($sharedLock) {
+            $query->sharedLock();
+        }
+
+        $hemisId = $query->value('hemis_id');
+
+        return is_numeric($hemisId) ? (int) $hemisId : null;
+    }
+
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'hemis_id', 'hemis_id');

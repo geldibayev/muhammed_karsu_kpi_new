@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\AiHumanReviewAssignment;
+use App\Models\Criterion;
 use App\Models\Datum;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,27 +13,33 @@ class AssignPendingAiHumanReviews extends Command
 {
     protected $signature = 'kpi:ai:assign-human-reviews
                             {--limit=0 : Biriktiriladigan maksimum resurslar soni (0 = barchasi)}
-                            {--reassign : Oldin boshqa mas’ulga biriktirilgan resurslarni ham yangi global mas’ulga o‘tkazish}
+                            {--criterion= : Faqat ko‘rsatilgan kriteriya kodi bo‘yicha biriktirish}
+                            {--reassign : Oldin boshqa mas’ulga biriktirilgan resurslarni ham amaldagi mas’ulga o‘tkazish}
                             {--dry-run : Ma’lumotlarni o‘zgartirmasdan nomzodlar sonini ko‘rsatish}';
 
-    protected $description = 'AI inson tekshiruviga qoldirgan resurslarni global HEMIS mas’uliga biriktiradi';
+    protected $description = 'AI inson tekshiruviga qoldirgan resurslarni kriteriya yoki global HEMIS mas’uliga biriktiradi';
 
     public function handle(): int
     {
         $limit = max(0, (int) $this->option('limit'));
         $reassign = (bool) $this->option('reassign');
         $dryRun = (bool) $this->option('dry-run');
-        $reviewerHemisId = AiHumanReviewAssignment::activeHemisId();
+        $criterionCode = trim((string) $this->option('criterion')) ?: null;
         $candidateCount = 0;
         $assignedCount = 0;
+        $unassignedCount = 0;
 
-        if ($reviewerHemisId === null) {
-            $this->error('Global AI inson tekshiruvchisi sozlanmagan.');
+        foreach ($this->candidateQuery($reassign, $criterionCode)->lazyById(200, column: 'data.id', alias: 'id') as $datum) {
+            $reviewerHemisId = $datum->criterion instanceof Criterion
+                ? AiHumanReviewAssignment::reviewerHemisIdFor($datum->criterion)
+                : null;
 
-            return self::FAILURE;
-        }
+            if ($reviewerHemisId === null) {
+                $unassignedCount++;
 
-        foreach ($this->candidateQuery($reassign)->lazyById(200, column: 'data.id', alias: 'id') as $datum) {
+                continue;
+            }
+
             if (! $this->shouldAssign($datum, $reviewerHemisId, $reassign)) {
                 continue;
             }
@@ -52,6 +59,12 @@ class AssignPendingAiHumanReviews extends Command
             }
         }
 
+        if ($candidateCount === 0 && $unassignedCount > 0) {
+            $this->error('Global AI inson tekshiruvchisi sozlanmagan.');
+
+            return self::FAILURE;
+        }
+
         if ($dryRun) {
             $this->info("AI inson tekshiruvi uchun biriktiriladigan resurslar: {$candidateCount}");
 
@@ -63,10 +76,11 @@ class AssignPendingAiHumanReviews extends Command
         return self::SUCCESS;
     }
 
-    private function candidateQuery(bool $reassign): Builder
+    private function candidateQuery(bool $reassign, ?string $criterionCode): Builder
     {
         $query = Datum::query()
             ->select(['data.id', 'data.criterion_id', 'data.reviewer_hemis_id'])
+            ->with('criterion:id,code,checking')
             ->withMax([
                 'histories as last_ai_evaluation_id' => fn (Builder $query): Builder => $query
                     ->where('message_type', 'ai_evaluation'),
@@ -78,7 +92,12 @@ class AssignPendingAiHumanReviews extends Command
             ->where('status', 'checking')
             ->whereHas(
                 'criterion',
-                fn (Builder $query): Builder => $query->where('checking', 'ai'),
+                fn (Builder $query): Builder => $query
+                    ->where('checking', 'ai')
+                    ->when(
+                        $criterionCode !== null,
+                        fn (Builder $query): Builder => $query->where('code', $criterionCode),
+                    ),
             )
             ->whereHas(
                 'histories',
@@ -103,21 +122,20 @@ class AssignPendingAiHumanReviews extends Command
     private function assign(int $datumId, int $reviewerHemisId, bool $reassign): bool
     {
         return DB::transaction(function () use ($datumId, $reviewerHemisId, $reassign): bool {
-            $activeReviewerHemisId = AiHumanReviewAssignment::query()
-                ->active()
-                ->sharedLock()
-                ->value('hemis_id');
-
-            if ((int) $activeReviewerHemisId !== $reviewerHemisId) {
-                return false;
-            }
-
             $datum = Datum::query()
-                ->with('criterion:id,checking')
+                ->with('criterion:id,code,checking')
                 ->lockForUpdate()
                 ->find($datumId);
 
+            $activeReviewerHemisId = $datum?->criterion instanceof Criterion
+                ? AiHumanReviewAssignment::reviewerHemisIdFor(
+                    $datum->criterion,
+                    sharedLock: true,
+                )
+                : null;
+
             if ($datum === null
+                || $activeReviewerHemisId !== $reviewerHemisId
                 || $datum->status !== 'checking'
                 || $datum->criterion?->checking !== 'ai'
                 || (int) $datum->reviewer_hemis_id === $reviewerHemisId

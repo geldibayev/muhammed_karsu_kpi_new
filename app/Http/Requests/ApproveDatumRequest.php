@@ -37,6 +37,7 @@ class ApproveDatumRequest extends FormRequest
         $isAiCriterion = $criterion?->checking === 'ai';
         $isOakArticleCriterion = $criterion?->isOakArticleCriterion() === true;
         $isPrintedLiteratureCriterion = $criterion?->isPrintedEducationalLiteratureCriterion() === true;
+        $usesAutomaticAiHumanReviewScore = $criterion?->usesAutomaticAiHumanReviewScore() === true;
         $activeScoreOptionCount = $isManualCriterion
             ? CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterionId)
@@ -60,8 +61,14 @@ class ApproveDatumRequest extends FormRequest
                         ->where('active', true)),
             ],
             'point' => [
-                Rule::requiredIf($isAiCriterion && ! $isOakArticleCriterion && ! $isPrintedLiteratureCriterion),
-                Rule::prohibitedIf(! $isAiCriterion || $isOakArticleCriterion || $isPrintedLiteratureCriterion),
+                Rule::requiredIf($isAiCriterion
+                    && ! $isOakArticleCriterion
+                    && ! $isPrintedLiteratureCriterion
+                    && ! $usesAutomaticAiHumanReviewScore),
+                Rule::prohibitedIf(! $isAiCriterion
+                    || $isOakArticleCriterion
+                    || $isPrintedLiteratureCriterion
+                    || $usesAutomaticAiHumanReviewScore),
                 'nullable',
                 'numeric',
                 'min:0',

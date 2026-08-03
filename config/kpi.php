@@ -6,6 +6,9 @@ return [
     'report_period_end' => '2026-08-31',
     'ai_status_viewer_hemis_id' => env('KPI_AI_STATUS_VIEWER_HEMIS_ID', '3172011004'),
     'settings_manager_hemis_id' => env('KPI_SETTINGS_MANAGER_HEMIS_ID', '3172011004'),
+    'ai_human_review_criterion_reviewers' => [
+        '2.1.1' => env('KPI_AI_HUMAN_REVIEWER_2_1_1_HEMIS_ID', '3462611061'),
+    ],
     'criterion_reviewers' => [
         '1.1' => env('KPI_REVIEWER_1_1_HEMIS_ID', '3172011004'),
         '1.5' => env('KPI_REVIEWER_1_5_HEMIS_ID', '3862011037'),

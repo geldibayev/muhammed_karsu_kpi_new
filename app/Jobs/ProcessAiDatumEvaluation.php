@@ -101,7 +101,10 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
             $expectedCriterionId,
             $result,
         ): bool {
-            $lockedDatum = Datum::query()->lockForUpdate()->find($this->datumId);
+            $lockedDatum = Datum::query()
+                ->with('criterion:id,code')
+                ->lockForUpdate()
+                ->find($this->datumId);
 
             if ($lockedDatum === null
                 || $lockedDatum->status !== 'checking'
@@ -110,10 +113,10 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
             }
 
             $reviewerHemisId = $result->status === 'checking'
-                ? AiHumanReviewAssignment::query()
-                    ->active()
-                    ->sharedLock()
-                    ->value('hemis_id')
+                ? AiHumanReviewAssignment::reviewerHemisIdFor(
+                    $lockedDatum->criterion,
+                    sharedLock: true,
+                )
                 : null;
             $reviewerHemisId = is_numeric($reviewerHemisId) ? (int) $reviewerHemisId : null;
 

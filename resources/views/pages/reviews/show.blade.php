@@ -23,6 +23,7 @@
         $isAiCriterion = $datum->criterion?->checking === 'ai';
         $isOakArticleCriterion = $datum->criterion?->isOakArticleCriterion() === true;
         $isPrintedLiteratureCriterion = $datum->criterion?->isPrintedEducationalLiteratureCriterion() === true;
+        $usesAutomaticAiHumanReviewScore = $datum->criterion?->usesAutomaticAiHumanReviewScore() === true;
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
         $fixedApprovalOption = $isManualCriterion && $scoreOptions->count() === 1
             && $scoreOptions->first()?->code === \App\Models\CriterionManualScoreOption::FIXED_APPROVAL_CODE
@@ -106,6 +107,14 @@
                             @endcan
 
                             @if($isHIndexCriterion)
+                                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check mr-1"></i> Tasdiqlash
+                                    </button>
+                                </form>
+                            @elseif($isAiCriterion && $usesAutomaticAiHumanReviewScore)
                                 <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
                                     @csrf
                                     @method('PATCH')
@@ -251,7 +260,7 @@
         </div>
     @endif
 
-    @if($isAiCriterion)
+    @if($isAiCriterion && ! $usesAutomaticAiHumanReviewScore)
         <div class="modal fade" id="ai-approve-modal" tabindex="-1" role="dialog"
              aria-labelledby="ai-approve-modal-title" aria-hidden="true">
             <div class="modal-dialog" role="document">

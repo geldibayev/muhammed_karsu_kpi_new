@@ -14,6 +14,8 @@ class Criterion extends Model
 {
     public const H_INDEX_CODE = '3.1.4';
 
+    public const AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES = ['2.1.1'];
+
     public const PRINTED_EDUCATIONAL_LITERATURE_CODES = ['1.2', '1.3'];
 
     protected $fillable = [
@@ -97,6 +99,12 @@ class Criterion extends Model
     public function isPrintedEducationalLiteratureCriterion(): bool
     {
         return in_array($this->code, self::PRINTED_EDUCATIONAL_LITERATURE_CODES, true);
+    }
+
+    public function usesAutomaticAiHumanReviewScore(): bool
+    {
+        return $this->checking === 'ai'
+            && in_array($this->code, self::AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES, true);
     }
 
     /** @return array<int, 'file'|'url'> */
