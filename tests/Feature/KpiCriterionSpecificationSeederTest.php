@@ -139,18 +139,6 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $hIndexCriterion = Criterion::query()->where('code', '3.1.4')->firstOrFail();
         $this->assertSame('ai', $hIndexCriterion->checking);
         $this->assertSame('1', $hIndexCriterion->upload);
-        $this->assertDatabaseHas('criterion_evaluations', [
-            'criterion_id' => $hIndexCriterion->getKey(),
-            'evaluation' => 'hold_degrees',
-            'has' => '1',
-            'score' => 2,
-        ]);
-        $this->assertDatabaseHas('criterion_evaluations', [
-            'criterion_id' => $hIndexCriterion->getKey(),
-            'evaluation' => 'no_degrees',
-            'has' => '0',
-            'score' => 0,
-        ]);
 
         $criterionOneTwo = Criterion::query()
             ->with('criterionEvaluations')

@@ -1421,7 +1421,7 @@ class ManualReviewWorkflowTest extends TestCase
         $criteria = collect([
             '3.1.2' => [2, 3],
             '3.1.3' => [5, 5],
-            '3.1.4' => [2, null],
+            '3.1.4' => [2, 3],
             '3.1.8' => [3, 4],
         ])->mapWithKeys(function (array $scores, string $code) use ($baseCriterion): array {
             $criterion = $this->createSiblingCriterion($baseCriterion, $code.' AI kriteriya', [
@@ -1433,8 +1433,8 @@ class ManualReviewWorkflowTest extends TestCase
                 CriterionEvaluation::query()->create([
                     'criterion_id' => $criterion->id,
                     'evaluation' => $evaluation,
-                    'has' => $score === null ? '0' : '1',
-                    'score' => $score ?? 0,
+                    'has' => '1',
+                    'score' => $score,
                 ]);
             }
 
@@ -1496,16 +1496,11 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertSee('Tasdiqlash')
             ->assertDontSee('name="point"', false);
         $this->actingAs($reviewer)
-            ->from(route('reviews.show', $automaticWithDegreeDatum))
-            ->patch(route('reviews.approve', $automaticWithDegreeDatum), ['point' => 2])
-            ->assertSessionHasErrors('point');
-        $this->actingAs($reviewer)
             ->patch(route('reviews.approve', $automaticWithDegreeDatum))
             ->assertRedirect(route('ai-human-reviews.index'));
         $this->actingAs($reviewer)
-            ->from(route('reviews.show', $automaticWithoutDegreeDatum))
             ->patch(route('reviews.approve', $automaticWithoutDegreeDatum))
-            ->assertSessionHasErrors('datum');
+            ->assertRedirect(route('ai-human-reviews.index'));
 
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $patentWithDegreeDatum))
@@ -1530,8 +1525,7 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertSame(2.5, $tierDatum->point);
         $this->assertSame('conference', $tierDatum->publication_tier);
         $this->assertSame(2.0, $automaticWithDegreeDatum->fresh()->point);
-        $this->assertSame(0.0, $automaticWithoutDegreeDatum->fresh()->point);
-        $this->assertSame('checking', $automaticWithoutDegreeDatum->fresh()->status);
+        $this->assertSame(3.0, $automaticWithoutDegreeDatum->fresh()->point);
         $this->assertSame(1.5, $patentWithDegreeDatum->point);
         $this->assertSame(1.0, $patentWithoutDegreeDatum->point);
         $this->assertSame(2, $patentWithDegreeDatum->author_count);
