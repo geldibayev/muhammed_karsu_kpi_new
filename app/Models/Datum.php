@@ -34,6 +34,17 @@ class Datum extends Model
         return $query->whereIn('status', self::statusesCountingTowardsUploadLimit());
     }
 
+    public function scopePendingAiHumanReviewFor(Builder $query, int $reviewerHemisId): Builder
+    {
+        return $query
+            ->where('reviewer_hemis_id', $reviewerHemisId)
+            ->where('status', DatumStatus::Checking->value)
+            ->whereHas(
+                'criterion',
+                fn (Builder $query): Builder => $query->where('checking', 'ai'),
+            );
+    }
+
     public function usesAiChecking(): bool
     {
         $criterion = $this->relationLoaded('criterion')

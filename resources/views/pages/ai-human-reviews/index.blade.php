@@ -17,6 +17,39 @@
                         </div>
                     </div>
                 </div>
+                <div class="card-body border-bottom">
+                    <form method="GET" action="{{ route('ai-human-reviews.index') }}">
+                        <div class="form-row align-items-end">
+                            <div class="form-group col-lg-6 col-md-8 mb-md-0">
+                                <label for="criterion">Kriteriya bo‘yicha filtr</label>
+                                <select id="criterion" name="criterion"
+                                        class="form-control @error('criterion') is-invalid @enderror">
+                                    <option value="">Barcha kriteriyalar</option>
+                                    @foreach($criteria as $criterion)
+                                        <option value="{{ $criterion->id }}"
+                                                @selected($selectedCriterionId === $criterion->id)>
+                                            @if(filled($criterion->code)){{ $criterion->code }} — @endif{{ data_get($criterion->name, 'uz', 'Nomsiz kriteriya') }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('criterion')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-auto mt-2 mt-md-0">
+                                <button type="submit" class="btn btn-info">
+                                    <i class="fas fa-filter mr-1"></i> Filtrlash
+                                </button>
+                                @if($selectedCriterionId !== null)
+                                    <a href="{{ route('ai-human-reviews.index') }}"
+                                       class="btn btn-outline-secondary ml-1">
+                                        Tozalash
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                    </form>
+                </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">

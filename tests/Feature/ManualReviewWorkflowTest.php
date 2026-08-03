@@ -399,6 +399,75 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_ai_human_reviews_can_be_filtered_by_criteria_with_pending_resources(): void
+    {
+        $reviewer = User::factory()->create();
+        $otherReviewer = User::factory()->create();
+        $owner = User::factory()->create();
+        $firstCriterion = $this->createCriterion();
+        $firstCriterion->update([
+            'code' => '4.1.1',
+            'name' => ['uz' => 'Birinchi AI kriteriya'],
+            'checking' => 'ai',
+        ]);
+        $secondCriterion = $this->createSiblingCriterion($firstCriterion, 'Ikkinchi AI kriteriya', [
+            'code' => '4.1.2',
+            'checking' => 'ai',
+        ]);
+        $emptyCriterion = $this->createSiblingCriterion($firstCriterion, 'Resurssiz AI kriteriya', [
+            'code' => '4.1.3',
+            'checking' => 'ai',
+        ]);
+        $manualCriterion = $this->createSiblingCriterion($firstCriterion, 'Manual kriteriya');
+        $this->assignAiHumanReviewer($reviewer);
+
+        $firstResource = $this->createDatum($owner, $firstCriterion, [
+            'name' => 'Birinchi filtrlanadigan resurs',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $secondResource = $this->createDatum($owner, $secondCriterion, [
+            'name' => 'Ikkinchi filtrlanadigan resurs',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $this->createDatum($owner, $emptyCriterion, [
+            'name' => 'Boshqa tekshiruvchidagi resurs',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $otherReviewer->hemis_id,
+        ]);
+        $this->createDatum($owner, $manualCriterion, [
+            'name' => 'Manual tekshiruvdagi resurs',
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('ai-human-reviews.index'))
+            ->assertOk()
+            ->assertSee('Kriteriya bo‘yicha filtr')
+            ->assertSee('Birinchi AI kriteriya')
+            ->assertSee('Ikkinchi AI kriteriya')
+            ->assertDontSee('Resurssiz AI kriteriya')
+            ->assertDontSee('Manual kriteriya')
+            ->assertSee($firstResource->name)
+            ->assertSee($secondResource->name);
+
+        $this->actingAs($reviewer)
+            ->get(route('ai-human-reviews.index', ['criterion' => $firstCriterion->id]))
+            ->assertOk()
+            ->assertSee('Birinchi AI kriteriya')
+            ->assertSee('Ikkinchi AI kriteriya')
+            ->assertSee($firstResource->name)
+            ->assertDontSee($secondResource->name);
+
+        $this->actingAs($reviewer)
+            ->from(route('ai-human-reviews.index'))
+            ->get(route('ai-human-reviews.index', ['criterion' => $emptyCriterion->id]))
+            ->assertRedirect(route('ai-human-reviews.index'))
+            ->assertSessionHasErrors('criterion');
+    }
+
     public function test_command_assigns_legacy_ai_human_reviews_but_skips_failures_and_transfers(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
