@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\OakArticleCriterionRule;
@@ -120,7 +121,8 @@ class Criterion extends Model
     public function usesAutomaticAiHumanReviewScore(): bool
     {
         return $this->checking === 'ai'
-            && in_array($this->code, self::AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES, true);
+            && (in_array($this->code, self::AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES, true)
+                || FixedPerResourceHumanReviewCriterionRule::supports($this->code));
     }
 
     public function usesImpactFactorAiHumanReviewScore(): bool

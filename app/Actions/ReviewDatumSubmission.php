@@ -11,6 +11,7 @@ use App\Services\IndustryFundingScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -212,9 +213,16 @@ class ReviewDatumSubmission
             }
 
             if ($datum->criterion->usesAutomaticAiHumanReviewScore()) {
+                $fixedPerResourcePoint = FixedPerResourceHumanReviewCriterionRule::pointFor(
+                    (string) $datum->criterion->code,
+                    (string) $datum->user->degree,
+                );
+
                 return [
-                    'point' => $maximumPoint,
-                    'rule' => 'foydalanuvchining baholash toifasi bo‘yicha avtomatik ball',
+                    'point' => $fixedPerResourcePoint ?? $maximumPoint,
+                    'rule' => $fixedPerResourcePoint === null
+                        ? 'foydalanuvchining baholash toifasi bo‘yicha avtomatik ball'
+                        : 'foydalanuvchining baholash toifasi bo‘yicha har bir tasdiqlangan resurs uchun qat’iy ball',
                 ];
             }
 

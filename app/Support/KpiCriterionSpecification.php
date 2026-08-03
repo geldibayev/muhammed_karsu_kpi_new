@@ -94,9 +94,9 @@ class KpiCriterionSpecification
 
             '4.1.1' => self::rule(self::Competition, 4, 'current', [3, 3, 2, 3]),
             '4.1.2' => self::rule(self::Competition, 1, 'current', [1, 1, 1, 2]),
-            '4.1.3' => self::rule(self::Competition, 4, 'current', [2, 3, 1, 3]),
-            '4.1.4' => self::rule(self::Competition, 4, 'current', [2, 3, 2, 4]),
-            '4.1.5' => self::rule(self::Competition, 2, 'current', [2, 1, 2, 2]),
+            '4.1.3' => self::rule(self::Maximum, 4, 'current', [2, 3, 1, 3]),
+            '4.1.4' => self::rule(self::Maximum, 4, 'current', [2, 3, 2, 4]),
+            '4.1.5' => self::rule(self::Maximum, 2, 'current', [2, 1, 2, 2]),
             '4.1.6' => self::rule(self::Competition, 0, 'current', [2, 3, 1, 2]),
         ];
     }
