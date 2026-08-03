@@ -46,6 +46,13 @@
                                         <div class="text-muted text-break">
                                             {{ data_get($datum->criterion?->name, 'uz', 'Mezon topilmadi') }}
                                         </div>
+                                        @if(auth()->user()->isSuperAdmin() && $status === \App\Enums\DatumStatus::Cancelled)
+                                            <div class="small text-info text-break">
+                                                <i class="fas fa-user mr-1" aria-hidden="true"></i>
+                                                {{ $datum->user?->full ?: ($datum->user?->short ?: 'Noma’lum foydalanuvchi') }}
+                                                · HEMIS ID: {{ $datum->user?->hemis_id ?? '—' }}
+                                            </div>
+                                        @endif
                                         @if($status === \App\Enums\DatumStatus::Deleted)
                                             <div class="alert alert-warning px-3 py-2 mt-2 mb-0">
                                                 <div class="text-break">
@@ -98,6 +105,18 @@
                                                     <i class="fas fa-external-link-alt"></i>
                                                 </a>
                                             @endif
+                                        @endcan
+
+                                        @can('requeueAiEvaluation', $datum)
+                                            <form action="{{ route('upload.ai-requeue', $datum) }}" method="post"
+                                                  class="d-inline-block">
+                                                @csrf
+                                                <button type="submit" class="btn btn-warning btn-xs"
+                                                        title="AI tekshiruviga qayta yuborish">
+                                                    <i class="fas fa-robot mr-1" aria-hidden="true"></i>
+                                                    AI tekshiruviga qayta yuborish
+                                                </button>
+                                            </form>
                                         @endcan
                                     </td>
                                 </tr>

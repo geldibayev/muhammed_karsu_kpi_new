@@ -35,7 +35,7 @@ class RequeueCancelledAiDatum
                 [
                     'user_id' => $administrator->getKey(),
                     'type' => 'info',
-                    'message' => 'Asosiy administrator resursni AI qayta tekshiruviga yubordi.',
+                    'message' => 'Super administrator resursni AI qayta tekshiruviga yubordi.',
                     'message_type' => 'ai_manual_recheck_queued',
                 ],
                 [

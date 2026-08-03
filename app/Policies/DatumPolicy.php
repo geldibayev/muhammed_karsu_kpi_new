@@ -53,26 +53,19 @@ class DatumPolicy
     public function requeueAiEvaluation(User $user, Datum $datum): bool
     {
         if (! $user->isSuperAdmin()
-            || (string) $user->hemis_id !== (string) config('kpi.settings_manager_hemis_id')
             || $datum->status !== DatumStatus::Cancelled->value
             || ! $datum->usesAiChecking()) {
             return false;
         }
 
-        $lastAiEvaluationId = (int) $datum->histories()
-            ->where('message_type', 'ai_evaluation')
-            ->max('id');
-        $lastAiQueueId = (int) $datum->histories()
-            ->whereIn('message_type', ['submission_created', 'ai_queued'])
-            ->max('id');
-        $lastHumanDecisionId = (int) $datum->histories()
-            ->whereIn('message_type', [
-                'manual_review_approved',
-                'manual_review_rejected',
-                'h_index_review_approved',
-                'criterion_transferred',
-            ])
-            ->max('id');
+        $lastAiEvaluationId = $this->latestHistoryId($datum, ['ai_evaluation']);
+        $lastAiQueueId = $this->latestHistoryId($datum, ['submission_created', 'ai_queued']);
+        $lastHumanDecisionId = $this->latestHistoryId($datum, [
+            'manual_review_approved',
+            'manual_review_rejected',
+            'h_index_review_approved',
+            'criterion_transferred',
+        ]);
 
         return $lastAiEvaluationId > $lastAiQueueId
             && $lastAiEvaluationId > $lastHumanDecisionId;
@@ -112,5 +105,19 @@ class DatumPolicy
             ->where('hemis_id', $user->hemis_id)
             ->where('criterion_id', $datum->criterion_id)
             ->exists();
+    }
+
+    /** @param  array<int, string>  $messageTypes */
+    private function latestHistoryId(Datum $datum, array $messageTypes): int
+    {
+        if ($datum->relationLoaded('histories')) {
+            return (int) $datum->histories
+                ->whereIn('message_type', $messageTypes)
+                ->max('id');
+        }
+
+        return (int) $datum->histories()
+            ->whereIn('message_type', $messageTypes)
+            ->max('id');
     }
 }

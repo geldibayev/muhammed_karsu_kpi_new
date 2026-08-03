@@ -24,20 +24,29 @@ class DatumHistoryController extends Controller
             ],
         ];
 
-        $query = Datum::query()
-            ->whereBelongsTo($request->user())
-            ->where('status', $status->value);
+        $query = Datum::query()->where('status', $status->value);
+
+        if (! $request->user()->isSuperAdmin() || $status !== DatumStatus::Cancelled) {
+            $query->whereBelongsTo($request->user());
+        }
 
         $totalPoints = $status === DatumStatus::Accepted
             ? (clone $query)->sum('point')
             : null;
 
+        $relations = [
+            'criterion:id,name,checking',
+            'duplicateOf:id,name,status',
+            'year:id,name',
+        ];
+
+        if ($request->user()->isSuperAdmin() && $status === DatumStatus::Cancelled) {
+            $relations[] = 'user:id,hemis_id,name';
+            $relations[] = 'histories:id,datum_id,message_type';
+        }
+
         $data = $query
-            ->with([
-                'criterion:id,name',
-                'duplicateOf:id,name,status',
-                'year:id,name',
-            ])
+            ->with($relations)
             ->latest()
             ->paginate(20)
             ->withQueryString();

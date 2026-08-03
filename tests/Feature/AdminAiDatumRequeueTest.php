@@ -15,11 +15,10 @@ class AdminAiDatumRequeueTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_primary_admin_sees_the_button_and_can_requeue_a_cancelled_ai_evaluation(): void
+    public function test_super_admin_sees_the_button_and_can_requeue_a_cancelled_ai_evaluation(): void
     {
-        config()->set('kpi.settings_manager_hemis_id', '3172011004');
         $administrator = User::factory()->withRole('super_admin')->create([
-            'hemis_id' => 3172011004,
+            'hemis_id' => 9999999999,
         ]);
         $datum = $this->createAiEvaluatedDatum();
         $datum->update([
@@ -29,6 +28,13 @@ class AdminAiDatumRequeueTest extends TestCase
             'reviewer_hemis_id' => 123456,
         ]);
         Queue::fake();
+
+        $this->actingAs($administrator)
+            ->get(route('files.show', 'cancelled'))
+            ->assertOk()
+            ->assertSee($datum->name)
+            ->assertSee('AI tekshiruviga qayta yuborish')
+            ->assertSee(route('upload.ai-requeue', $datum));
 
         $this->actingAs($administrator)
             ->get(route('upload.details', $datum))
@@ -52,6 +58,7 @@ class AdminAiDatumRequeueTest extends TestCase
             'datum_id' => $datum->id,
             'user_id' => $administrator->id,
             'message_type' => 'ai_manual_recheck_queued',
+            'message' => 'Super administrator resursni AI qayta tekshiruviga yubordi.',
         ]);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
@@ -65,27 +72,23 @@ class AdminAiDatumRequeueTest extends TestCase
         );
     }
 
-    public function test_other_users_cannot_see_or_use_the_requeue_action(): void
+    public function test_non_super_admin_users_cannot_see_or_use_the_requeue_action(): void
     {
-        config()->set('kpi.settings_manager_hemis_id', '3172011004');
-        $otherAdministrator = User::factory()->withRole('super_admin')->create([
+        $teacher = User::factory()->withRole('teacher')->create([
             'hemis_id' => 9999999999,
-        ]);
-        $configuredTeacher = User::factory()->withRole('teacher')->create([
-            'hemis_id' => 3172011004,
         ]);
         $datum = $this->createAiEvaluatedDatum();
         Queue::fake();
 
-        $this->actingAs($otherAdministrator)
+        $this->post(route('upload.ai-requeue', $datum))
+            ->assertRedirect(route('login'));
+
+        $this->actingAs($teacher)
             ->get(route('upload.details', $datum))
             ->assertOk()
             ->assertDontSee('AI tekshiruviga qayta yuborish');
 
-        $this->actingAs($otherAdministrator)
-            ->post(route('upload.ai-requeue', $datum))
-            ->assertForbidden();
-        $this->actingAs($configuredTeacher)
+        $this->actingAs($teacher)
             ->post(route('upload.ai-requeue', $datum))
             ->assertForbidden();
 
@@ -95,9 +98,8 @@ class AdminAiDatumRequeueTest extends TestCase
 
     public function test_only_the_latest_unmodified_ai_rejection_can_be_requeued(): void
     {
-        config()->set('kpi.settings_manager_hemis_id', '3172011004');
         $administrator = User::factory()->withRole('super_admin')->create([
-            'hemis_id' => 3172011004,
+            'hemis_id' => 9999999999,
         ]);
         $accepted = $this->createAiEvaluatedDatum(status: 'accepted');
         $manualCriterion = $this->createCriterion(checking: 'manual');
@@ -123,9 +125,8 @@ class AdminAiDatumRequeueTest extends TestCase
 
     public function test_repeated_click_cannot_enqueue_the_same_ai_evaluation_twice(): void
     {
-        config()->set('kpi.settings_manager_hemis_id', '3172011004');
         $administrator = User::factory()->withRole('super_admin')->create([
-            'hemis_id' => 3172011004,
+            'hemis_id' => 9999999999,
         ]);
         $datum = $this->createAiEvaluatedDatum();
         Queue::fake();
