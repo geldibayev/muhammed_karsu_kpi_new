@@ -8,6 +8,7 @@ use App\Http\Controllers\CriterionRatingController;
 use App\Http\Controllers\CriterionResourceStatisticsController;
 use App\Http\Controllers\DatumController;
 use App\Http\Controllers\DatumHistoryController;
+use App\Http\Controllers\ExternalPartTimeUserExportController;
 use App\Http\Controllers\HemisController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ManualReviewController;
@@ -59,6 +60,9 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
         ->middleware('can:view-ratings')
         ->name('criteria.ratings.show');
     Route::get('/users/roles', [UserRoleController::class, 'index'])->name('users.roles.index');
+    Route::get('/users/external-part-timers/export', ExternalPartTimeUserExportController::class)
+        ->middleware('can:export-employment-data')
+        ->name('users.external-part-timers.export');
     Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
     Route::get('/reviewer-assignments', [ReviewerAssignmentController::class, 'index'])
         ->name('reviewer-assignments.index');

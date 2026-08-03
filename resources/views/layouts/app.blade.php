@@ -205,6 +205,14 @@
                     <li class="nav-header font-weight-bold" style="text-transform: uppercase">
                         Tizim
                     </li>
+                    @can('export-employment-data')
+                        <li class="nav-item">
+                            <a href="{{ route('users.external-part-timers.export') }}" class="nav-link">
+                                <i class="nav-icon fas fa-file-excel"></i>
+                                <p>Tashqi o‘rindoshlar</p>
+                            </a>
+                        </li>
+                    @endcan
                     @can('view-ai-status')
                         @php
                             $aiMenuPresentation = match ($aiMenuStatus['state'] ?? 'unknown') {
