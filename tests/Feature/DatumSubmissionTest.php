@@ -349,35 +349,12 @@ class DatumSubmissionTest extends TestCase
 
     public function test_criterion_1_4_allows_only_one_active_file_per_user(): void
     {
-        Storage::fake('local');
-        Queue::fake();
-        $teacher = User::factory()->create();
-        $criterion = $this->createCriterion([
-            'code' => '1.4',
-            'res_type' => 'file',
-            'checking' => 'ai',
-            'file_limit' => 1,
-        ]);
-        $year = $this->createActiveYear();
-        Datum::query()->create([
-            'name' => 'Old proof.pdf',
-            'material' => ['type' => 'file', 'disk' => 'local', 'path' => 'old-proof.pdf'],
-            'user_id' => $teacher->id,
-            'criterion_id' => $criterion->id,
-            'year_id' => $year->id,
-            'status' => 'checking',
-        ]);
+        $this->assertCriterionAllowsOnlyOneActiveFile('1.4');
+    }
 
-        $this->actingAs($teacher)
-            ->post(route('upload.store', $criterion), [
-                'uploadResourceType' => 'file',
-                'uploadResourceFile' => UploadedFile::fake()->create('new-proof.pdf', 100, 'application/pdf'),
-                'year' => $year->id,
-            ])
-            ->assertSessionHasErrors('uploadResourceFile');
-
-        $this->assertDatabaseCount('data', 1);
-        Queue::assertNothingPushed();
+    public function test_criterion_1_10_allows_only_one_active_file_per_user(): void
+    {
+        $this->assertCriterionAllowsOnlyOneActiveFile('1.10');
     }
 
     public function test_cancelled_submission_does_not_consume_file_limit(): void
@@ -527,6 +504,39 @@ class DatumSubmissionTest extends TestCase
         ]);
 
         return $criterion;
+    }
+
+    private function assertCriterionAllowsOnlyOneActiveFile(string $criterionCode): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => $criterionCode,
+            'res_type' => 'file',
+            'checking' => 'ai',
+            'file_limit' => 1,
+        ]);
+        $year = $this->createActiveYear();
+        Datum::query()->create([
+            'name' => 'Old proof.pdf',
+            'material' => ['type' => 'file', 'disk' => 'local', 'path' => 'old-proof.pdf'],
+            'user_id' => $teacher->id,
+            'criterion_id' => $criterion->id,
+            'year_id' => $year->id,
+            'status' => 'checking',
+        ]);
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create('new-proof.pdf', 100, 'application/pdf'),
+                'year' => $year->id,
+            ])
+            ->assertSessionHasErrors('uploadResourceFile');
+
+        $this->assertDatabaseCount('data', 1);
+        Queue::assertNothingPushed();
     }
 
     private function createActiveYear(): Year

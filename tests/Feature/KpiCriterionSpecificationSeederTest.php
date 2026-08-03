@@ -168,6 +168,18 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             ->firstWhere('evaluation', 'no_degrees')?->score);
         $this->assertSame(1, Criterion::query()->where('code', '1.4')->value('file_limit'));
 
+        $criterionOneTen = Criterion::query()
+            ->with('criterionEvaluations')
+            ->where('code', '1.10')
+            ->firstOrFail();
+        $this->assertSame(1, $criterionOneTen->file_limit);
+        foreach (['hold_degrees' => 2, 'no_degrees' => 2, 'foreign_lang' => 3, 'physical' => 4] as $evaluation => $score) {
+            $this->assertSame(
+                $score,
+                $criterionOneTen->criterionEvaluations->firstWhere('evaluation', $evaluation)?->score,
+            );
+        }
+
         $this->assertDatabaseHas('criterion_manual_score_options', ['code' => 'dsc_diploma', 'point' => 3]);
         $this->assertDatabaseHas('criterion_manual_score_options', ['code' => 'phd_diploma', 'point' => 3]);
     }

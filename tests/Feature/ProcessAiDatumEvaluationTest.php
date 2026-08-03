@@ -127,10 +127,10 @@ class ProcessAiDatumEvaluationTest extends TestCase
     public function test_job_assigns_criterion_specific_ai_human_reviewer_before_global_reviewer(): void
     {
         config()->set('kpi.ai_human_review_criterion_reviewers', [
-            '2.1.1' => 3462611061,
+            '1.10' => 3862011037,
         ]);
         $datum = $this->createDatum();
-        $datum->criterion->update(['code' => '2.1.1']);
+        $datum->criterion->update(['code' => '1.10']);
         AiHumanReviewAssignment::query()->create([
             'hemis_id' => 3172011004,
             'active_slot' => 1,
@@ -145,11 +145,11 @@ class ProcessAiDatumEvaluationTest extends TestCase
 
         (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
 
-        $this->assertSame(3462611061, $datum->fresh()->reviewer_hemis_id);
+        $this->assertSame(3862011037, $datum->fresh()->reviewer_hemis_id);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
             'message_type' => 'ai_human_review_assigned',
-            'message' => 'AI inson tekshiruvi HEMIS ID 3462611061 mas’ulga biriktirildi.',
+            'message' => 'AI inson tekshiruvi HEMIS ID 3862011037 mas’ulga biriktirildi.',
         ]);
     }
 

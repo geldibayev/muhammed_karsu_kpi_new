@@ -622,7 +622,7 @@ class ManualReviewWorkflowTest extends TestCase
         $oldReviewer = User::factory()->create();
         $owner = User::factory()->create();
         $baseCriterion = $this->createCriterion();
-        $data = collect(['1.2', '1.3', '1.4'])->mapWithKeys(function (string $code) use (
+        $data = collect(['1.2', '1.3', '1.4', '1.10'])->mapWithKeys(function (string $code) use (
             $baseCriterion,
             $oldReviewer,
             $owner,
@@ -1463,6 +1463,71 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertSame(1.5, $criterionOneThreeDatum->fresh()->point);
         $this->assertSame(5.0, $criterionOneFourWithDegreeDatum->fresh()->point);
         $this->assertSame(4.0, $criterionOneFourWithoutDegreeDatum->fresh()->point);
+    }
+
+    public function test_criterion_1_10_human_approval_uses_the_evaluation_category_score(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3862011037]);
+        $baseCriterion = $this->createCriterion();
+        $criterion = $this->createSiblingCriterion($baseCriterion, '1.10 AI kriteriya', [
+            'code' => '1.10',
+            'checking' => 'ai',
+            'file_limit' => 1,
+        ]);
+        $scores = [
+            'hold_degrees' => 2,
+            'no_degrees' => 2,
+            'foreign_lang' => 3,
+            'physical' => 4,
+        ];
+        $data = collect($scores)->mapWithKeys(function (int $score, string $evaluation) use (
+            $criterion,
+            $reviewer,
+        ): array {
+            Evaluation::query()->firstOrCreate(
+                ['code' => $evaluation],
+                ['name' => ['uz' => $evaluation], 'status' => '1'],
+            );
+            CriterionEvaluation::query()->create([
+                'criterion_id' => $criterion->getKey(),
+                'evaluation' => $evaluation,
+                'has' => '1',
+                'score' => $score,
+            ]);
+            $owner = User::factory()->create(['degree' => $evaluation]);
+
+            return [$evaluation => $this->createDatum($owner, $criterion, [
+                'status' => 'checking',
+                'reviewer_hemis_id' => $reviewer->hemis_id,
+            ])];
+        });
+
+        $firstDatum = $data->first();
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $firstDatum))
+            ->assertOk()
+            ->assertSee('Tasdiqlash')
+            ->assertDontSee('name="point"', false)
+            ->assertDontSee('name="author_count"', false)
+            ->assertDontSee('name="page_count"', false);
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $firstDatum))
+            ->patch(route('reviews.approve', $firstDatum), ['point' => 99])
+            ->assertSessionHasErrors('point');
+
+        foreach ($data as $evaluation => $datum) {
+            $this->actingAs($reviewer)
+                ->patch(route('reviews.approve', $datum))
+                ->assertRedirect(route('ai-human-reviews.index'));
+
+            $this->assertSame('accepted', $datum->fresh()->status);
+            $this->assertSame((float) $scores[$evaluation], $datum->fresh()->point);
+            $this->assertDatabaseHas('datum_histories', [
+                'datum_id' => $datum->getKey(),
+                'user_id' => $reviewer->getKey(),
+                'message_type' => 'manual_review_approved',
+            ]);
+        }
     }
 
     public function test_scientific_publication_human_reviews_use_server_side_scoring_rules(): void
