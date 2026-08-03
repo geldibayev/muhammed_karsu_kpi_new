@@ -207,8 +207,9 @@
                     </li>
                     @can('export-employment-data')
                         <li class="nav-item">
-                            <a href="{{ route('users.external-part-timers.export') }}" class="nav-link">
-                                <i class="nav-icon fas fa-file-excel"></i>
+                            <a href="{{ route('users.external-part-timers.index') }}"
+                               class="nav-link @if(request()->routeIs('users.external-part-timers.*')) active @endif">
+                                <i class="nav-icon fas fa-user-tie"></i>
                                 <p>Tashqi o‘rindoshlar</p>
                             </a>
                         </li>

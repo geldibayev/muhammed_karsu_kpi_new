@@ -8,8 +8,8 @@
                 <div class="card-tools d-flex align-items-center">
                     <span class="text-muted small mr-3">Rollarni faqat super administrator o‘zgartira oladi.</span>
                     @can('export-employment-data')
-                        <a href="{{ route('users.external-part-timers.export') }}" class="btn btn-success btn-sm">
-                            <i class="fas fa-file-excel mr-1"></i> Tashqi o‘rindoshlarni Excelga yuklash
+                        <a href="{{ route('users.external-part-timers.index') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-user-tie mr-1"></i> Tashqi o‘rindoshlar
                         </a>
                     @endcan
                 </div>

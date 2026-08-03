@@ -22,16 +22,27 @@ class ExternalPartTimeUsersExportTest extends TestCase
 
     private int $referenceId = 90_000;
 
-    public function test_only_super_admin_can_export_external_part_time_users(): void
+    public function test_only_super_admin_can_view_and_export_external_part_time_users(): void
     {
+        $this->get(route('users.external-part-timers.index'))
+            ->assertRedirect(route('login'));
         $this->get(route('users.external-part-timers.export'))
             ->assertRedirect(route('login'));
 
         $teacher = User::factory()->create();
 
         $this->actingAs($teacher)
+            ->get(route('users.external-part-timers.index'))
+            ->assertForbidden();
+        $this->actingAs($teacher)
             ->get(route('users.external-part-timers.export'))
             ->assertForbidden();
+
+        $superAdmin = User::factory()->superAdmin()->create();
+        $this->actingAs($superAdmin)
+            ->get(route('users.external-part-timers.index'))
+            ->assertOk()
+            ->assertSee('Tashqi o‘rindosh foydalanuvchilar topilmadi.');
     }
 
     public function test_super_admin_can_download_external_part_time_users_as_xlsx(): void
@@ -73,7 +84,22 @@ class ExternalPartTimeUsersExportTest extends TestCase
         $this->actingAs($superAdmin)
             ->get(route('users.roles.index'))
             ->assertOk()
-            ->assertSee('Tashqi o‘rindoshlarni Excelga yuklash')
+            ->assertSee('Tashqi o‘rindoshlar')
+            ->assertSee(route('users.external-part-timers.index'));
+
+        $this->actingAs($superAdmin)
+            ->get(route('users.external-part-timers.index'))
+            ->assertOk()
+            ->assertSee('Excelga yuklash')
+            ->assertSee(route('users.external-part-timers.export'))
+            ->assertSee('3462111006')
+            ->assertSee('Tashqi O‘rindosh Xodim')
+            ->assertSee('Tashqi o‘rindoshlar fakulteti')
+            ->assertSee('Tashqi o‘rindoshlar kafedrasi')
+            ->assertSee('Ikkinchi tashqi kafedra')
+            ->assertSee('Professor')
+            ->assertSee('Katta o‘qituvchi')
+            ->assertDontSee('Asosiy Ish Joyidagi Xodim')
             ->assertSee(route('users.external-part-timers.export'));
 
         $response = $this->actingAs($superAdmin)
