@@ -4,6 +4,10 @@ $scientificPublicationsReviewerHemisId = env(
     'KPI_AI_HUMAN_REVIEWER_SCIENTIFIC_PUBLICATIONS_HEMIS_ID',
     '3462011207',
 );
+$educationalLiteratureReviewerHemisId = env(
+    'KPI_AI_HUMAN_REVIEWER_EDUCATIONAL_LITERATURE_HEMIS_ID',
+    '3862011037',
+);
 
 return [
     'ai_unlimited_submission_max_point' => (float) env('KPI_AI_UNLIMITED_SUBMISSION_MAX_POINT', 1),
@@ -12,6 +16,9 @@ return [
     'ai_status_viewer_hemis_id' => env('KPI_AI_STATUS_VIEWER_HEMIS_ID', '3172011004'),
     'settings_manager_hemis_id' => env('KPI_SETTINGS_MANAGER_HEMIS_ID', '3172011004'),
     'ai_human_review_criterion_reviewers' => [
+        '1.2' => $educationalLiteratureReviewerHemisId,
+        '1.3' => $educationalLiteratureReviewerHemisId,
+        '1.4' => $educationalLiteratureReviewerHemisId,
         '2.1.1' => env('KPI_AI_HUMAN_REVIEWER_2_1_1_HEMIS_ID', '3462611061'),
         '3.1.1' => $scientificPublicationsReviewerHemisId,
         '3.1.2' => $scientificPublicationsReviewerHemisId,

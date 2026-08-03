@@ -616,6 +616,46 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertSee($datum->name);
     }
 
+    public function test_assignment_command_routes_educational_literature_reviews_to_configured_reviewer(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3862011037]);
+        $oldReviewer = User::factory()->create();
+        $owner = User::factory()->create();
+        $baseCriterion = $this->createCriterion();
+        $data = collect(['1.2', '1.3', '1.4'])->mapWithKeys(function (string $code) use (
+            $baseCriterion,
+            $oldReviewer,
+            $owner,
+        ): array {
+            $criterion = $this->createSiblingCriterion($baseCriterion, $code.' kriteriya', [
+                'code' => $code,
+                'checking' => 'ai',
+            ]);
+            $datum = $this->createDatum($owner, $criterion, [
+                'name' => $code.' inson tekshiruvi',
+                'status' => 'checking',
+                'reviewer_hemis_id' => $oldReviewer->hemis_id,
+            ]);
+            $datum->histories()->create([
+                'user_id' => $owner->id,
+                'type' => 'warning',
+                'message' => 'Inson tekshiruvi kerak.',
+                'message_type' => 'ai_evaluation',
+            ]);
+
+            return [$code => $datum];
+        });
+
+        foreach ($data as $code => $datum) {
+            $this->artisan('kpi:ai:assign-human-reviews', [
+                '--criterion' => $code,
+                '--reassign' => true,
+            ])->assertSuccessful();
+
+            $this->assertSame($reviewer->hemis_id, $datum->fresh()->reviewer_hemis_id);
+        }
+    }
+
     public function test_assignment_command_routes_scientific_ai_human_reviews_to_one_reviewer(): void
     {
         $criterionCodes = ['3.1.1', '3.1.2', '3.1.3', '3.1.4', '3.1.8'];
@@ -1261,6 +1301,104 @@ class ManualReviewWorkflowTest extends TestCase
             'user_id' => $reviewer->id,
             'message_type' => 'manual_review_approved',
         ]);
+    }
+
+    public function test_educational_literature_human_approval_uses_the_correct_server_side_rules(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3862011037]);
+        $withDegreeOwner = User::factory()->create(['degree' => 'hold_degrees']);
+        $withoutDegreeOwner = User::factory()->create(['degree' => 'no_degrees']);
+        $baseCriterion = $this->createCriterion();
+        foreach (['hold_degrees' => 'Ilmiy darajali', 'no_degrees' => 'Ilmiy darajasiz'] as $code => $name) {
+            Evaluation::query()->firstOrCreate(
+                ['code' => $code],
+                ['name' => ['uz' => $name], 'status' => '1'],
+            );
+        }
+        $criteria = collect(['1.2', '1.3', '1.4'])->mapWithKeys(function (string $code) use ($baseCriterion): array {
+            $criterion = $this->createSiblingCriterion($baseCriterion, $code.' AI kriteriya', [
+                'code' => $code,
+                'checking' => 'ai',
+                'file_limit' => $code === '1.4' ? 1 : 0,
+            ]);
+
+            $scores = $code === '1.2'
+                ? ['hold_degrees' => 6, 'no_degrees' => 5]
+                : ['hold_degrees' => 5, 'no_degrees' => 4];
+
+            foreach ($scores as $evaluation => $score) {
+                CriterionEvaluation::query()->create([
+                    'criterion_id' => $criterion->id,
+                    'evaluation' => $evaluation,
+                    'has' => '1',
+                    'score' => $score,
+                ]);
+            }
+
+            return [$code => $criterion];
+        });
+
+        $criterionOneTwoDatum = $this->createDatum($withDegreeOwner, $criteria->get('1.2'), [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $criterionOneThreeDatum = $this->createDatum($withoutDegreeOwner, $criteria->get('1.3'), [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $criterionOneFourWithDegreeDatum = $this->createDatum($withDegreeOwner, $criteria->get('1.4'), [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $criterionOneFourWithoutDegreeDatum = $this->createDatum($withoutDegreeOwner, $criteria->get('1.4'), [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $criterionOneTwoDatum))
+            ->assertOk()
+            ->assertSee('Sahifa va mualliflar bilan tasdiqlash')
+            ->assertDontSee('name="point"', false)
+            ->assertSee('name="author_count"', false)
+            ->assertSee('name="page_count"', false);
+
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $criterionOneTwoDatum))
+            ->patch(route('reviews.approve', $criterionOneTwoDatum))
+            ->assertSessionHasErrors(['page_count', 'author_count']);
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $criterionOneTwoDatum), [
+                'page_count' => 160,
+                'author_count' => 2,
+            ])
+            ->assertRedirect(route('ai-human-reviews.index'));
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $criterionOneThreeDatum), [
+                'page_count' => 160,
+                'author_count' => 2,
+            ])
+            ->assertRedirect(route('ai-human-reviews.index'));
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $criterionOneFourWithDegreeDatum))
+            ->assertOk()
+            ->assertSee('Tasdiqlash')
+            ->assertDontSee('name="point"', false)
+            ->assertDontSee('name="author_count"', false)
+            ->assertDontSee('name="page_count"', false);
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $criterionOneFourWithDegreeDatum))
+            ->assertRedirect(route('ai-human-reviews.index'));
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $criterionOneFourWithoutDegreeDatum))
+            ->assertRedirect(route('ai-human-reviews.index'));
+
+        $this->assertSame(2.0, $criterionOneTwoDatum->fresh()->point);
+        $this->assertSame(1.5, $criterionOneThreeDatum->fresh()->point);
+        $this->assertSame(5.0, $criterionOneFourWithDegreeDatum->fresh()->point);
+        $this->assertSame(4.0, $criterionOneFourWithoutDegreeDatum->fresh()->point);
     }
 
     public function test_scientific_publication_human_reviews_use_server_side_scoring_rules(): void

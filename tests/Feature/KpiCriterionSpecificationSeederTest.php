@@ -140,6 +140,16 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $this->assertSame('ai', $hIndexCriterion->checking);
         $this->assertSame('1', $hIndexCriterion->upload);
 
+        $criterionOneTwo = Criterion::query()
+            ->with('criterionEvaluations')
+            ->where('code', '1.2')
+            ->firstOrFail();
+        $this->assertSame(6, $criterionOneTwo->criterionEvaluations
+            ->firstWhere('evaluation', 'hold_degrees')?->score);
+        $this->assertSame(5, $criterionOneTwo->criterionEvaluations
+            ->firstWhere('evaluation', 'no_degrees')?->score);
+        $this->assertSame(1, Criterion::query()->where('code', '1.4')->value('file_limit'));
+
         $this->assertDatabaseHas('criterion_manual_score_options', ['code' => 'dsc_diploma', 'point' => 3]);
         $this->assertDatabaseHas('criterion_manual_score_options', ['code' => 'phd_diploma', 'point' => 3]);
     }

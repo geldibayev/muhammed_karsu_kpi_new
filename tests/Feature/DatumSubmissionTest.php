@@ -294,32 +294,37 @@ class DatumSubmissionTest extends TestCase
         ]);
     }
 
-    public function test_file_limit_is_rechecked_when_submission_is_created(): void
+    public function test_criterion_1_4_allows_only_one_active_file_per_user(): void
     {
+        Storage::fake('local');
+        Queue::fake();
         $teacher = User::factory()->create();
         $criterion = $this->createCriterion([
-            'res_type' => 'url',
+            'code' => '1.4',
+            'res_type' => 'file',
+            'checking' => 'ai',
             'file_limit' => 1,
         ]);
         $year = $this->createActiveYear();
         Datum::query()->create([
-            'name' => 'Old URL',
-            'material' => ['type' => 'url', 'link' => 'https://example.com/old'],
+            'name' => 'Old proof.pdf',
+            'material' => ['type' => 'file', 'disk' => 'local', 'path' => 'old-proof.pdf'],
             'user_id' => $teacher->id,
             'criterion_id' => $criterion->id,
             'year_id' => $year->id,
-            'status' => 'received',
+            'status' => 'checking',
         ]);
 
         $this->actingAs($teacher)
             ->post(route('upload.store', $criterion), [
-                'uploadResourceType' => 'url',
-                'uploadResourceUrl' => 'https://example.com/new',
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create('new-proof.pdf', 100, 'application/pdf'),
                 'year' => $year->id,
             ])
             ->assertSessionHasErrors('uploadResourceFile');
 
         $this->assertDatabaseCount('data', 1);
+        Queue::assertNothingPushed();
     }
 
     public function test_cancelled_submission_does_not_consume_file_limit(): void
