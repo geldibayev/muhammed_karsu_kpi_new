@@ -81,6 +81,10 @@ class KpiCriterionSpecificationSeeder extends Seeder
             }
 
             $criteria->get('3.1.4')?->update([
+                'checking' => 'site:profile:index',
+                'upload' => '0',
+            ]);
+            $criteria->get('3.1.15')?->update([
                 'checking' => 'ai',
                 'upload' => '1',
             ]);

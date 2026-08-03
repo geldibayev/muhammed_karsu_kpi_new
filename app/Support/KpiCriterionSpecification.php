@@ -69,7 +69,7 @@ class KpiCriterionSpecification
                 false,
                 'Scopus va Web of Science bazasi orqali baholanadi. Q1, Q2 — 100 %, Q3, Q4 — 80 %, konferensiya maqolalari — 50 %. Ball mualliflar soniga bo‘linmaydi.',
             ),
-            '3.1.4' => self::rule(self::Maximum, 1, 'current_state', [2, 3, 3, 3]),
+            '3.1.4' => self::rule(self::Maximum, 0, 'current_state', [3, 2, 2, 2]),
             '3.1.5' => self::rule(self::Maximum, 1, 'current', [2, 3, 3, 3]),
             '3.1.6' => self::rule(self::Unlimited, 0, 'current', [3, null, null, null]),
             '3.1.7' => self::rule(self::Unlimited, 0, 'current', [3, null, 3, null]),
@@ -88,7 +88,7 @@ class KpiCriterionSpecification
                 'Xo‘jalik shartnomasi asosida jalb qilingan har 1 million so‘m uchun 1 ball beriladi. Umumiy ball hammualliflar soniga bo‘linadi.',
             ),
             '3.1.14' => self::rule(self::Competition, 1, 'project_finished', [4, 1, 1, 1]),
-            '3.1.15' => self::rule(self::Maximum, 1, 'end_of_council', [2, null, 2, 2]),
+            '3.1.15' => self::rule(self::Maximum, 1, 'end_of_council', [2, null, null, null]),
 
             '4.1.1' => self::rule(self::Competition, 4, 'current', [3, 3, 2, 3]),
             '4.1.2' => self::rule(self::Competition, 1, 'current', [1, 1, 1, 2]),

@@ -23,8 +23,8 @@ return [
         '3.1.1' => $scientificPublicationsReviewerHemisId,
         '3.1.2' => $scientificPublicationsReviewerHemisId,
         '3.1.3' => $scientificPublicationsReviewerHemisId,
-        '3.1.4' => $scientificPublicationsReviewerHemisId,
         '3.1.8' => $scientificPublicationsReviewerHemisId,
+        '3.1.15' => $scientificPublicationsReviewerHemisId,
     ],
     'criterion_reviewers' => [
         '1.1' => env('KPI_REVIEWER_1_1_HEMIS_ID', '3172011004'),

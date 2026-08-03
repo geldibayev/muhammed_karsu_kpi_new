@@ -658,7 +658,7 @@ class ManualReviewWorkflowTest extends TestCase
 
     public function test_assignment_command_routes_scientific_ai_human_reviews_to_one_reviewer(): void
     {
-        $criterionCodes = ['3.1.1', '3.1.2', '3.1.3', '3.1.4', '3.1.8'];
+        $criterionCodes = ['3.1.1', '3.1.2', '3.1.3', '3.1.8', '3.1.15'];
         config()->set(
             'kpi.ai_human_review_criterion_reviewers',
             array_fill_keys($criterionCodes, 3462011207),
@@ -1303,6 +1303,70 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_criterion_3_1_15_only_approves_scientific_degree_resources_for_two_points(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3462011207]);
+        $withDegreeOwner = User::factory()->create(['degree' => 'hold_degrees']);
+        $withoutDegreeOwner = User::factory()->create(['degree' => 'no_degrees']);
+        $criterion = $this->createCriterion();
+        $criterion->update(['code' => '3.1.15', 'checking' => 'ai']);
+
+        foreach (['hold_degrees' => 'Ilmiy darajali', 'no_degrees' => 'Ilmiy darajasiz'] as $code => $name) {
+            Evaluation::query()->firstOrCreate(
+                ['code' => $code],
+                ['name' => ['uz' => $name], 'status' => '1'],
+            );
+        }
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'hold_degrees',
+            'has' => '1',
+            'score' => 2,
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'no_degrees',
+            'has' => '0',
+            'score' => 0,
+        ]);
+
+        $withDegreeDatum = $this->createDatum($withDegreeOwner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $withoutDegreeDatum = $this->createDatum($withoutDegreeOwner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $withDegreeDatum))
+            ->assertOk()
+            ->assertSee('Tasdiqlash')
+            ->assertDontSee('name="point"', false);
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $withDegreeDatum))
+            ->patch(route('reviews.approve', $withDegreeDatum), ['point' => 99])
+            ->assertSessionHasErrors('point');
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $withDegreeDatum))
+            ->assertRedirect(route('ai-human-reviews.index'));
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $withoutDegreeDatum))
+            ->patch(route('reviews.approve', $withoutDegreeDatum))
+            ->assertSessionHasErrors('datum');
+
+        $this->assertSame(2.0, $withDegreeDatum->fresh()->point);
+        $this->assertSame('accepted', $withDegreeDatum->fresh()->status);
+        $this->assertSame(0.0, $withoutDegreeDatum->fresh()->point);
+        $this->assertSame('checking', $withoutDegreeDatum->fresh()->status);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $withDegreeDatum->getKey(),
+            'user_id' => $reviewer->getKey(),
+            'message_type' => 'manual_review_approved',
+        ]);
+    }
+
     public function test_educational_literature_human_approval_uses_the_correct_server_side_rules(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3862011037]);
@@ -1421,7 +1485,6 @@ class ManualReviewWorkflowTest extends TestCase
         $criteria = collect([
             '3.1.2' => [2, 3],
             '3.1.3' => [5, 5],
-            '3.1.4' => [2, 3],
             '3.1.8' => [3, 4],
         ])->mapWithKeys(function (array $scores, string $code) use ($baseCriterion): array {
             $criterion = $this->createSiblingCriterion($baseCriterion, $code.' AI kriteriya', [
@@ -1447,14 +1510,6 @@ class ManualReviewWorkflowTest extends TestCase
             'reviewer_hemis_id' => $reviewer->hemis_id,
         ]);
         $tierDatum = $this->createDatum($withDegreeOwner, $criteria->get('3.1.3'), [
-            'status' => 'checking',
-            'reviewer_hemis_id' => $reviewer->hemis_id,
-        ]);
-        $automaticWithDegreeDatum = $this->createDatum($withDegreeOwner, $criteria->get('3.1.4'), [
-            'status' => 'checking',
-            'reviewer_hemis_id' => $reviewer->hemis_id,
-        ]);
-        $automaticWithoutDegreeDatum = $this->createDatum($withoutDegreeOwner, $criteria->get('3.1.4'), [
             'status' => 'checking',
             'reviewer_hemis_id' => $reviewer->hemis_id,
         ]);
@@ -1491,18 +1546,6 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertRedirect(route('ai-human-reviews.index'));
 
         $this->actingAs($reviewer)
-            ->get(route('reviews.show', $automaticWithDegreeDatum))
-            ->assertOk()
-            ->assertSee('Tasdiqlash')
-            ->assertDontSee('name="point"', false);
-        $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $automaticWithDegreeDatum))
-            ->assertRedirect(route('ai-human-reviews.index'));
-        $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $automaticWithoutDegreeDatum))
-            ->assertRedirect(route('ai-human-reviews.index'));
-
-        $this->actingAs($reviewer)
             ->get(route('reviews.show', $patentWithDegreeDatum))
             ->assertOk()
             ->assertSee('Mualliflar soni bilan tasdiqlash')
@@ -1524,8 +1567,6 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertSame(2, $impactDatum->impact_factor);
         $this->assertSame(2.5, $tierDatum->point);
         $this->assertSame('conference', $tierDatum->publication_tier);
-        $this->assertSame(2.0, $automaticWithDegreeDatum->fresh()->point);
-        $this->assertSame(3.0, $automaticWithoutDegreeDatum->fresh()->point);
         $this->assertSame(1.5, $patentWithDegreeDatum->point);
         $this->assertSame(1.0, $patentWithoutDegreeDatum->point);
         $this->assertSame(2, $patentWithDegreeDatum->author_count);

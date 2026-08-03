@@ -138,6 +138,59 @@ class DatumSubmissionTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_criterion_3_1_15_only_allows_users_with_scientific_degrees_to_submit(): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+        $withoutDegree = User::factory()->create(['degree' => 'no_degrees']);
+        $withDegree = User::factory()->create(['degree' => 'hold_degrees']);
+        $criterion = $this->createCriterion([
+            'code' => '3.1.15',
+            'res_type' => 'file',
+            'checking' => 'ai',
+            'file_limit' => 1,
+        ]);
+        $criterion->criterionEvaluations()
+            ->where('evaluation', 'no_degrees')
+            ->update(['has' => '0', 'score' => 0]);
+        Evaluation::query()->firstOrCreate(
+            ['code' => 'hold_degrees'],
+            ['name' => ['uz' => 'Ilmiy darajali'], 'status' => '1'],
+        );
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'hold_degrees',
+            'has' => '1',
+            'score' => 2,
+        ]);
+        $year = $this->createActiveYear();
+
+        $submission = [
+            'uploadResourceType' => 'file',
+            'uploadResourceFile' => UploadedFile::fake()->create('proof.pdf', 100, 'application/pdf'),
+            'year' => $year->getKey(),
+        ];
+
+        $this->actingAs($withoutDegree)
+            ->post(route('upload.store', $criterion), $submission)
+            ->assertForbidden();
+
+        $submission['uploadResourceFile'] = UploadedFile::fake()->create('degree-proof.pdf', 100, 'application/pdf');
+        $this->actingAs($withDegree)
+            ->post(route('upload.store', $criterion), $submission)
+            ->assertRedirect(route('upload.show', $criterion));
+
+        $this->assertDatabaseHas('data', [
+            'criterion_id' => $criterion->getKey(),
+            'user_id' => $withDegree->getKey(),
+            'status' => 'checking',
+        ]);
+        $this->assertDatabaseMissing('data', [
+            'criterion_id' => $criterion->getKey(),
+            'user_id' => $withoutDegree->getKey(),
+        ]);
+    }
+
     public function test_h_index_submission_can_be_created_with_single_profile(): void
     {
         Storage::fake('local');
