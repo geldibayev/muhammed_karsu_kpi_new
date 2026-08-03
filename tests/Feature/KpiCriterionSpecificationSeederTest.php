@@ -40,6 +40,17 @@ class KpiCriterionSpecificationSeederTest extends TestCase
                 ->whereIn('ai_model', ['gemini-2.5-flash', 'gemini-2.5-pro'])
                 ->exists(),
         );
+
+        $criterion = Criterion::query()->where('code', '1.4')->firstOrFail();
+
+        $this->assertSame(
+            'Darsliklik va o‘quv qo‘llanmalarni boshqa tillardan tarjima qilganligi',
+            $criterion->name['uz'],
+        );
+        $this->assertSame(
+            'Creating electronic textbooks and teaching aids or translating them into other languages',
+            $criterion->name['en'],
+        );
     }
 
     public function test_new_criteria_use_the_cost_efficient_default_ai_model(): void

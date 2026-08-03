@@ -161,7 +161,7 @@ class CriterionSeeder extends Seeder
                     ],
                     [
                         'name' => [
-                            'uz' => 'Elektron darslik va o‘quv qo‘llanma yaratish yoki boshqa tillarda tarjima qilganligi',
+                            'uz' => 'Darsliklik va o‘quv qo‘llanmalarni boshqa tillardan tarjima qilganligi',
                             'kaa' => 'Elektron sabaqlıq hám oqıw qollanbasın jaratıw yamasa basqa tillerge awdarǵanlıǵı',
                             'ru' => 'Создание электронных учебников и учебных пособий или их перевод на другие языки',
                             'en' => 'Creating electronic textbooks and teaching aids or translating them into other languages',
