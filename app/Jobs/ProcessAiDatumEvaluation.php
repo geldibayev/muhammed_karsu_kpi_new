@@ -127,6 +127,7 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 'page_count' => $result->status === 'accepted' ? $result->pageCount : null,
                 'impact_factor' => null,
                 'publication_tier' => null,
+                'university_tier' => null,
                 'reason' => $result->status === 'checking'
                     ? Datum::PUBLIC_CHECKING_REASON
                     : $result->reason,

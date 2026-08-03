@@ -10,6 +10,7 @@ use App\Services\HIndexScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
+use App\Support\InternationalCooperationCriterionRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -33,6 +34,7 @@ class ReviewDatumSubmission
         ?int $pageCount = null,
         ?int $impactFactor = null,
         ?string $publicationTier = null,
+        ?string $universityTier = null,
     ): Datum {
         $reviewedDatum = DB::transaction(function () use (
             $reviewer,
@@ -43,6 +45,7 @@ class ReviewDatumSubmission
             $pageCount,
             $impactFactor,
             $publicationTier,
+            $universityTier,
         ): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'user'])
@@ -95,6 +98,7 @@ class ReviewDatumSubmission
                 $pageCount,
                 $impactFactor,
                 $publicationTier,
+                $universityTier,
             );
             $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
                 .'. Hisoblangan ball: '.number_format(
@@ -118,6 +122,9 @@ class ReviewDatumSubmission
                     : null,
                 'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
                     ? $publicationTier
+                    : null,
+                'university_tier' => $lockedDatum->criterion->isInternationalCooperationCriterion()
+                    ? $universityTier
                     : null,
                 'reason' => $message,
                 'reviewer_hemis_id' => null,
@@ -147,6 +154,7 @@ class ReviewDatumSubmission
         ?int $pageCount,
         ?int $impactFactor,
         ?string $publicationTier,
+        ?string $universityTier,
     ): array {
         $maximumPoint = max(0, (float) $evaluation->score);
 
@@ -240,6 +248,31 @@ class ReviewDatumSubmission
                 ];
             }
 
+            if ($datum->criterion->isInternationalCooperationCriterion()) {
+                $point = $universityTier === null
+                    ? null
+                    : InternationalCooperationCriterionRule::pointForUniversityTier(
+                        $maximumPoint,
+                        $universityTier,
+                    );
+
+                if ($point === null) {
+                    throw ValidationException::withMessages([
+                        'university_tier' => 'Universitetning xalqaro reytingdagi Top darajasini tanlang.',
+                    ]);
+                }
+
+                return [
+                    'point' => $point,
+                    'rule' => match ($universityTier) {
+                        'top_100' => 'Universitet Top-100 reytingida',
+                        'top_300' => 'Universitet Top-101–300 reytingida',
+                        'top_500' => 'Universitet Top-301–500 reytingida',
+                        'top_1000' => 'Universitet Top-501–1000 reytingida',
+                    },
+                ];
+            }
+
             if ($datum->criterion->usesAuthorDividedAiHumanReviewScore()) {
                 if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
                     throw ValidationException::withMessages([
@@ -325,6 +358,7 @@ class ReviewDatumSubmission
                 'reviewer_hemis_id' => null,
                 'impact_factor' => null,
                 'publication_tier' => null,
+                'university_tier' => null,
             ]);
             $lockedDatum->histories()->create([
                 'user_id' => $reviewer->getKey(),

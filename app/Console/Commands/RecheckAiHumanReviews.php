@@ -201,6 +201,7 @@ class RecheckAiHumanReviews extends Command
                 'point' => 0,
                 'impact_factor' => null,
                 'publication_tier' => null,
+                'university_tier' => null,
                 'reason' => 'AI xulosasi yangi qaror qoidasi bo‘yicha qayta tekshirilmoqda.',
                 'reviewer_hemis_id' => null,
             ]);

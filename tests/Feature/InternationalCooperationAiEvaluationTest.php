@@ -44,6 +44,31 @@ class InternationalCooperationAiEvaluationTest extends TestCase
         yield 'special Top-100 or foreign student' => [4.0, 4.0];
     }
 
+    #[DataProvider('universityTierPointProvider')]
+    public function test_it_calculates_human_review_point_from_the_university_tier(
+        float $maximumPoint,
+        string $universityTier,
+        float $expectedPoint,
+    ): void {
+        $this->assertSame(
+            $expectedPoint,
+            InternationalCooperationCriterionRule::pointForUniversityTier($maximumPoint, $universityTier),
+        );
+    }
+
+    /** @return iterable<string, array{float, string, float}> */
+    public static function universityTierPointProvider(): iterable
+    {
+        yield 'standard Top-100' => [3.0, 'top_100', 3.0];
+        yield 'standard Top-300' => [3.0, 'top_300', 2.5];
+        yield 'standard Top-500' => [3.0, 'top_500', 2.0];
+        yield 'standard Top-1000' => [3.0, 'top_1000', 1.5];
+        yield 'special Top-100' => [4.0, 'top_100', 4.0];
+        yield 'special Top-300' => [4.0, 'top_300', 3.5];
+        yield 'special Top-500' => [4.0, 'top_500', 3.0];
+        yield 'special Top-1000' => [4.0, 'top_1000', 1.0];
+    }
+
     #[DataProvider('invalidPointProvider')]
     public function test_it_sends_invalid_accepted_points_to_human_review(float $maximumPoint, float $point): void
     {

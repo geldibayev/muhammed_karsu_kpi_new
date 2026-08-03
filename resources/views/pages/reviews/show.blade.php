@@ -27,6 +27,7 @@
         $usesImpactFactorScore = $datum->criterion?->usesImpactFactorAiHumanReviewScore() === true;
         $usesPublicationTierScore = $datum->criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesAuthorDividedScore = $datum->criterion?->usesAuthorDividedAiHumanReviewScore() === true;
+        $usesUniversityTierScore = $datum->criterion?->isInternationalCooperationCriterion() === true;
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
         $fixedApprovalOption = $isManualCriterion && $scoreOptions->count() === 1
             && $scoreOptions->first()?->code === \App\Models\CriterionManualScoreOption::FIXED_APPROVAL_CODE
@@ -137,6 +138,8 @@
                                         Impakt faktor bilan tasdiqlash
                                     @elseif($usesPublicationTierScore)
                                         Kvartil bilan tasdiqlash
+                                    @elseif($usesUniversityTierScore)
+                                        Universitet Top darajasi bilan tasdiqlash
                                     @else
                                         Ball bilan tasdiqlash
                                     @endif
@@ -356,6 +359,38 @@
                             @error('publication_tier')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                        @elseif($usesUniversityTierScore)
+                            <label for="university-tier">Universitetning xalqaro reytingdagi Top darajasi</label>
+                            <select id="university-tier" name="university_tier" required
+                                    class="form-control @error('university_tier') is-invalid @enderror">
+                                <option value="">Tanlang</option>
+                                @foreach([
+                                    'top_100' => 'Top-100',
+                                    'top_300' => 'Top-101–300',
+                                    'top_500' => 'Top-301–500',
+                                    'top_1000' => 'Top-501–1000',
+                                ] as $universityTier => $universityTierLabel)
+                                    @php
+                                        $universityTierPoint = \App\Support\InternationalCooperationCriterionRule::pointForUniversityTier(
+                                            $evaluationMaximum,
+                                            $universityTier,
+                                        );
+                                    @endphp
+                                    <option value="{{ $universityTier }}"
+                                        @selected(old('university_tier', $datum->university_tier) === $universityTier)>
+                                        {{ $universityTierLabel }}
+                                        @if($universityTierPoint !== null)
+                                            — {{ number_format($universityTierPoint, 2) }} ball
+                                        @endif
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('university_tier')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="small text-muted mt-2">
+                                Ball foydalanuvchining baholash toifasi va tanlangan Top darajasi bo‘yicha avtomatik hisoblanadi.
+                            </div>
                         @else
                             <label for="reviewer-point">Tasdiqlangan ball</label>
                             <input id="reviewer-point" name="point" type="number" min="0"

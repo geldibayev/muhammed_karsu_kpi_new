@@ -6,6 +6,13 @@ class InternationalCooperationCriterionRule
 {
     public const CODE = '2.1.6';
 
+    public const UNIVERSITY_TIER_POINTS = [
+        'top_100' => [3 => 3.0, 4 => 4.0],
+        'top_300' => [3 => 2.5, 4 => 3.5],
+        'top_500' => [3 => 2.0, 4 => 3.0],
+        'top_1000' => [3 => 1.5, 4 => 1.0],
+    ];
+
     public const PROMPT = <<<'PROMPT'
 Siz 2.1.6 xalqaro hamkorlik mezoni bo'yicha qat'iy AI baholovchisiz.
 
@@ -42,5 +49,10 @@ PROMPT;
             4.0 => [1.0, 3.0, 3.5, 4.0],
             default => [],
         };
+    }
+
+    public static function pointForUniversityTier(float $maximumPoint, string $universityTier): ?float
+    {
+        return self::UNIVERSITY_TIER_POINTS[$universityTier][(int) $maximumPoint] ?? null;
     }
 }

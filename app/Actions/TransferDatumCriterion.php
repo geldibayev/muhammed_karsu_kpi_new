@@ -101,6 +101,7 @@ class TransferDatumCriterion
                 'page_count' => null,
                 'impact_factor' => null,
                 'publication_tier' => null,
+                'university_tier' => null,
                 'reviewer_hemis_id' => null,
                 'reason' => 'Kriteriya o‘zgartirildi. Inson tekshiruvi kutilmoqda.',
             ]);

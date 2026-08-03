@@ -580,16 +580,17 @@ class ManualReviewWorkflowTest extends TestCase
     public function test_assignment_command_reassigns_existing_criterion_specific_ai_human_reviews(): void
     {
         config()->set('kpi.ai_human_review_criterion_reviewers', [
-            '2.1.1' => 3462611061,
+            '2.1.6' => 3462611061,
         ]);
         $criterionReviewer = User::factory()->create(['hemis_id' => 3462611061]);
         $globalReviewer = User::factory()->create(['hemis_id' => 3172011004]);
         $owner = User::factory()->create();
         $criterion = $this->createCriterion();
         $criterion->update([
-            'code' => '2.1.1',
+            'code' => '2.1.6',
             'checking' => 'ai',
         ]);
+        $this->assertSame(3462611061, AiHumanReviewAssignment::reviewerHemisIdFor($criterion));
         $this->assignAiHumanReviewer($globalReviewer);
         $datum = $this->createDatum($owner, $criterion, [
             'status' => 'checking',
@@ -603,7 +604,7 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
 
         $this->artisan('kpi:ai:assign-human-reviews', [
-            '--criterion' => '2.1.1',
+            '--criterion' => '2.1.6',
             '--reassign' => true,
         ])
             ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 1')
@@ -1299,6 +1300,77 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $withDegreeDatum->id,
             'user_id' => $reviewer->id,
+            'message_type' => 'manual_review_approved',
+        ]);
+    }
+
+    public function test_criterion_2_1_6_human_review_calculates_point_from_selected_university_tier(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3462611061]);
+        $standardOwner = User::factory()->create(['degree' => 'hold_degrees']);
+        $specialOwner = User::factory()->create(['degree' => 'foreign_lang']);
+        $criterion = $this->createCriterion();
+        $criterion->update(['code' => '2.1.6', 'checking' => 'ai']);
+
+        foreach (['hold_degrees' => 3, 'foreign_lang' => 4] as $evaluation => $score) {
+            Evaluation::query()->create([
+                'code' => $evaluation,
+                'name' => ['uz' => $evaluation],
+                'status' => '1',
+            ]);
+            CriterionEvaluation::query()->create([
+                'criterion_id' => $criterion->getKey(),
+                'evaluation' => $evaluation,
+                'has' => '1',
+                'score' => $score,
+            ]);
+        }
+
+        $standardDatum = $this->createDatum($standardOwner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $specialDatum = $this->createDatum($specialOwner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $standardDatum))
+            ->assertOk()
+            ->assertSee('Universitet Top darajasi bilan tasdiqlash')
+            ->assertSee('name="university_tier"', false)
+            ->assertDontSee('name="point"', false);
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $standardDatum))
+            ->patch(route('reviews.approve', $standardDatum))
+            ->assertSessionHasErrors('university_tier');
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $standardDatum))
+            ->patch(route('reviews.approve', $standardDatum), [
+                'university_tier' => 'top_300',
+                'point' => 3,
+            ])
+            ->assertSessionHasErrors('point');
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $standardDatum))
+            ->patch(route('reviews.approve', $standardDatum), ['university_tier' => 'top_50'])
+            ->assertSessionHasErrors('university_tier');
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $standardDatum), ['university_tier' => 'top_300'])
+            ->assertRedirect(route('ai-human-reviews.index'));
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $specialDatum), ['university_tier' => 'top_300'])
+            ->assertRedirect(route('ai-human-reviews.index'));
+
+        $this->assertSame(2.5, $standardDatum->fresh()->point);
+        $this->assertSame('top_300', $standardDatum->fresh()->university_tier);
+        $this->assertSame(3.5, $specialDatum->fresh()->point);
+        $this->assertSame('top_300', $specialDatum->fresh()->university_tier);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $standardDatum->getKey(),
+            'user_id' => $reviewer->getKey(),
             'message_type' => 'manual_review_approved',
         ]);
     }

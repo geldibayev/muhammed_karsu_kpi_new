@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
+use App\Support\InternationalCooperationCriterionRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -42,6 +43,7 @@ class ApproveDatumRequest extends FormRequest
         $usesImpactFactorScore = $criterion?->usesImpactFactorAiHumanReviewScore() === true;
         $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesAuthorDividedScore = $criterion?->usesAuthorDividedAiHumanReviewScore() === true;
+        $usesUniversityTierScore = $criterion?->isInternationalCooperationCriterion() === true;
         $activeScoreOptionCount = $isManualCriterion
             ? CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterionId)
@@ -71,14 +73,16 @@ class ApproveDatumRequest extends FormRequest
                     && ! $usesAutomaticAiHumanReviewScore
                     && ! $usesImpactFactorScore
                     && ! $usesPublicationTierScore
-                    && ! $usesAuthorDividedScore),
+                    && ! $usesAuthorDividedScore
+                    && ! $usesUniversityTierScore),
                 Rule::prohibitedIf(! $isAiCriterion
                     || $isOakArticleCriterion
                     || $isPrintedLiteratureCriterion
                     || $usesAutomaticAiHumanReviewScore
                     || $usesImpactFactorScore
                     || $usesPublicationTierScore
-                    || $usesAuthorDividedScore),
+                    || $usesAuthorDividedScore
+                    || $usesUniversityTierScore),
                 'nullable',
                 'numeric',
                 'min:0',
@@ -119,6 +123,13 @@ class ApproveDatumRequest extends FormRequest
                 'string',
                 Rule::in(array_keys(ScientificPublicationHumanReviewScoreCalculator::PUBLICATION_TIER_POINTS)),
             ],
+            'university_tier' => [
+                Rule::requiredIf($usesUniversityTierScore),
+                Rule::prohibitedIf(! $usesUniversityTierScore),
+                'nullable',
+                'string',
+                Rule::in(array_keys(InternationalCooperationCriterionRule::UNIVERSITY_TIER_POINTS)),
+            ],
         ];
     }
 
@@ -142,6 +153,9 @@ class ApproveDatumRequest extends FormRequest
             'publication_tier.required' => 'Jurnal kvartili yoki nashr turini tanlang.',
             'publication_tier.prohibited' => 'Bu kriteriya uchun kvartil yoki nashr turi yuborilmaydi.',
             'publication_tier.in' => 'Tanlangan jurnal kvartili yoki nashr turi noto‘g‘ri.',
+            'university_tier.required' => 'Universitetning xalqaro reytingdagi Top darajasini tanlang.',
+            'university_tier.prohibited' => 'Bu kriteriya uchun universitet Top darajasi yuborilmaydi.',
+            'university_tier.in' => 'Tanlangan universitet Top darajasi noto‘g‘ri.',
         ];
     }
 }
