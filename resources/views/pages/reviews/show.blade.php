@@ -24,6 +24,9 @@
         $isOakArticleCriterion = $datum->criterion?->isOakArticleCriterion() === true;
         $isPrintedLiteratureCriterion = $datum->criterion?->isPrintedEducationalLiteratureCriterion() === true;
         $usesAutomaticAiHumanReviewScore = $datum->criterion?->usesAutomaticAiHumanReviewScore() === true;
+        $usesImpactFactorScore = $datum->criterion?->usesImpactFactorAiHumanReviewScore() === true;
+        $usesPublicationTierScore = $datum->criterion?->usesPublicationTierAiHumanReviewScore() === true;
+        $usesAuthorDividedScore = $datum->criterion?->usesAuthorDividedAiHumanReviewScore() === true;
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
         $fixedApprovalOption = $isManualCriterion && $scoreOptions->count() === 1
             && $scoreOptions->first()?->code === \App\Models\CriterionManualScoreOption::FIXED_APPROVAL_CODE
@@ -126,7 +129,17 @@
                                 <button type="button" class="btn btn-success btn-sm mr-2"
                                         data-toggle="modal" data-target="#ai-approve-modal">
                                     <i class="fas fa-check mr-1"></i>
-                                    {{ $isPrintedLiteratureCriterion ? 'Sahifa va mualliflar bilan tasdiqlash' : ($isOakArticleCriterion ? 'Mualliflar soni bilan tasdiqlash' : 'Ball bilan tasdiqlash') }}
+                                    @if($isPrintedLiteratureCriterion)
+                                        Sahifa va mualliflar bilan tasdiqlash
+                                    @elseif($isOakArticleCriterion || $usesAuthorDividedScore)
+                                        Mualliflar soni bilan tasdiqlash
+                                    @elseif($usesImpactFactorScore)
+                                        Impakt faktor bilan tasdiqlash
+                                    @elseif($usesPublicationTierScore)
+                                        Kvartil bilan tasdiqlash
+                                    @else
+                                        Ball bilan tasdiqlash
+                                    @endif
                                 </button>
                             @elseif($isManualCriterion && $scoreOptions->isEmpty())
                                 <button type="button" class="btn btn-success btn-sm mr-2" disabled
@@ -307,6 +320,42 @@
                             <div class="small text-muted mt-2">
                                 Bazaviy {{ number_format($oakArticleBasePoint, 2) }} ball kiritilgan mualliflar soniga avtomatik bo‘linadi.
                             </div>
+                        @elseif($usesAuthorDividedScore)
+                            <label for="author-count">Patentdagi jami mualliflar soni</label>
+                            <input id="author-count" name="author_count" type="number" min="1" max="1000"
+                                   step="1" required value="{{ old('author_count', $datum->author_count) }}"
+                                   class="form-control @error('author_count') is-invalid @enderror">
+                            @error('author_count')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="small text-muted mt-2">
+                                Bazaviy {{ number_format($evaluationMaximum, 2) }} ball mualliflar soniga avtomatik bo‘linadi.
+                            </div>
+                        @elseif($usesImpactFactorScore)
+                            <label for="impact-factor">Jurnalning impakt faktori</label>
+                            <input id="impact-factor" name="impact_factor" type="number" min="1" max="1000"
+                                   step="1" required value="{{ old('impact_factor', $datum->impact_factor) }}"
+                                   class="form-control @error('impact_factor') is-invalid @enderror">
+                            @error('impact_factor')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div class="small text-muted mt-2">
+                                Har bir birlik uchun maksimal ballning 10 foizi, 10 va undan yuqori qiymatda to‘liq ball beriladi.
+                            </div>
+                        @elseif($usesPublicationTierScore)
+                            <label for="publication-tier">Jurnal kvartili yoki nashr turi</label>
+                            <select id="publication-tier" name="publication_tier" required
+                                    class="form-control @error('publication_tier') is-invalid @enderror">
+                                <option value="">Tanlang</option>
+                                <option value="q1" @selected(old('publication_tier', $datum->publication_tier) === 'q1')>Q1 — 5 ball</option>
+                                <option value="q2" @selected(old('publication_tier', $datum->publication_tier) === 'q2')>Q2 — 5 ball</option>
+                                <option value="q3" @selected(old('publication_tier', $datum->publication_tier) === 'q3')>Q3 — 4 ball</option>
+                                <option value="q4" @selected(old('publication_tier', $datum->publication_tier) === 'q4')>Q4 — 4 ball</option>
+                                <option value="conference" @selected(old('publication_tier', $datum->publication_tier) === 'conference')>Konferensiya — 2,5 ball</option>
+                            </select>
+                            @error('publication_tier')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         @else
                             <label for="reviewer-point">Tasdiqlangan ball</label>
                             <input id="reviewer-point" name="point" type="number" min="0"
@@ -401,7 +450,7 @@
 @endsection
 
 @section('script')
-    @if($errors->has('point') || $errors->has('author_count') || $errors->has('page_count'))
+    @if($errors->has('point') || $errors->has('author_count') || $errors->has('page_count') || $errors->has('impact_factor') || $errors->has('publication_tier'))
         <script>$('#ai-approve-modal').modal('show');</script>
     @elseif($errors->has('criterion_id'))
         <script>$('#transfer-criterion-modal').modal('show');</script>

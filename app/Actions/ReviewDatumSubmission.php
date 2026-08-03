@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\HIndexScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
+use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -20,6 +21,7 @@ class ReviewDatumSubmission
         private HIndexScoreCalculator $hIndexScoreCalculator,
         private OakArticleScoreCalculator $oakArticleScoreCalculator,
         private PrintedEducationalLiteratureScoreCalculator $printedLiteratureScoreCalculator,
+        private ScientificPublicationHumanReviewScoreCalculator $scientificPublicationScoreCalculator,
     ) {}
 
     public function approve(
@@ -29,6 +31,8 @@ class ReviewDatumSubmission
         ?float $reviewerPoint = null,
         ?int $authorCount = null,
         ?int $pageCount = null,
+        ?int $impactFactor = null,
+        ?string $publicationTier = null,
     ): Datum {
         $reviewedDatum = DB::transaction(function () use (
             $reviewer,
@@ -37,6 +41,8 @@ class ReviewDatumSubmission
             $reviewerPoint,
             $authorCount,
             $pageCount,
+            $impactFactor,
+            $publicationTier,
         ): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'user'])
@@ -87,12 +93,15 @@ class ReviewDatumSubmission
                 $reviewerPoint,
                 $authorCount,
                 $pageCount,
+                $impactFactor,
+                $publicationTier,
             );
             $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
                 .'. Hisoblangan ball: '.number_format(
                     $point,
                     ($lockedDatum->criterion->isOakArticleCriterion()
-                        || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()) ? 4 : 2,
+                        || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()
+                        || $lockedDatum->criterion->usesAuthorDividedAiHumanReviewScore()) ? 4 : 2,
                     '.',
                     '',
                 ).'.';
@@ -101,8 +110,15 @@ class ReviewDatumSubmission
                 'status' => 'accepted',
                 'point' => $point,
                 'author_count' => ($lockedDatum->criterion->isOakArticleCriterion()
-                    || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()) ? $authorCount : null,
+                    || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()
+                    || $lockedDatum->criterion->usesAuthorDividedAiHumanReviewScore()) ? $authorCount : null,
                 'page_count' => $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion() ? $pageCount : null,
+                'impact_factor' => $lockedDatum->criterion->usesImpactFactorAiHumanReviewScore()
+                    ? $impactFactor
+                    : null,
+                'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
+                    ? $publicationTier
+                    : null,
                 'reason' => $message,
                 'reviewer_hemis_id' => null,
             ]);
@@ -129,6 +145,8 @@ class ReviewDatumSubmission
         ?float $reviewerPoint,
         ?int $authorCount,
         ?int $pageCount,
+        ?int $impactFactor,
+        ?string $publicationTier,
     ): array {
         $maximumPoint = max(0, (float) $evaluation->score);
 
@@ -178,6 +196,62 @@ class ReviewDatumSubmission
                 return [
                     'point' => $maximumPoint,
                     'rule' => 'foydalanuvchining baholash toifasi bo‘yicha avtomatik ball',
+                ];
+            }
+
+            if ($datum->criterion->usesImpactFactorAiHumanReviewScore()) {
+                if ($impactFactor === null || $impactFactor < 1 || $impactFactor > 1000) {
+                    throw ValidationException::withMessages([
+                        'impact_factor' => 'Impakt faktor 1 dan 1000 gacha bo‘lgan butun son bo‘lishi kerak.',
+                    ]);
+                }
+
+                $point = $this->scientificPublicationScoreCalculator->impactFactorPoint(
+                    $maximumPoint,
+                    $impactFactor,
+                );
+                $percentage = min($impactFactor, 10) * 10;
+
+                return [
+                    'point' => $point,
+                    'rule' => $impactFactor.' impakt faktor — '.$percentage.'% × '
+                        .number_format($maximumPoint, 2, '.', '').' maksimal ball',
+                ];
+            }
+
+            if ($datum->criterion->usesPublicationTierAiHumanReviewScore()) {
+                if ($publicationTier === null
+                    || ! array_key_exists(
+                        $publicationTier,
+                        ScientificPublicationHumanReviewScoreCalculator::PUBLICATION_TIER_POINTS,
+                    )) {
+                    throw ValidationException::withMessages([
+                        'publication_tier' => 'Jurnal kvartili yoki nashr turini tanlang.',
+                    ]);
+                }
+
+                return [
+                    'point' => $this->scientificPublicationScoreCalculator
+                        ->publicationTierPoint($publicationTier),
+                    'rule' => match ($publicationTier) {
+                        'q1', 'q2', 'q3', 'q4' => mb_strtoupper($publicationTier).' jurnal kvartili',
+                        'conference' => 'konferensiya maqolasi',
+                    },
+                ];
+            }
+
+            if ($datum->criterion->usesAuthorDividedAiHumanReviewScore()) {
+                if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
+                    throw ValidationException::withMessages([
+                        'author_count' => 'Mualliflar soni 1 dan 1000 gacha bo‘lishi kerak.',
+                    ]);
+                }
+
+                return [
+                    'point' => $this->scientificPublicationScoreCalculator
+                        ->authorDividedPoint($maximumPoint, $authorCount),
+                    'rule' => number_format($maximumPoint, 2, '.', '')
+                        .' bazaviy ball / '.$authorCount.' muallif',
                 ];
             }
 
@@ -249,6 +323,8 @@ class ReviewDatumSubmission
                 'point' => 0,
                 'reason' => $reason,
                 'reviewer_hemis_id' => null,
+                'impact_factor' => null,
+                'publication_tier' => null,
             ]);
             $lockedDatum->histories()->create([
                 'user_id' => $reviewer->getKey(),

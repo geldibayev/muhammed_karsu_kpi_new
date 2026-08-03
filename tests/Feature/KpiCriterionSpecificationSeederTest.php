@@ -136,6 +136,10 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             );
         }
 
+        $hIndexCriterion = Criterion::query()->where('code', '3.1.4')->firstOrFail();
+        $this->assertSame('ai', $hIndexCriterion->checking);
+        $this->assertSame('1', $hIndexCriterion->upload);
+
         $this->assertDatabaseHas('criterion_manual_score_options', ['code' => 'dsc_diploma', 'point' => 3]);
         $this->assertDatabaseHas('criterion_manual_score_options', ['code' => 'phd_diploma', 'point' => 3]);
     }

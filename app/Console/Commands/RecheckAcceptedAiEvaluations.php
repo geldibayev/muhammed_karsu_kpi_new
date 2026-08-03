@@ -155,6 +155,8 @@ class RecheckAcceptedAiEvaluations extends Command
             $datum->update([
                 'status' => 'checking',
                 'point' => 0,
+                'impact_factor' => null,
+                'publication_tier' => null,
                 'reason' => Datum::PUBLIC_CHECKING_REASON,
                 'reviewer_hemis_id' => null,
             ]);

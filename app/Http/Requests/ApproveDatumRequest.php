@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
+use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -38,6 +39,9 @@ class ApproveDatumRequest extends FormRequest
         $isOakArticleCriterion = $criterion?->isOakArticleCriterion() === true;
         $isPrintedLiteratureCriterion = $criterion?->isPrintedEducationalLiteratureCriterion() === true;
         $usesAutomaticAiHumanReviewScore = $criterion?->usesAutomaticAiHumanReviewScore() === true;
+        $usesImpactFactorScore = $criterion?->usesImpactFactorAiHumanReviewScore() === true;
+        $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
+        $usesAuthorDividedScore = $criterion?->usesAuthorDividedAiHumanReviewScore() === true;
         $activeScoreOptionCount = $isManualCriterion
             ? CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterionId)
@@ -64,19 +68,29 @@ class ApproveDatumRequest extends FormRequest
                 Rule::requiredIf($isAiCriterion
                     && ! $isOakArticleCriterion
                     && ! $isPrintedLiteratureCriterion
-                    && ! $usesAutomaticAiHumanReviewScore),
+                    && ! $usesAutomaticAiHumanReviewScore
+                    && ! $usesImpactFactorScore
+                    && ! $usesPublicationTierScore
+                    && ! $usesAuthorDividedScore),
                 Rule::prohibitedIf(! $isAiCriterion
                     || $isOakArticleCriterion
                     || $isPrintedLiteratureCriterion
-                    || $usesAutomaticAiHumanReviewScore),
+                    || $usesAutomaticAiHumanReviewScore
+                    || $usesImpactFactorScore
+                    || $usesPublicationTierScore
+                    || $usesAuthorDividedScore),
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:'.$reviewerPointMaximum,
             ],
             'author_count' => [
-                Rule::requiredIf($isAiCriterion && ($isOakArticleCriterion || $isPrintedLiteratureCriterion)),
-                Rule::prohibitedIf(! $isAiCriterion || (! $isOakArticleCriterion && ! $isPrintedLiteratureCriterion)),
+                Rule::requiredIf($isAiCriterion
+                    && ($isOakArticleCriterion || $isPrintedLiteratureCriterion || $usesAuthorDividedScore)),
+                Rule::prohibitedIf(! $isAiCriterion
+                    || (! $isOakArticleCriterion
+                        && ! $isPrintedLiteratureCriterion
+                        && ! $usesAuthorDividedScore)),
                 'nullable',
                 'integer',
                 'min:1',
@@ -89,6 +103,21 @@ class ApproveDatumRequest extends FormRequest
                 'integer',
                 'min:1',
                 'max:100000',
+            ],
+            'impact_factor' => [
+                Rule::requiredIf($usesImpactFactorScore),
+                Rule::prohibitedIf(! $usesImpactFactorScore),
+                'nullable',
+                'integer',
+                'min:1',
+                'max:1000',
+            ],
+            'publication_tier' => [
+                Rule::requiredIf($usesPublicationTierScore),
+                Rule::prohibitedIf(! $usesPublicationTierScore),
+                'nullable',
+                'string',
+                Rule::in(array_keys(ScientificPublicationHumanReviewScoreCalculator::PUBLICATION_TIER_POINTS)),
             ],
         ];
     }
@@ -107,6 +136,12 @@ class ApproveDatumRequest extends FormRequest
             'author_count.prohibited' => 'Bu mezon uchun mualliflar soni alohida yuborilmaydi.',
             'page_count.required' => 'Tasdiqlash uchun kitobdagi jami sahifalar sonini kiriting.',
             'page_count.prohibited' => 'Bu mezon uchun sahifalar soni alohida yuborilmaydi.',
+            'impact_factor.required' => 'Tasdiqlash uchun impakt faktorning butun son qiymatini kiriting.',
+            'impact_factor.prohibited' => 'Bu kriteriya uchun impakt faktor yuborilmaydi.',
+            'impact_factor.integer' => 'Impakt faktor butun son bo‘lishi kerak.',
+            'publication_tier.required' => 'Jurnal kvartili yoki nashr turini tanlang.',
+            'publication_tier.prohibited' => 'Bu kriteriya uchun kvartil yoki nashr turi yuborilmaydi.',
+            'publication_tier.in' => 'Tanlangan jurnal kvartili yoki nashr turi noto‘g‘ri.',
         ];
     }
 }

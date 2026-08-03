@@ -59,7 +59,7 @@ class KpiCriterionSpecification
                 divideAiPointByAuthors: true,
                 descriptionUz: OakArticleCriterionRule::DESCRIPTION_UZ,
             ),
-            '3.1.2' => self::rule(self::Competition, 4, 'current', [2, 3, 3, 3]),
+            '3.1.2' => self::rule(self::Maximum, 4, 'current', [2, 3, 3, 3]),
             '3.1.3' => self::rule(
                 self::Unlimited,
                 4,
@@ -69,7 +69,7 @@ class KpiCriterionSpecification
                 false,
                 'Scopus va Web of Science bazasi orqali baholanadi. Q1, Q2 — 100 %, Q3, Q4 — 80 %, konferensiya maqolalari — 50 %. Ball mualliflar soniga bo‘linmaydi.',
             ),
-            '3.1.4' => self::rule(self::Maximum, 0, 'current_state', [3, 2, 2, 2]),
+            '3.1.4' => self::rule(self::Maximum, 1, 'current_state', [2, 3, 3, 3]),
             '3.1.5' => self::rule(self::Maximum, 1, 'current', [2, 3, 3, 3]),
             '3.1.6' => self::rule(self::Unlimited, 0, 'current', [3, null, null, null]),
             '3.1.7' => self::rule(self::Unlimited, 0, 'current', [3, null, 3, null]),

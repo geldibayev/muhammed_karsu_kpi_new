@@ -199,6 +199,8 @@ class RecheckAiHumanReviews extends Command
 
             $datum->update([
                 'point' => 0,
+                'impact_factor' => null,
+                'publication_tier' => null,
                 'reason' => 'AI xulosasi yangi qaror qoidasi bo‘yicha qayta tekshirilmoqda.',
                 'reviewer_hemis_id' => null,
             ]);

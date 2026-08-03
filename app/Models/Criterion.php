@@ -14,7 +14,13 @@ class Criterion extends Model
 {
     public const H_INDEX_CODE = '3.1.4';
 
-    public const AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES = ['2.1.1'];
+    public const AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES = ['2.1.1', '3.1.4'];
+
+    public const IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE = '3.1.2';
+
+    public const PUBLICATION_TIER_AI_HUMAN_REVIEW_CODE = '3.1.3';
+
+    public const AUTHOR_DIVIDED_AI_HUMAN_REVIEW_CODE = '3.1.8';
 
     public const PRINTED_EDUCATIONAL_LITERATURE_CODES = ['1.2', '1.3'];
 
@@ -77,6 +83,10 @@ class Criterion extends Model
 
     public function isHIndexCriterion(): bool
     {
+        if ($this->checking === 'ai') {
+            return false;
+        }
+
         if (filled($this->code)) {
             return $this->code === self::H_INDEX_CODE;
         }
@@ -105,6 +115,21 @@ class Criterion extends Model
     {
         return $this->checking === 'ai'
             && in_array($this->code, self::AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES, true);
+    }
+
+    public function usesImpactFactorAiHumanReviewScore(): bool
+    {
+        return $this->checking === 'ai' && $this->code === self::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE;
+    }
+
+    public function usesPublicationTierAiHumanReviewScore(): bool
+    {
+        return $this->checking === 'ai' && $this->code === self::PUBLICATION_TIER_AI_HUMAN_REVIEW_CODE;
+    }
+
+    public function usesAuthorDividedAiHumanReviewScore(): bool
+    {
+        return $this->checking === 'ai' && $this->code === self::AUTHOR_DIVIDED_AI_HUMAN_REVIEW_CODE;
     }
 
     /** @return array<int, 'file'|'url'> */

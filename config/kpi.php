@@ -1,5 +1,10 @@
 <?php
 
+$scientificPublicationsReviewerHemisId = env(
+    'KPI_AI_HUMAN_REVIEWER_SCIENTIFIC_PUBLICATIONS_HEMIS_ID',
+    '3462011207',
+);
+
 return [
     'ai_unlimited_submission_max_point' => (float) env('KPI_AI_UNLIMITED_SUBMISSION_MAX_POINT', 1),
     'report_period_start' => '2025-09-01',
@@ -8,6 +13,11 @@ return [
     'settings_manager_hemis_id' => env('KPI_SETTINGS_MANAGER_HEMIS_ID', '3172011004'),
     'ai_human_review_criterion_reviewers' => [
         '2.1.1' => env('KPI_AI_HUMAN_REVIEWER_2_1_1_HEMIS_ID', '3462611061'),
+        '3.1.1' => $scientificPublicationsReviewerHemisId,
+        '3.1.2' => $scientificPublicationsReviewerHemisId,
+        '3.1.3' => $scientificPublicationsReviewerHemisId,
+        '3.1.4' => $scientificPublicationsReviewerHemisId,
+        '3.1.8' => $scientificPublicationsReviewerHemisId,
     ],
     'criterion_reviewers' => [
         '1.1' => env('KPI_REVIEWER_1_1_HEMIS_ID', '3172011004'),

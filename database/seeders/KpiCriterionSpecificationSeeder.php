@@ -80,6 +80,11 @@ class KpiCriterionSpecificationSeeder extends Seeder
                 }
             }
 
+            $criteria->get('3.1.4')?->update([
+                'checking' => 'ai',
+                'upload' => '1',
+            ]);
+
             CriterionReviewerAssignment::query()
                 ->with('criterion:id,code')
                 ->get()
