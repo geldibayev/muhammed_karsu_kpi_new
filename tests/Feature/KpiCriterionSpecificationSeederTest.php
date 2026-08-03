@@ -52,7 +52,7 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             $criterion->name['en'],
         );
         $this->assertSame(
-            'Belgilangan tartib va talablar asosida elektron darslik va o‘quv qo‘llanmalarni boshqa tillardan tarjima qilinganligi tayyorlanib chop qilinganligi hamda ushbu o‘quv adabiyoti bo‘yicha universitetning nashr ruxsatnomasi, ISBN raqami asosida aniqlanadi. Mualliflik ulushi inobatga olinadi.',
+            'Belgilangan tartib va talablar asosida darslik va o‘quv qo‘llanmalarni boshqa tillardan tarjima qilinganligi tayyorlanib chop qilinganligi hamda ushbu o‘quv adabiyoti bo‘yicha universitetning nashr ruxsatnomasi, ISBN raqami asosida aniqlanadi. Mualliflik ulushi inobatga olinadi.',
             $criterion->desc['uz'],
         );
         $this->assertSame(
