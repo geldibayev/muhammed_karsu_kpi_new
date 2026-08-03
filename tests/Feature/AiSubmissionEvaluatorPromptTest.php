@@ -16,6 +16,7 @@ use App\Services\AiResourceDatePolicy;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
 use App\Services\GeminiUrlContextGateway;
+use App\Services\IndustryFundingScoreCalculator;
 use App\Services\InternationalCooperationScoreValidator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
@@ -118,6 +119,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             new GeminiUrlContextGateway,
             new PrintedEducationalLiteratureScoreCalculator,
             new InternationalCooperationScoreValidator,
+            new IndustryFundingScoreCalculator,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);
@@ -235,6 +237,7 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
             new GeminiUrlContextGateway,
             new PrintedEducationalLiteratureScoreCalculator,
             new InternationalCooperationScoreValidator,
+            new IndustryFundingScoreCalculator,
         ))->evaluate($datum);
 
         $this->assertSame('checking', $result->status);

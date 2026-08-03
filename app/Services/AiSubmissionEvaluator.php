@@ -29,6 +29,7 @@ class AiSubmissionEvaluator
         private GeminiUrlContextGateway $geminiUrlContextGateway,
         private PrintedEducationalLiteratureScoreCalculator $printedEducationalLiteratureScoreCalculator,
         private InternationalCooperationScoreValidator $internationalCooperationScoreValidator,
+        private IndustryFundingScoreCalculator $industryFundingScoreCalculator,
     ) {}
 
     public function evaluate(Datum $datum): AiEvaluationResult
@@ -51,8 +52,10 @@ class AiSubmissionEvaluator
         $maximumPoint = $this->maximumPoint($datum);
         $requiresPageCount = $criterion->isPrintedEducationalLiteratureCriterion();
         $requiresAuthorCount = $requiresPageCount
+            || $criterion->isIndustryFundingCriterion()
             || str_contains((string) $criterion->ai_prompt, 'author_count');
         $requiresResourceDate = true;
+        $requiresReceivedAmount = $criterion->isIndustryFundingCriterion();
 
         if ($maximumPoint === null) {
             return AiEvaluationResult::checking('Foydalanuvchi uchun mezon ball chegarasi topilmadi.');
@@ -79,9 +82,16 @@ class AiSubmissionEvaluator
                 $requiresAuthorCount,
                 $requiresResourceDate,
                 $requiresPageCount,
+                $requiresReceivedAmount,
             ));
 
-        $contentParts = [$this->buildPrompt($datum, $maximumPoint, $requiresAuthorCount, $requiresPageCount)];
+        $contentParts = [$this->buildPrompt(
+            $datum,
+            $maximumPoint,
+            $requiresAuthorCount,
+            $requiresPageCount,
+            $requiresReceivedAmount,
+        )];
 
         if ($resourceUrl !== null) {
             $contentParts[0] .= <<<PROMPT
@@ -138,6 +148,7 @@ PROMPT;
                         $requiresAuthorCount,
                         $requiresResourceDate,
                         $requiresPageCount,
+                        $requiresReceivedAmount,
                     ),
                     prompt: $contentParts[0],
                 );
@@ -200,6 +211,10 @@ PROMPT;
                 return $this->internationalCooperationScoreValidator->handle($result, $maximumPoint);
             }
 
+            if ($criterion->isIndustryFundingCriterion()) {
+                return $this->industryFundingScoreCalculator->apply($result);
+            }
+
             return $this->aiAuthorPointDistributor->handle(
                 $result,
                 (string) $criterion->ai_prompt,
@@ -253,6 +268,7 @@ PROMPT;
         bool $requiresAuthorCount,
         bool $requiresResourceDate,
         bool $requiresPageCount = false,
+        bool $requiresReceivedAmount = false,
     ): GenerationConfig {
         return new GenerationConfig(
             temperature: 0.1,
@@ -262,6 +278,7 @@ PROMPT;
                 $requiresAuthorCount,
                 $requiresResourceDate,
                 $requiresPageCount,
+                $requiresReceivedAmount,
             ),
         );
     }
@@ -322,6 +339,7 @@ PROMPT;
         float $maximumPoint,
         bool $requiresAuthorCount,
         bool $requiresPageCount,
+        bool $requiresReceivedAmount,
     ): string {
         $criterionPrompt = trim((string) preg_replace('/[ \t]+/', ' ', (string) $datum->criterion?->ai_prompt));
         $criterionPrompt = str_replace('%pointing%', (string) $maximumPoint, $criterionPrompt);
@@ -361,6 +379,7 @@ PROMPT;
             : 'YYYY-MM-DD';
         $responseExample = match (true) {
             $requiresPageCount => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
+            $requiresReceivedAmount => "{\"status\":\"accepted|cancelled|checking\",\"received_amount\":12500000.50,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresAuthorCount && $requiresResourceDate => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresAuthorCount => '{"status":"accepted|cancelled|checking","point":0,"author_count":1,"reason":"qisqa asos"}',
             $requiresResourceDate => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"resource_date\":\"{$resourceDateFormat} yoki bo‘sh satr\",\"reason\":\"qisqa asos\"}",
@@ -372,6 +391,12 @@ PROMPT;
         $printedLiteratureInstruction = $requiresPageCount
             ? "BOSMA TABOQ HISOBI: accepted holatida page_count maydoniga kitobning jami sahifalar sonini butun son ko'rinishida yozing. Pointni o'zingiz hisoblamang: point uchun 0 qaytaring. Server 1 bosma taboq = 16 sahifa qoidasi bo'yicha ballni hisoblaydi va mualliflar soniga bo'ladi."
             : '';
+        $receivedAmountInstruction = $requiresReceivedAmount
+            ? 'MABLAG‘ HISOBI: received_amount maydoniga faqat universitet hisobiga tushgani tasdiqlangan summani so‘mda yozing. Ballni hisoblamang va point maydonini qaytarmang. Server received_amount / 1 000 000 / author_count formulasini qo‘llaydi.'
+            : '';
+        $pointInstruction = $requiresReceivedAmount
+            ? 'Accepted bo‘lmasa received_amount va author_count 0 bo‘lishi shart.'
+            : 'Status accepted bo‘lmasa point 0 bo‘lishi shart.';
 
         return <<<PROMPT
 {$criterionPrompt}
@@ -398,9 +423,10 @@ QAROR USTUVORLIGI:
 
 Faqat quyidagi kalitlarga ega JSON obyekt qaytaring:
 {$responseExample}
-Status accepted bo'lmasa point 0 bo'lishi shart. Ishonch yetarli bo'lmasa checking qaytaring.
+{$pointInstruction} Ishonch yetarli bo'lmasa checking qaytaring.
 {$authorInstruction}
 {$printedLiteratureInstruction}
+{$receivedAmountInstruction}
 PROMPT;
     }
 
@@ -432,21 +458,25 @@ PROMPT;
         bool $requiresAuthorCount,
         bool $requiresResourceDate = false,
         bool $requiresPageCount = false,
+        bool $requiresReceivedAmount = false,
     ): Schema {
         $properties = [
             'status' => new Schema(
                 type: DataType::STRING,
                 enum: ['accepted', 'cancelled', 'checking'],
             ),
-            'point' => new Schema(
-                type: DataType::NUMBER,
-                minimum: 0,
-                maximum: $maximumPoint,
-            ),
             'reason' => new Schema(
                 type: DataType::STRING,
             ),
         ];
+
+        if (! $requiresReceivedAmount) {
+            $properties['point'] = new Schema(
+                type: DataType::NUMBER,
+                minimum: 0,
+                maximum: $maximumPoint,
+            );
+        }
 
         if ($requiresAuthorCount) {
             $properties['author_count'] = new Schema(
@@ -470,7 +500,15 @@ PROMPT;
             );
         }
 
-        $required = ['status', 'point'];
+        if ($requiresReceivedAmount) {
+            $properties['received_amount'] = new Schema(
+                type: DataType::NUMBER,
+                minimum: 0,
+                maximum: 9_999_999_999_999_999.99,
+            );
+        }
+
+        $required = $requiresReceivedAmount ? ['status', 'received_amount'] : ['status', 'point'];
 
         if ($requiresAuthorCount) {
             $required[] = 'author_count';

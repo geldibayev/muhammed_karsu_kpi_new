@@ -188,6 +188,7 @@ class RetryUnreadableAiImages extends Command
                 'impact_factor' => null,
                 'publication_tier' => null,
                 'university_tier' => null,
+                'received_amount' => null,
                 'reason' => 'Rasm fayli AI qayta tekshiruv navbatiga qo‘yildi.',
                 'reviewer_hemis_id' => null,
             ]);

@@ -8,8 +8,10 @@ use App\Models\Datum;
 use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
+use App\Services\IndustryFundingScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
+use App\Support\IndustryFundingCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -22,6 +24,7 @@ class RecalculateReportPoints
     public function __construct(
         private OakArticleScoreCalculator $oakArticleScoreCalculator,
         private PrintedEducationalLiteratureScoreCalculator $printedLiteratureScoreCalculator,
+        private IndustryFundingScoreCalculator $industryFundingScoreCalculator,
     ) {}
 
     public function handle(Report $report): void
@@ -33,9 +36,48 @@ class RecalculateReportPoints
 
                     $this->refreshOakArticleDatumPoints($report);
                     $this->refreshPrintedLiteratureDatumPoints($report);
+                    $this->refreshIndustryFundingDatumPoints($report);
                     $this->rebuildCriterionPoints($report);
                     $this->rebuildFinalPoints($report);
                 }, attempts: 5);
+            });
+    }
+
+    private function refreshIndustryFundingDatumPoints(Report $report): void
+    {
+        Datum::query()
+            ->where('status', 'accepted')
+            ->whereNotNull('received_amount')
+            ->whereNotNull('author_count')
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->where('code', IndustryFundingCriterionRule::CODE))
+            ->lockForUpdate()
+            ->get()
+            ->each(function (Datum $datum): void {
+                if ($datum->received_amount === null || $datum->author_count === null) {
+                    return;
+                }
+
+                $point = $this->industryFundingScoreCalculator->calculate(
+                    (float) $datum->received_amount,
+                    $datum->author_count,
+                );
+
+                if (abs($datum->point - $point) < 0.00005) {
+                    return;
+                }
+
+                $oldPoint = $datum->point;
+                $datum->update(['point' => $point]);
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => 'info',
+                    'message' => '3.1.13 balli saqlangan summa va hammualliflar soni bo‘yicha qayta hisoblandi. '
+                        .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
+                        .'Yangi ball: '.number_format($point, 4, '.', '').'.',
+                    'message_type' => 'industry_funding_point_recalculated',
+                ]);
             });
     }
 

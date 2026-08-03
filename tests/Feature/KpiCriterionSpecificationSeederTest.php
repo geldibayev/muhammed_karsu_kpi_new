@@ -6,6 +6,7 @@ use App\Models\Criterion;
 use App\Models\CriterionManualScoreOption;
 use App\Models\Formula;
 use App\Models\Report;
+use App\Support\IndustryFundingCriterionRule;
 use App\Support\KpiCriterionSpecification;
 use Database\Seeders\CriterionSeeder;
 use Database\Seeders\KpiCriterionSpecificationSeeder;
@@ -157,6 +158,12 @@ class KpiCriterionSpecificationSeederTest extends TestCase
                 'score' => 0,
             ]);
         }
+
+        $criterionThreeOneThirteen = Criterion::query()->where('code', '3.1.13')->firstOrFail();
+        $this->assertSame(
+            IndustryFundingCriterionRule::PROMPT,
+            $criterionThreeOneThirteen->ai_prompt,
+        );
 
         $criterionOneTwo = Criterion::query()
             ->with('criterionEvaluations')

@@ -21,7 +21,8 @@ class KpiCriterionSpecification
      *     scores: array{hold_degrees: int|null, no_degrees: int|null, foreign_lang: int|null, physical: int|null},
      *     ai_submission_max_point?: float,
      *     divide_ai_point_by_authors?: bool,
-     *     description_uz?: string
+     *     description_uz?: string,
+     *     ai_prompt?: string
      * }>
      */
     public static function criteria(): array
@@ -86,6 +87,7 @@ class KpiCriterionSpecification
                 999999.99,
                 true,
                 'Xo‘jalik shartnomasi asosida jalb qilingan har 1 million so‘m uchun 1 ball beriladi. Umumiy ball hammualliflar soniga bo‘linadi.',
+                IndustryFundingCriterionRule::PROMPT,
             ),
             '3.1.14' => self::rule(self::Competition, 1, 'project_finished', [4, 1, 1, 1]),
             '3.1.15' => self::rule(self::Maximum, 1, 'end_of_council', [2, null, null, null]),
@@ -111,6 +113,7 @@ class KpiCriterionSpecification
         ?float $aiSubmissionMaxPoint = null,
         ?bool $divideAiPointByAuthors = null,
         ?string $descriptionUz = null,
+        ?string $aiPrompt = null,
     ): array {
         $rule = [
             'formula' => $formula,
@@ -134,6 +137,10 @@ class KpiCriterionSpecification
 
         if ($descriptionUz !== null) {
             $rule['description_uz'] = $descriptionUz;
+        }
+
+        if ($aiPrompt !== null) {
+            $rule['ai_prompt'] = $aiPrompt;
         }
 
         return $rule;

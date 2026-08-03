@@ -64,6 +64,10 @@ class KpiCriterionSpecificationSeeder extends Seeder
                     $attributes['desc'] = $description;
                 }
 
+                if (isset($rule['ai_prompt'])) {
+                    $attributes['ai_prompt'] = $rule['ai_prompt'];
+                }
+
                 $criterion->update($attributes);
 
                 foreach ($rule['scores'] as $evaluation => $score) {

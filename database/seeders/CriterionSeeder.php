@@ -8,6 +8,7 @@ use App\Models\CriterionYear;
 use App\Models\Formula;
 use App\Models\Report;
 use App\Models\Year;
+use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use App\Support\ScopusCriterionRule;
@@ -1137,19 +1138,7 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 1,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan shartnomalar, to‘lov hujjatlari va ilmiy-tadqiqot hisobotlarini tahlil qilib, professor-o‘qituvchining xo‘jalik yoki innovatsion shartnomalardagi ishtirokini baholang.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Hujjatda shartnoma mavzusi, buyurtmachi (soha) va universitet hisobiga tushgan mablag‘ miqdori aniq ko‘rsatilgan bo‘lishi shart.
-                        2. O‘qituvchining ushbu loyihada \"rahbar\" yoki \"asosiy ijrochi\" ekanligi tasdiqlanishi kerak.
-                        3. Ballarni mablag‘ hajmi va ishtirok darajasiga qarab administrator belgilaydi, siz esa faqat hujjat haqiqiyligini tekshiring.
-
-                        Tahlil natijasiga ko‘ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar shartnoma, to‘lov hujjati (universitet hisobiga tushganini tasdiqlovchi) va o‘qituvchining ishtiroki aniq bo‘lsa: \"accepted\" statusini bering. \"point\" qismiga hisobot asosida 1 ball (yoki administrator belgilaydigan qiymat) yozing.
-                        - Agar hujjatlar xira bo‘lsa, mablag‘ miqdorini aniq o‘qib bo‘lmasa, yoki universitet hisobiga tushganligi haqida ma’lumot yetishmasa (administrator tekshiruvi uchun): \"checking\" statusini bering.
-                        - Agar shartnoma shaxsiy bo‘lsa (universitetga aloqasi yo‘q), hujjat soxta bo‘lsa yoki umuman moliyaviy hujjat bo‘lmasa: \"cancelled\" statusini bering.
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo‘shimcha so‘zlarsiz, faqatgina quyidagi qat’iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam: 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, shartnoma summasi va universitet hisobiga tushganligi haqida qisqacha izoh>\"}",
+                        'ai_prompt' => IndustryFundingCriterionRule::PROMPT,
                     ],
                     [
                         'name' => [

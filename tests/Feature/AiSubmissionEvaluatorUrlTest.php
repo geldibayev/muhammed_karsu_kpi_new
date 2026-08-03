@@ -14,6 +14,7 @@ use App\Services\AiResourceDatePolicy;
 use App\Services\AiSubmissionEvaluator;
 use App\Services\GeminiFileMimeTypeResolver;
 use App\Services\GeminiUrlContextGateway;
+use App\Services\IndustryFundingScoreCalculator;
 use App\Services\InternationalCooperationScoreValidator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
@@ -190,6 +191,7 @@ class AiSubmissionEvaluatorUrlTest extends TestCase
             new GeminiUrlContextGateway,
             new PrintedEducationalLiteratureScoreCalculator,
             new InternationalCooperationScoreValidator,
+            new IndustryFundingScoreCalculator,
         );
     }
 

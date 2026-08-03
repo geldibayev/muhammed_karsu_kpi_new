@@ -31,6 +31,7 @@ class RequeueCancelledAiDatum
                 'impact_factor' => null,
                 'publication_tier' => null,
                 'university_tier' => null,
+                'received_amount' => null,
                 'reason' => Datum::PUBLIC_CHECKING_REASON,
                 'reviewer_hemis_id' => null,
             ]);

@@ -44,6 +44,7 @@ class ApproveDatumRequest extends FormRequest
         $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesAuthorDividedScore = $criterion?->usesAuthorDividedAiHumanReviewScore() === true;
         $usesUniversityTierScore = $criterion?->isInternationalCooperationCriterion() === true;
+        $isIndustryFundingCriterion = $criterion?->isIndustryFundingCriterion() === true;
         $activeScoreOptionCount = $isManualCriterion
             ? CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterionId)
@@ -74,7 +75,8 @@ class ApproveDatumRequest extends FormRequest
                     && ! $usesImpactFactorScore
                     && ! $usesPublicationTierScore
                     && ! $usesAuthorDividedScore
-                    && ! $usesUniversityTierScore),
+                    && ! $usesUniversityTierScore
+                    && ! $isIndustryFundingCriterion),
                 Rule::prohibitedIf(! $isAiCriterion
                     || $isOakArticleCriterion
                     || $isPrintedLiteratureCriterion
@@ -82,7 +84,8 @@ class ApproveDatumRequest extends FormRequest
                     || $usesImpactFactorScore
                     || $usesPublicationTierScore
                     || $usesAuthorDividedScore
-                    || $usesUniversityTierScore),
+                    || $usesUniversityTierScore
+                    || $isIndustryFundingCriterion),
                 'nullable',
                 'numeric',
                 'min:0',
@@ -90,11 +93,15 @@ class ApproveDatumRequest extends FormRequest
             ],
             'author_count' => [
                 Rule::requiredIf($isAiCriterion
-                    && ($isOakArticleCriterion || $isPrintedLiteratureCriterion || $usesAuthorDividedScore)),
+                    && ($isOakArticleCriterion
+                        || $isPrintedLiteratureCriterion
+                        || $usesAuthorDividedScore
+                        || $isIndustryFundingCriterion)),
                 Rule::prohibitedIf(! $isAiCriterion
                     || (! $isOakArticleCriterion
                         && ! $isPrintedLiteratureCriterion
-                        && ! $usesAuthorDividedScore)),
+                        && ! $usesAuthorDividedScore
+                        && ! $isIndustryFundingCriterion)),
                 'nullable',
                 'integer',
                 'min:1',
@@ -130,6 +137,15 @@ class ApproveDatumRequest extends FormRequest
                 'string',
                 Rule::in(array_keys(InternationalCooperationCriterionRule::UNIVERSITY_TIER_POINTS)),
             ],
+            'received_amount' => [
+                Rule::requiredIf($isIndustryFundingCriterion),
+                Rule::prohibitedIf(! $isIndustryFundingCriterion),
+                'nullable',
+                'numeric',
+                'min:0.01',
+                'max:9999999999999999.99',
+                'decimal:0,2',
+            ],
         ];
     }
 
@@ -156,6 +172,9 @@ class ApproveDatumRequest extends FormRequest
             'university_tier.required' => 'Universitetning xalqaro reytingdagi Top darajasini tanlang.',
             'university_tier.prohibited' => 'Bu kriteriya uchun universitet Top darajasi yuborilmaydi.',
             'university_tier.in' => 'Tanlangan universitet Top darajasi noto‘g‘ri.',
+            'received_amount.required' => 'Universitet hisobiga tushgan summani kiriting.',
+            'received_amount.prohibited' => 'Bu kriteriya uchun tushgan summa yuborilmaydi.',
+            'received_amount.decimal' => 'Summa ko‘pi bilan 2 ta kasr xonasiga ega bo‘lishi kerak.',
         ];
     }
 }

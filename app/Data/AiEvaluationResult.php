@@ -15,6 +15,7 @@ class AiEvaluationResult
         public readonly ?int $authorCount = null,
         public readonly ?string $resourceDate = null,
         public readonly ?int $pageCount = null,
+        public readonly ?float $receivedAmount = null,
     ) {}
 
     /** @param array<string, mixed> $payload */
@@ -29,6 +30,7 @@ class AiEvaluationResult
             ['point', 'reason', 'resource_date', 'status'],
             ['author_count', 'point', 'reason', 'resource_date', 'status'],
             ['author_count', 'page_count', 'point', 'reason', 'resource_date', 'status'],
+            ['author_count', 'reason', 'received_amount', 'resource_date', 'status'],
         ], true)) {
             throw new UnexpectedValueException('AI javobida kutilmagan yoki yetishmayotgan maydon bor.');
         }
@@ -43,12 +45,15 @@ class AiEvaluationResult
         $authorCount = $payload['author_count'] ?? null;
         $resourceDate = $payload['resource_date'] ?? null;
         $pageCount = $payload['page_count'] ?? null;
+        $receivedAmount = $payload['received_amount'] ?? null;
+        $usesReceivedAmount = array_key_exists('received_amount', $payload);
 
         if (! is_string($status) || ! in_array($status, ['accepted', 'cancelled', 'checking'], true)) {
             throw new UnexpectedValueException('AI statusi ruxsat etilgan qiymatlardan biri emas.');
         }
 
-        if ((! is_int($point) && ! is_float($point)) || ! is_finite((float) $point) || $point < 0) {
+        if (! $usesReceivedAmount
+            && ((! is_int($point) && ! is_float($point)) || ! is_finite((float) $point) || $point < 0)) {
             throw new UnexpectedValueException('AI balli manfiy bo\'lmagan son bo\'lishi kerak.');
         }
 
@@ -56,8 +61,20 @@ class AiEvaluationResult
             throw new UnexpectedValueException('AI xulosasi bo\'sh yoki juda uzun.');
         }
 
-        if ($point > $maximumPoint) {
+        if (! $usesReceivedAmount && $point > $maximumPoint) {
             throw new UnexpectedValueException('AI balli mezon chegarasidan oshib ketdi.');
+        }
+
+        if ($usesReceivedAmount
+            && ((! is_int($receivedAmount) && ! is_float($receivedAmount))
+                || ! is_finite((float) $receivedAmount)
+                || $receivedAmount < 0
+                || $receivedAmount > 9_999_999_999_999_999.99)) {
+            throw new UnexpectedValueException('Universitet hisobiga tushgan mablag‘ noto‘g‘ri formatda.');
+        }
+
+        if ($usesReceivedAmount && $status === 'accepted' && $receivedAmount <= 0) {
+            throw new UnexpectedValueException('Qabul qilingan resurs uchun tushgan mablag‘ musbat bo‘lishi kerak.');
         }
 
         if ($authorCount !== null
@@ -96,11 +113,12 @@ class AiEvaluationResult
 
         return new self(
             status: $status,
-            point: $status === 'accepted' ? (float) $point : 0,
+            point: $status === 'accepted' && ! $usesReceivedAmount ? (float) $point : 0,
             reason: trim($reason),
             authorCount: $status === 'accepted' ? $authorCount : null,
             resourceDate: $resourceDate,
             pageCount: $status === 'accepted' ? $pageCount : null,
+            receivedAmount: $status === 'accepted' && $usesReceivedAmount ? (float) $receivedAmount : null,
         );
     }
 

@@ -7,6 +7,7 @@ use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Models\User;
 use App\Services\HIndexScoreCalculator;
+use App\Services\IndustryFundingScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
@@ -23,6 +24,7 @@ class ReviewDatumSubmission
         private OakArticleScoreCalculator $oakArticleScoreCalculator,
         private PrintedEducationalLiteratureScoreCalculator $printedLiteratureScoreCalculator,
         private ScientificPublicationHumanReviewScoreCalculator $scientificPublicationScoreCalculator,
+        private IndustryFundingScoreCalculator $industryFundingScoreCalculator,
     ) {}
 
     public function approve(
@@ -35,6 +37,7 @@ class ReviewDatumSubmission
         ?int $impactFactor = null,
         ?string $publicationTier = null,
         ?string $universityTier = null,
+        ?float $receivedAmount = null,
     ): Datum {
         $reviewedDatum = DB::transaction(function () use (
             $reviewer,
@@ -46,6 +49,7 @@ class ReviewDatumSubmission
             $impactFactor,
             $publicationTier,
             $universityTier,
+            $receivedAmount,
         ): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'user'])
@@ -99,12 +103,14 @@ class ReviewDatumSubmission
                 $impactFactor,
                 $publicationTier,
                 $universityTier,
+                $receivedAmount,
             );
             $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
                 .'. Hisoblangan ball: '.number_format(
                     $point,
                     ($lockedDatum->criterion->isOakArticleCriterion()
                         || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()
+                        || $lockedDatum->criterion->isIndustryFundingCriterion()
                         || $lockedDatum->criterion->usesAuthorDividedAiHumanReviewScore()) ? 4 : 2,
                     '.',
                     '',
@@ -115,6 +121,7 @@ class ReviewDatumSubmission
                 'point' => $point,
                 'author_count' => ($lockedDatum->criterion->isOakArticleCriterion()
                     || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()
+                    || $lockedDatum->criterion->isIndustryFundingCriterion()
                     || $lockedDatum->criterion->usesAuthorDividedAiHumanReviewScore()) ? $authorCount : null,
                 'page_count' => $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion() ? $pageCount : null,
                 'impact_factor' => $lockedDatum->criterion->usesImpactFactorAiHumanReviewScore()
@@ -125,6 +132,9 @@ class ReviewDatumSubmission
                     : null,
                 'university_tier' => $lockedDatum->criterion->isInternationalCooperationCriterion()
                     ? $universityTier
+                    : null,
+                'received_amount' => $lockedDatum->criterion->isIndustryFundingCriterion()
+                    ? $receivedAmount
                     : null,
                 'reason' => $message,
                 'reviewer_hemis_id' => null,
@@ -155,6 +165,7 @@ class ReviewDatumSubmission
         ?int $impactFactor,
         ?string $publicationTier,
         ?string $universityTier,
+        ?float $receivedAmount,
     ): array {
         $maximumPoint = max(0, (float) $evaluation->score);
 
@@ -273,6 +284,29 @@ class ReviewDatumSubmission
                 ];
             }
 
+            if ($datum->criterion->isIndustryFundingCriterion()) {
+                if ($receivedAmount === null || $receivedAmount <= 0) {
+                    throw ValidationException::withMessages([
+                        'received_amount' => 'Universitet hisobiga tushgan summa musbat bo‘lishi kerak.',
+                    ]);
+                }
+
+                if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
+                    throw ValidationException::withMessages([
+                        'author_count' => 'Hammualliflar soni 1 dan 1000 gacha bo‘lishi kerak.',
+                    ]);
+                }
+
+                return [
+                    'point' => $this->industryFundingScoreCalculator->calculate(
+                        $receivedAmount,
+                        $authorCount,
+                    ),
+                    'rule' => number_format($receivedAmount, 2, '.', '')
+                        .' so‘m / 1 000 000 / '.$authorCount.' hammuallif',
+                ];
+            }
+
             if ($datum->criterion->usesAuthorDividedAiHumanReviewScore()) {
                 if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
                     throw ValidationException::withMessages([
@@ -359,6 +393,7 @@ class ReviewDatumSubmission
                 'impact_factor' => null,
                 'publication_tier' => null,
                 'university_tier' => null,
+                'received_amount' => null,
             ]);
             $lockedDatum->histories()->create([
                 'user_id' => $reviewer->getKey(),

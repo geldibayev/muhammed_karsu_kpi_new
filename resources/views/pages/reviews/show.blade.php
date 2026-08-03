@@ -28,6 +28,7 @@
         $usesPublicationTierScore = $datum->criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesAuthorDividedScore = $datum->criterion?->usesAuthorDividedAiHumanReviewScore() === true;
         $usesUniversityTierScore = $datum->criterion?->isInternationalCooperationCriterion() === true;
+        $isIndustryFundingCriterion = $datum->criterion?->isIndustryFundingCriterion() === true;
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
         $fixedApprovalOption = $isManualCriterion && $scoreOptions->count() === 1
             && $scoreOptions->first()?->code === \App\Models\CriterionManualScoreOption::FIXED_APPROVAL_CODE
@@ -312,6 +313,29 @@
                             <div class="small text-muted mt-2">
                                 Ball serverda: sahifalar / 16 × {{ $datum->criterion?->code === '1.2' ? '0.4' : '0.3' }} / mualliflar soni.
                             </div>
+                        @elseif($isIndustryFundingCriterion)
+                            <div class="form-group">
+                                <label for="received-amount">Universitet hisobiga tushgan summa (so‘m)</label>
+                                <input id="received-amount" name="received_amount" type="number" min="0.01"
+                                       max="9999999999999999.99" step="0.01" required
+                                       value="{{ old('received_amount', $datum->received_amount) }}"
+                                       class="form-control @error('received_amount') is-invalid @enderror">
+                                @error('received_amount')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="form-group">
+                                <label for="author-count">Jami hammualliflar soni</label>
+                                <input id="author-count" name="author_count" type="number" min="1" max="1000"
+                                       step="1" required value="{{ old('author_count', $datum->author_count) }}"
+                                       class="form-control @error('author_count') is-invalid @enderror">
+                                @error('author_count')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="small text-muted mt-2">
+                                Ball serverda: tushgan summa / 1 000 000 / hammualliflar soni.
+                            </div>
                         @elseif($isOakArticleCriterion)
                             <label for="author-count">Maqoladagi jami mualliflar soni</label>
                             <input id="author-count" name="author_count" type="number" min="1" max="1000"
@@ -485,7 +509,7 @@
 @endsection
 
 @section('script')
-    @if($errors->has('point') || $errors->has('author_count') || $errors->has('page_count') || $errors->has('impact_factor') || $errors->has('publication_tier'))
+    @if($errors->has('point') || $errors->has('author_count') || $errors->has('page_count') || $errors->has('impact_factor') || $errors->has('publication_tier') || $errors->has('received_amount'))
         <script>$('#ai-approve-modal').modal('show');</script>
     @elseif($errors->has('criterion_id'))
         <script>$('#transfer-criterion-modal').modal('show');</script>

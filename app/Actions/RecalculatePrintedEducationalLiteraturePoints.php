@@ -79,6 +79,7 @@ class RecalculatePrintedEducationalLiteraturePoints
                         'impact_factor' => null,
                         'publication_tier' => null,
                         'university_tier' => null,
+                        'received_amount' => null,
                         'reviewer_hemis_id' => null,
                         'reason' => 'AI tahlili navbatga qo\'yildi.',
                     ]);

@@ -113,6 +113,7 @@ class ManualReviewController extends Controller
             $request->filled('impact_factor') ? $request->integer('impact_factor') : null,
             $request->filled('publication_tier') ? $request->string('publication_tier')->toString() : null,
             $request->filled('university_tier') ? $request->string('university_tier')->toString() : null,
+            $request->filled('received_amount') ? $request->float('received_amount') : null,
         );
 
         return redirect()->route($reviewIndexRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');

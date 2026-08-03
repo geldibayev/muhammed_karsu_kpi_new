@@ -60,6 +60,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
                 'Talablar bajarilgan.',
                 authorCount: 4,
                 pageCount: 160,
+                receivedAmount: 12_500_000.50,
             ));
         $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
         $recalculateReportPoints->shouldReceive('handle')
@@ -73,6 +74,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertSame(8.5, $datum->point);
         $this->assertSame(4, $datum->author_count);
         $this->assertSame(160, $datum->page_count);
+        $this->assertSame('12500000.50', $datum->received_amount);
         $this->assertSame('Talablar bajarilgan.', $datum->reason);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
