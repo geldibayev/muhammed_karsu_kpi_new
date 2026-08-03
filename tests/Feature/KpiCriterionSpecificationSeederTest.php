@@ -51,6 +51,14 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             'Creating electronic textbooks and teaching aids or translating them into other languages',
             $criterion->name['en'],
         );
+        $this->assertSame(
+            'Belgilangan tartib va talablar asosida elektron darslik va o‘quv qo‘llanmalarni boshqa tillardan tarjima qilinganligi tayyorlanib chop qilinganligi hamda ushbu o‘quv adabiyoti bo‘yicha universitetning nashr ruxsatnomasi, ISBN raqami asosida aniqlanadi. Mualliflik ulushi inobatga olinadi.',
+            $criterion->desc['uz'],
+        );
+        $this->assertSame(
+            'Based on the established procedure and requirements, the creation of electronic textbooks and teaching aids or their translation into other languages, as well as the preparation and publication of this educational literature, is determined on the basis of the university’s publication permit and ISBN number. The author’s contribution is taken into account.',
+            $criterion->desc['en'],
+        );
     }
 
     public function test_new_criteria_use_the_cost_efficient_default_ai_model(): void
