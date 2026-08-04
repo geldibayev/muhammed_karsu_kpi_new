@@ -97,6 +97,7 @@ PROMPT;
             point: $point,
             reason: self::authoritativeReason(
                 $result->reason,
+                $result->point,
                 $maximumPoint,
                 $point,
                 $result->universityTier,
@@ -111,6 +112,7 @@ PROMPT;
 
     private static function authoritativeReason(
         string $aiReason,
+        float $oldPoint,
         float $maximumPoint,
         float $point,
         string $universityTier,
@@ -127,6 +129,21 @@ PROMPT;
             'top_500' => ['Top-301–500', 50],
             'top_1000' => ['Top-501–1000', 25],
         };
+        $evidenceReason = (string) preg_replace(
+            ['/\b(?:20|25|70|75)\s*%/iu', '/\b(?:20|25|70|75)\s+foiz(?:i|ini|ning)?/iu'],
+            [$percentage.'%', $percentage.' foiz'],
+            $evidenceReason,
+        );
+
+        if (abs($oldPoint - $point) >= 0.00005) {
+            $oldPointPattern = str_replace('\.', '[.,]', preg_quote(self::formatPoint($oldPoint), '/'));
+            $evidenceReason = (string) preg_replace(
+                '/(?<![\d.,])'.$oldPointPattern.'(?=\s*ball\b)/iu',
+                self::formatPoint($point),
+                $evidenceReason,
+            );
+        }
+
         $calculation = 'Tizim hisob-kitobi: '
             .$tierLabel.' — '.$percentage.'%; '
             .self::formatPoint($maximumPoint).' × '.$percentage.'% = '.self::formatPoint($point).' ball.';
