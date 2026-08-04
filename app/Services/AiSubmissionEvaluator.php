@@ -7,6 +7,7 @@ use App\Data\AiEvaluationResult;
 use App\Models\Datum;
 use App\Models\Formula;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\TranslatedEducationalLiteratureCriterionRule;
 use Gemini\Data\Blob;
 use Gemini\Data\Content;
 use Gemini\Data\GenerationConfig;
@@ -52,8 +53,10 @@ class AiSubmissionEvaluator
 
         $maximumPoint = $this->maximumPoint($datum);
         $requiresPageCount = $criterion->isPrintedEducationalLiteratureCriterion();
+        $requiresTranslationEvidence = TranslatedEducationalLiteratureCriterionRule::supports($criterion->code);
         $requiresAuthorCount = $requiresPageCount
             || $criterion->isIndustryFundingCriterion()
+            || $requiresTranslationEvidence
             || str_contains((string) $criterion->ai_prompt, 'author_count');
         $requiresResourceDate = true;
         $requiresReceivedAmount = $criterion->isIndustryFundingCriterion();
@@ -84,6 +87,7 @@ class AiSubmissionEvaluator
                 $requiresResourceDate,
                 $requiresPageCount,
                 $requiresReceivedAmount,
+                $requiresTranslationEvidence,
             ));
 
         $contentParts = [$this->buildPrompt(
@@ -92,6 +96,7 @@ class AiSubmissionEvaluator
             $requiresAuthorCount,
             $requiresPageCount,
             $requiresReceivedAmount,
+            $requiresTranslationEvidence,
         )];
 
         if ($resourceUrl !== null) {
@@ -150,6 +155,7 @@ PROMPT;
                         $requiresResourceDate,
                         $requiresPageCount,
                         $requiresReceivedAmount,
+                        $requiresTranslationEvidence,
                     ),
                     prompt: $contentParts[0],
                 );
@@ -193,7 +199,11 @@ PROMPT;
         }
 
         try {
-            $result = AiEvaluationResult::fromJson($responseText, $maximumPoint);
+            $result = AiEvaluationResult::fromJson(
+                $responseText,
+                $maximumPoint,
+                $requiresTranslationEvidence,
+            );
 
             $result = $this->aiResourceDatePolicy->enforce($datum, $result);
 
@@ -278,6 +288,7 @@ PROMPT;
         bool $requiresResourceDate,
         bool $requiresPageCount = false,
         bool $requiresReceivedAmount = false,
+        bool $requiresTranslationEvidence = false,
     ): GenerationConfig {
         return new GenerationConfig(
             temperature: 0.1,
@@ -288,6 +299,7 @@ PROMPT;
                 $requiresResourceDate,
                 $requiresPageCount,
                 $requiresReceivedAmount,
+                $requiresTranslationEvidence,
             ),
         );
     }
@@ -349,9 +361,13 @@ PROMPT;
         bool $requiresAuthorCount,
         bool $requiresPageCount,
         bool $requiresReceivedAmount,
+        bool $requiresTranslationEvidence,
     ): string {
         $criterionPrompt = trim((string) preg_replace('/[ \t]+/', ' ', (string) $datum->criterion?->ai_prompt));
         $criterionPrompt = str_replace('%pointing%', (string) $maximumPoint, $criterionPrompt);
+        if ($requiresTranslationEvidence) {
+            $criterionPrompt .= "\n\n".TranslatedEducationalLiteratureCriterionRule::aiInstruction();
+        }
         $currentDate = now();
         $periodStart = $this->aiResourceDatePolicy->periodStart();
         $periodEnd = $this->aiResourceDatePolicy->periodEnd();
@@ -387,6 +403,7 @@ PROMPT;
             ? 'YYYY-MM-DD yoki faqat YYYY'
             : 'YYYY-MM-DD';
         $responseExample = match (true) {
+            $requiresTranslationEvidence => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"is_translation\":true,\"source_language\":\"manba tili\",\"target_language\":\"tarjima tili\",\"reason\":\"qisqa asos\"}",
             $requiresPageCount => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresReceivedAmount => "{\"status\":\"accepted|cancelled|checking\",\"received_amount\":12500000.50,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresAuthorCount && $requiresResourceDate => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
@@ -468,6 +485,7 @@ PROMPT;
         bool $requiresResourceDate = false,
         bool $requiresPageCount = false,
         bool $requiresReceivedAmount = false,
+        bool $requiresTranslationEvidence = false,
     ): Schema {
         $properties = [
             'status' => new Schema(
@@ -517,6 +535,12 @@ PROMPT;
             );
         }
 
+        if ($requiresTranslationEvidence) {
+            $properties['is_translation'] = new Schema(type: DataType::BOOLEAN);
+            $properties['source_language'] = new Schema(type: DataType::STRING);
+            $properties['target_language'] = new Schema(type: DataType::STRING);
+        }
+
         $required = $requiresReceivedAmount ? ['status', 'received_amount'] : ['status', 'point'];
 
         if ($requiresAuthorCount) {
@@ -529,6 +553,12 @@ PROMPT;
 
         if ($requiresPageCount) {
             $required[] = 'page_count';
+        }
+
+        if ($requiresTranslationEvidence) {
+            $required[] = 'is_translation';
+            $required[] = 'source_language';
+            $required[] = 'target_language';
         }
 
         $required[] = 'reason';

@@ -22,6 +22,7 @@ class CreateDatumSubmission
     public function __construct(
         private DatumResourceFingerprintGenerator $fingerprintGenerator,
         private DatumResourceIdentifierRegistry $identifierRegistry,
+        private EnsureTranslationSubmissionIsEligible $ensureTranslationSubmissionIsEligible,
     ) {}
 
     /** @param array<string, mixed> $validated */
@@ -58,6 +59,12 @@ class CreateDatumSubmission
                         'uploadResourceFile' => 'Resurs yuklash chegarasidan oshib ketdingiz.',
                     ]);
                 }
+
+                $this->ensureTranslationSubmissionIsEligible->handle(
+                    $user,
+                    $lockedCriterion,
+                    $identifiers,
+                );
 
                 $datum = Datum::query()->create([
                     'user_id' => $user->id,

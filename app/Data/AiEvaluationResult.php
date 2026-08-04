@@ -19,19 +19,37 @@ class AiEvaluationResult
     ) {}
 
     /** @param array<string, mixed> $payload */
-    public static function fromPayload(array $payload, float $maximumPoint): self
-    {
+    public static function fromPayload(
+        array $payload,
+        float $maximumPoint,
+        bool $requiresTranslationEvidence = false,
+    ): self {
         $payloadKeys = array_keys($payload);
         sort($payloadKeys);
 
-        if (! in_array($payloadKeys, [
+        $allowedPayloadKeys = [
             ['point', 'reason', 'status'],
             ['author_count', 'point', 'reason', 'status'],
             ['point', 'reason', 'resource_date', 'status'],
             ['author_count', 'point', 'reason', 'resource_date', 'status'],
             ['author_count', 'page_count', 'point', 'reason', 'resource_date', 'status'],
             ['author_count', 'reason', 'received_amount', 'resource_date', 'status'],
-        ], true)) {
+        ];
+
+        if ($requiresTranslationEvidence) {
+            $allowedPayloadKeys = [[
+                'author_count',
+                'is_translation',
+                'point',
+                'reason',
+                'resource_date',
+                'source_language',
+                'status',
+                'target_language',
+            ]];
+        }
+
+        if (! in_array($payloadKeys, $allowedPayloadKeys, true)) {
             throw new UnexpectedValueException('AI javobida kutilmagan yoki yetishmayotgan maydon bor.');
         }
 
@@ -47,6 +65,9 @@ class AiEvaluationResult
         $pageCount = $payload['page_count'] ?? null;
         $receivedAmount = $payload['received_amount'] ?? null;
         $usesReceivedAmount = array_key_exists('received_amount', $payload);
+        $isTranslation = $payload['is_translation'] ?? null;
+        $sourceLanguage = $payload['source_language'] ?? null;
+        $targetLanguage = $payload['target_language'] ?? null;
 
         if (! is_string($status) || ! in_array($status, ['accepted', 'cancelled', 'checking'], true)) {
             throw new UnexpectedValueException('AI statusi ruxsat etilgan qiymatlardan biri emas.');
@@ -99,6 +120,27 @@ class AiEvaluationResult
             throw new UnexpectedValueException('AI resurs sanasi matn ko‘rinishida bo‘lishi kerak.');
         }
 
+        if ($requiresTranslationEvidence) {
+            if (! is_bool($isTranslation)
+                || ! is_string($sourceLanguage)
+                || ! is_string($targetLanguage)
+                || mb_strlen($sourceLanguage) > 100
+                || mb_strlen($targetLanguage) > 100) {
+                throw new UnexpectedValueException('AI tarjima holati yoki tillarni noto‘g‘ri formatda qaytardi.');
+            }
+
+            $sourceLanguage = trim($sourceLanguage);
+            $targetLanguage = trim($targetLanguage);
+
+            if ($status === 'accepted'
+                && (! $isTranslation
+                    || $sourceLanguage === ''
+                    || $targetLanguage === ''
+                    || mb_strtolower($sourceLanguage) === mb_strtolower($targetLanguage))) {
+                throw new UnexpectedValueException('1.4 mezoni uchun tarjima va o‘zaro farqli tillar tasdiqlanmadi.');
+            }
+        }
+
         $resourceDate = is_string($resourceDate) && trim($resourceDate) !== ''
             ? trim($resourceDate)
             : null;
@@ -123,15 +165,18 @@ class AiEvaluationResult
     }
 
     /** @throws JsonException */
-    public static function fromJson(string $json, float $maximumPoint): self
-    {
+    public static function fromJson(
+        string $json,
+        float $maximumPoint,
+        bool $requiresTranslationEvidence = false,
+    ): self {
         $payload = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
         if (! is_array($payload) || array_is_list($payload)) {
             throw new UnexpectedValueException('AI javobi JSON obyekt emas.');
         }
 
-        return self::fromPayload($payload, $maximumPoint);
+        return self::fromPayload($payload, $maximumPoint, $requiresTranslationEvidence);
     }
 
     public static function checking(string $reason): self
