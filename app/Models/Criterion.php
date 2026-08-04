@@ -6,6 +6,7 @@ use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\OakArticleCriterionRule;
+use App\Support\ProfessionalDevelopmentCriterionRule;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -106,6 +107,17 @@ class Criterion extends Model
     public function isInternationalCooperationCriterion(): bool
     {
         return $this->code === InternationalCooperationCriterionRule::CODE;
+    }
+
+    public function isProfessionalDevelopmentCriterion(): bool
+    {
+        return $this->code === ProfessionalDevelopmentCriterionRule::CODE;
+    }
+
+    public function usesUniversityTierAiHumanReviewScore(): bool
+    {
+        return $this->checking === 'ai'
+            && ($this->isProfessionalDevelopmentCriterion() || $this->isInternationalCooperationCriterion());
     }
 
     public function isIndustryFundingCriterion(): bool

@@ -1375,6 +1375,57 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_criterion_2_1_5_human_review_calculates_percentage_from_selected_university_tier(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3462611061]);
+        $withDegreeOwner = User::factory()->create(['degree' => 'hold_degrees']);
+        $withoutDegreeOwner = User::factory()->create(['degree' => 'no_degrees']);
+        $criterion = $this->createCriterion();
+        $criterion->update(['code' => '2.1.5', 'checking' => 'ai']);
+
+        foreach (['hold_degrees' => 2, 'no_degrees' => 3] as $evaluation => $score) {
+            Evaluation::query()->create([
+                'code' => $evaluation,
+                'name' => ['uz' => $evaluation],
+                'status' => '1',
+            ]);
+            CriterionEvaluation::query()->create([
+                'criterion_id' => $criterion->getKey(),
+                'evaluation' => $evaluation,
+                'has' => '1',
+                'score' => $score,
+            ]);
+        }
+
+        $withDegreeDatum = $this->createDatum($withDegreeOwner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $withoutDegreeDatum = $this->createDatum($withoutDegreeOwner, $criterion, [
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $withDegreeDatum))
+            ->assertOk()
+            ->assertSee('Universitet Top darajasi bilan tasdiqlash')
+            ->assertSee('name="university_tier"', false)
+            ->assertDontSee('name="point"', false);
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $withDegreeDatum), ['university_tier' => 'top_1000'])
+            ->assertRedirect(route('ai-human-reviews.index'));
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $withoutDegreeDatum), ['university_tier' => 'top_300'])
+            ->assertRedirect(route('ai-human-reviews.index'));
+
+        $this->assertSame(0.5, $withDegreeDatum->fresh()->point);
+        $this->assertSame('top_1000', $withDegreeDatum->fresh()->university_tier);
+        $this->assertSame(2.25, $withoutDegreeDatum->fresh()->point);
+        $this->assertSame('top_300', $withoutDegreeDatum->fresh()->university_tier);
+    }
+
     public function test_criterion_3_1_15_only_approves_scientific_degree_resources_for_two_points(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3462011207]);

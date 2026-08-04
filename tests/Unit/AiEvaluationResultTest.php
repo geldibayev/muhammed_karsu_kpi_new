@@ -10,6 +10,27 @@ use UnexpectedValueException;
 
 class AiEvaluationResultTest extends TestCase
 {
+    public function test_professional_development_requires_valid_top_tier(): void
+    {
+        $result = AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 0,
+            'university_tier' => 'top_500',
+            'reason' => 'Top-301–500 tasdiqlandi.',
+        ], 3, requiresUniversityTier: true);
+
+        $this->assertSame('top_500', $result->universityTier);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 0,
+            'university_tier' => 'unknown',
+            'reason' => 'Noaniq.',
+        ], 3, requiresUniversityTier: true);
+    }
+
     public function test_valid_accepted_json_is_normalized(): void
     {
         $result = AiEvaluationResult::fromJson(

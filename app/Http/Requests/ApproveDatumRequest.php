@@ -43,7 +43,7 @@ class ApproveDatumRequest extends FormRequest
         $usesImpactFactorScore = $criterion?->usesImpactFactorAiHumanReviewScore() === true;
         $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesAuthorDividedScore = $criterion?->usesAuthorDividedAiHumanReviewScore() === true;
-        $usesUniversityTierScore = $criterion?->isInternationalCooperationCriterion() === true;
+        $usesUniversityTierScore = $criterion?->usesUniversityTierAiHumanReviewScore() === true;
         $isIndustryFundingCriterion = $criterion?->isIndustryFundingCriterion() === true;
         $activeScoreOptionCount = $isManualCriterion
             ? CriterionManualScoreOption::query()

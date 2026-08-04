@@ -7,6 +7,7 @@ use App\Data\AiEvaluationResult;
 use App\Models\Datum;
 use App\Models\Formula;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\ProfessionalDevelopmentCriterionRule;
 use App\Support\TranslatedEducationalLiteratureCriterionRule;
 use Gemini\Data\Blob;
 use Gemini\Data\Content;
@@ -60,6 +61,7 @@ class AiSubmissionEvaluator
             || str_contains((string) $criterion->ai_prompt, 'author_count');
         $requiresResourceDate = true;
         $requiresReceivedAmount = $criterion->isIndustryFundingCriterion();
+        $requiresUniversityTier = $criterion->isProfessionalDevelopmentCriterion();
 
         if ($maximumPoint === null) {
             return AiEvaluationResult::checking('Foydalanuvchi uchun mezon ball chegarasi topilmadi.');
@@ -88,6 +90,7 @@ class AiSubmissionEvaluator
                 $requiresPageCount,
                 $requiresReceivedAmount,
                 $requiresTranslationEvidence,
+                $requiresUniversityTier,
             ));
 
         $contentParts = [$this->buildPrompt(
@@ -97,6 +100,7 @@ class AiSubmissionEvaluator
             $requiresPageCount,
             $requiresReceivedAmount,
             $requiresTranslationEvidence,
+            $requiresUniversityTier,
         )];
 
         if ($resourceUrl !== null) {
@@ -156,6 +160,7 @@ PROMPT;
                         $requiresPageCount,
                         $requiresReceivedAmount,
                         $requiresTranslationEvidence,
+                        $requiresUniversityTier,
                     ),
                     prompt: $contentParts[0],
                 );
@@ -203,6 +208,7 @@ PROMPT;
                 $responseText,
                 $maximumPoint,
                 $requiresTranslationEvidence,
+                $requiresUniversityTier,
             );
 
             $result = $this->aiResourceDatePolicy->enforce($datum, $result);
@@ -220,6 +226,10 @@ PROMPT;
 
             if ($criterion->isInternationalCooperationCriterion()) {
                 return $this->internationalCooperationScoreValidator->handle($result, $maximumPoint);
+            }
+
+            if ($criterion->isProfessionalDevelopmentCriterion()) {
+                return ProfessionalDevelopmentCriterionRule::apply($result, $maximumPoint);
             }
 
             if ($criterion->isIndustryFundingCriterion()) {
@@ -289,6 +299,7 @@ PROMPT;
         bool $requiresPageCount = false,
         bool $requiresReceivedAmount = false,
         bool $requiresTranslationEvidence = false,
+        bool $requiresUniversityTier = false,
     ): GenerationConfig {
         return new GenerationConfig(
             temperature: 0.1,
@@ -300,6 +311,7 @@ PROMPT;
                 $requiresPageCount,
                 $requiresReceivedAmount,
                 $requiresTranslationEvidence,
+                $requiresUniversityTier,
             ),
         );
     }
@@ -362,6 +374,7 @@ PROMPT;
         bool $requiresPageCount,
         bool $requiresReceivedAmount,
         bool $requiresTranslationEvidence,
+        bool $requiresUniversityTier,
     ): string {
         $criterionPrompt = trim((string) preg_replace('/[ \t]+/', ' ', (string) $datum->criterion?->ai_prompt));
         $criterionPrompt = str_replace('%pointing%', (string) $maximumPoint, $criterionPrompt);
@@ -404,6 +417,7 @@ PROMPT;
             : 'YYYY-MM-DD';
         $responseExample = match (true) {
             $requiresTranslationEvidence => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"is_translation\":true,\"source_language\":\"manba tili\",\"target_language\":\"tarjima tili\",\"reason\":\"qisqa asos\"}",
+            $requiresUniversityTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"university_tier\":\"top_100|top_300|top_500|top_1000|outside_top_1000|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresPageCount => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresReceivedAmount => "{\"status\":\"accepted|cancelled|checking\",\"received_amount\":12500000.50,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresAuthorCount && $requiresResourceDate => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
@@ -486,6 +500,7 @@ PROMPT;
         bool $requiresPageCount = false,
         bool $requiresReceivedAmount = false,
         bool $requiresTranslationEvidence = false,
+        bool $requiresUniversityTier = false,
     ): Schema {
         $properties = [
             'status' => new Schema(
@@ -541,6 +556,20 @@ PROMPT;
             $properties['target_language'] = new Schema(type: DataType::STRING);
         }
 
+        if ($requiresUniversityTier) {
+            $properties['university_tier'] = new Schema(
+                type: DataType::STRING,
+                enum: [
+                    'top_100',
+                    'top_300',
+                    'top_500',
+                    'top_1000',
+                    'outside_top_1000',
+                    'unknown',
+                ],
+            );
+        }
+
         $required = $requiresReceivedAmount ? ['status', 'received_amount'] : ['status', 'point'];
 
         if ($requiresAuthorCount) {
@@ -559,6 +588,10 @@ PROMPT;
             $required[] = 'is_translation';
             $required[] = 'source_language';
             $required[] = 'target_language';
+        }
+
+        if ($requiresUniversityTier) {
+            $required[] = 'university_tier';
         }
 
         $required[] = 'reason';

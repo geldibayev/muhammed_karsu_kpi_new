@@ -13,6 +13,7 @@ use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\MasterClassCriterionRule;
 use App\Support\OakArticleCriterionRule;
+use App\Support\ProfessionalDevelopmentCriterionRule;
 use App\Support\ScopusCriterionRule;
 use Illuminate\Database\Seeder;
 use RuntimeException;
@@ -1479,16 +1480,24 @@ class CriterionSeeder extends Seeder
                 $childCode = $sectionIndex === 0
                     ? "1.{$position}"
                     : "{$sectionCode}.1.{$position}";
+                $description = $child['desc'];
+
+                if (ProfessionalDevelopmentCriterionRule::supports($childCode)) {
+                    $description['uz'] = ProfessionalDevelopmentCriterionRule::DESCRIPTION_UZ;
+                }
+
                 $ch = Criterion::query()->updateOrCreate([
                     'report_id' => $report->getKey(),
                     'code' => $childCode,
                 ], [
                     'name' => $child['name'],
-                    'desc' => $child['desc'],
+                    'desc' => $description,
                     'observation' => $child['observation'],
                     'parent_id' => $c->id,
                     'sort_order' => $position,
-                    'ai_prompt' => $child['ai_prompt'],
+                    'ai_prompt' => ProfessionalDevelopmentCriterionRule::supports($childCode)
+                        ? ProfessionalDevelopmentCriterionRule::PROMPT
+                        : $child['ai_prompt'],
                     'ai_model' => $child['ai_model'],
                     'ai_submission_max_point' => $child['ai_submission_max_point'] ?? null,
                     'divide_ai_point_by_authors' => $child['divide_ai_point_by_authors'] ?? null,

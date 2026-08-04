@@ -16,6 +16,7 @@ class AiEvaluationResult
         public readonly ?string $resourceDate = null,
         public readonly ?int $pageCount = null,
         public readonly ?float $receivedAmount = null,
+        public readonly ?string $universityTier = null,
     ) {}
 
     /** @param array<string, mixed> $payload */
@@ -23,6 +24,7 @@ class AiEvaluationResult
         array $payload,
         float $maximumPoint,
         bool $requiresTranslationEvidence = false,
+        bool $requiresUniversityTier = false,
     ): self {
         $payloadKeys = array_keys($payload);
         sort($payloadKeys);
@@ -34,6 +36,8 @@ class AiEvaluationResult
             ['author_count', 'point', 'reason', 'resource_date', 'status'],
             ['author_count', 'page_count', 'point', 'reason', 'resource_date', 'status'],
             ['author_count', 'reason', 'received_amount', 'resource_date', 'status'],
+            ['point', 'reason', 'status', 'university_tier'],
+            ['point', 'reason', 'resource_date', 'status', 'university_tier'],
         ];
 
         if ($requiresTranslationEvidence) {
@@ -64,6 +68,7 @@ class AiEvaluationResult
         $resourceDate = $payload['resource_date'] ?? null;
         $pageCount = $payload['page_count'] ?? null;
         $receivedAmount = $payload['received_amount'] ?? null;
+        $universityTier = $payload['university_tier'] ?? null;
         $usesReceivedAmount = array_key_exists('received_amount', $payload);
         $isTranslation = $payload['is_translation'] ?? null;
         $sourceLanguage = $payload['source_language'] ?? null;
@@ -96,6 +101,29 @@ class AiEvaluationResult
 
         if ($usesReceivedAmount && $status === 'accepted' && $receivedAmount <= 0) {
             throw new UnexpectedValueException('Qabul qilingan resurs uchun tushgan mablag‘ musbat bo‘lishi kerak.');
+        }
+
+        if ($universityTier !== null
+            && (! is_string($universityTier)
+                || ! in_array($universityTier, [
+                    'top_100',
+                    'top_300',
+                    'top_500',
+                    'top_1000',
+                    'outside_top_1000',
+                    'unknown',
+                ], true))) {
+            throw new UnexpectedValueException('AI universitet Top oralig‘ini noto‘g‘ri formatda qaytardi.');
+        }
+
+        if ($requiresUniversityTier && $universityTier === null) {
+            throw new UnexpectedValueException('AI universitet Top oralig‘ini qaytarmadi.');
+        }
+
+        if ($requiresUniversityTier
+            && $status === 'accepted'
+            && ! in_array($universityTier, ['top_100', 'top_300', 'top_500', 'top_1000'], true)) {
+            throw new UnexpectedValueException('Qabul qilingan resurs uchun universitet Top-1000 oralig‘i tasdiqlanmadi.');
         }
 
         if ($authorCount !== null
@@ -161,6 +189,7 @@ class AiEvaluationResult
             resourceDate: $resourceDate,
             pageCount: $status === 'accepted' ? $pageCount : null,
             receivedAmount: $status === 'accepted' && $usesReceivedAmount ? (float) $receivedAmount : null,
+            universityTier: $universityTier,
         );
     }
 
@@ -169,6 +198,7 @@ class AiEvaluationResult
         string $json,
         float $maximumPoint,
         bool $requiresTranslationEvidence = false,
+        bool $requiresUniversityTier = false,
     ): self {
         $payload = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
@@ -176,7 +206,12 @@ class AiEvaluationResult
             throw new UnexpectedValueException('AI javobi JSON obyekt emas.');
         }
 
-        return self::fromPayload($payload, $maximumPoint, $requiresTranslationEvidence);
+        return self::fromPayload(
+            $payload,
+            $maximumPoint,
+            $requiresTranslationEvidence,
+            $requiresUniversityTier,
+        );
     }
 
     public static function checking(string $reason): self

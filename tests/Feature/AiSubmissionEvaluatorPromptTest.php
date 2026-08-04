@@ -20,6 +20,7 @@ use App\Services\IndustryFundingScoreCalculator;
 use App\Services\InternationalCooperationScoreValidator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
+use App\Support\ProfessionalDevelopmentCriterionRule;
 use Gemini\Data\Blob;
 use Gemini\Data\GenerationConfig;
 use Gemini\Enums\MimeType;
@@ -36,6 +37,85 @@ use Tests\TestCase;
 class AiSubmissionEvaluatorPromptTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    public function test_professional_development_point_is_calculated_from_category_maximum_and_top_tier(): void
+    {
+        Storage::fake('local');
+        $image = UploadedFile::fake()->image('internship.jpg', 10, 10);
+        Storage::disk('local')->put('internship.jpg', $image->getContent());
+        $user = User::factory()->create(['degree' => 'no_degrees']);
+        Evaluation::query()->create([
+            'code' => 'no_degrees',
+            'name' => ['uz' => 'Ilmiy darajasiz'],
+            'status' => '1',
+        ]);
+        $report = Report::query()->create([
+            'name' => ['uz' => 'KPI hisoboti'],
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'code' => ProfessionalDevelopmentCriterionRule::CODE,
+            'name' => ['uz' => 'Malaka oshirish'],
+            'report_id' => $report->getKey(),
+            'upload' => '1',
+            'status' => '1',
+            'checking' => 'ai',
+            'ai_prompt' => ProfessionalDevelopmentCriterionRule::PROMPT,
+            'ai_model' => 'gemini-test',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 3,
+        ]);
+        $datum = Datum::query()->create([
+            'name' => 'internship.jpg',
+            'material' => [
+                'type' => 'file',
+                'disk' => 'local',
+                'path' => 'internship.jpg',
+                'mime' => 'image/jpeg',
+            ],
+            'user_id' => $user->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'checking',
+        ]);
+
+        Gemini::fake([
+            GenerateContentResponse::fake([
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [[
+                            'text' => json_encode([
+                                'status' => 'accepted',
+                                'point' => 0,
+                                'university_tier' => 'top_300',
+                                'resource_date' => '2026-01-10',
+                                'reason' => 'Top-101–300 oralig‘i hujjatda tasdiqlandi.',
+                            ], JSON_THROW_ON_ERROR),
+                        ]],
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $result = (new AiSubmissionEvaluator(
+            new AiAuthorPointDistributor,
+            new OakArticleScoreCalculator,
+            new DescribeAiFailure,
+            new GeminiFileMimeTypeResolver,
+            new AiResourceDatePolicy,
+            new GeminiUrlContextGateway,
+            new PrintedEducationalLiteratureScoreCalculator,
+            new InternationalCooperationScoreValidator,
+            new IndustryFundingScoreCalculator,
+        ))->evaluate($datum);
+
+        $this->assertSame('accepted', $result->status);
+        $this->assertSame(2.25, $result->point);
+        $this->assertSame('top_300', $result->universityTier);
+    }
 
     public function test_university_project_rule_overrides_ai_point_with_degree_category_point(): void
     {

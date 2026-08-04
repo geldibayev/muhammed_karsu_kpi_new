@@ -13,6 +13,7 @@ use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
+use App\Support\ProfessionalDevelopmentCriterionRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -131,7 +132,7 @@ class ReviewDatumSubmission
                 'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
                     ? $publicationTier
                     : null,
-                'university_tier' => $lockedDatum->criterion->isInternationalCooperationCriterion()
+                'university_tier' => $lockedDatum->criterion->usesUniversityTierAiHumanReviewScore()
                     ? $universityTier
                     : null,
                 'received_amount' => $lockedDatum->criterion->isIndustryFundingCriterion()
@@ -267,13 +268,20 @@ class ReviewDatumSubmission
                 ];
             }
 
-            if ($datum->criterion->isInternationalCooperationCriterion()) {
+            if ($datum->criterion->usesUniversityTierAiHumanReviewScore()) {
                 $point = $universityTier === null
                     ? null
-                    : InternationalCooperationCriterionRule::pointForUniversityTier(
-                        $maximumPoint,
-                        $universityTier,
-                    );
+                    : match (true) {
+                        $datum->criterion->isProfessionalDevelopmentCriterion() => ProfessionalDevelopmentCriterionRule::pointForUniversityTier(
+                            $maximumPoint,
+                            $universityTier,
+                        ),
+                        $datum->criterion->isInternationalCooperationCriterion() => InternationalCooperationCriterionRule::pointForUniversityTier(
+                            $maximumPoint,
+                            $universityTier,
+                        ),
+                        default => null,
+                    };
 
                 if ($point === null) {
                     throw ValidationException::withMessages([

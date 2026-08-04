@@ -10,6 +10,7 @@ use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\KpiCriterionSpecification;
 use App\Support\MasterClassCriterionRule;
+use App\Support\ProfessionalDevelopmentCriterionRule;
 use Database\Seeders\CriterionSeeder;
 use Database\Seeders\KpiCriterionSpecificationSeeder;
 use Database\Seeders\LanguageSeeder;
@@ -165,6 +166,12 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $this->assertSame(
             IndustryFundingCriterionRule::PROMPT,
             $criterionThreeOneThirteen->ai_prompt,
+        );
+
+        $criterionTwoOneFive = Criterion::query()->where('code', '2.1.5')->firstOrFail();
+        $this->assertSame(
+            ProfessionalDevelopmentCriterionRule::PROMPT,
+            $criterionTwoOneFive->ai_prompt,
         );
 
         $criterionThreeOneSeven = Criterion::query()->where('code', '3.1.7')->firstOrFail();

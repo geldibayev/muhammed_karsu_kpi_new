@@ -27,7 +27,7 @@
         $usesImpactFactorScore = $datum->criterion?->usesImpactFactorAiHumanReviewScore() === true;
         $usesPublicationTierScore = $datum->criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesAuthorDividedScore = $datum->criterion?->usesAuthorDividedAiHumanReviewScore() === true;
-        $usesUniversityTierScore = $datum->criterion?->isInternationalCooperationCriterion() === true;
+        $usesUniversityTierScore = $datum->criterion?->usesUniversityTierAiHumanReviewScore() === true;
         $isIndustryFundingCriterion = $datum->criterion?->isIndustryFundingCriterion() === true;
         $isHIndexCriterion = $datum->criterion?->isHIndexCriterion() === true;
         $fixedApprovalOption = $isManualCriterion && $scoreOptions->count() === 1
@@ -397,10 +397,15 @@
                                     'top_1000' => 'Top-501–1000',
                                 ] as $universityTier => $universityTierLabel)
                                     @php
-                                        $universityTierPoint = \App\Support\InternationalCooperationCriterionRule::pointForUniversityTier(
-                                            $evaluationMaximum,
-                                            $universityTier,
-                                        );
+                                        $universityTierPoint = $datum->criterion?->isProfessionalDevelopmentCriterion()
+                                            ? \App\Support\ProfessionalDevelopmentCriterionRule::pointForUniversityTier(
+                                                $evaluationMaximum,
+                                                $universityTier,
+                                            )
+                                            : \App\Support\InternationalCooperationCriterionRule::pointForUniversityTier(
+                                                $evaluationMaximum,
+                                                $universityTier,
+                                            );
                                     @endphp
                                     <option value="{{ $universityTier }}"
                                         @selected(old('university_tier', $datum->university_tier) === $universityTier)>
@@ -511,7 +516,7 @@
 @endsection
 
 @section('script')
-    @if($errors->has('point') || $errors->has('author_count') || $errors->has('page_count') || $errors->has('impact_factor') || $errors->has('publication_tier') || $errors->has('received_amount'))
+    @if($errors->has('point') || $errors->has('author_count') || $errors->has('page_count') || $errors->has('impact_factor') || $errors->has('publication_tier') || $errors->has('university_tier') || $errors->has('received_amount'))
         <script>$('#ai-approve-modal').modal('show');</script>
     @elseif($errors->has('criterion_id'))
         <script>$('#transfer-criterion-modal').modal('show');</script>
