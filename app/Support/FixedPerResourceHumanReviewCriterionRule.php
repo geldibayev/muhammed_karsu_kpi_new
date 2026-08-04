@@ -20,6 +20,10 @@ class FixedPerResourceHumanReviewCriterionRule
             'foreign_lang' => 3.0,
             'physical' => 3.0,
         ],
+        '3.1.7' => [
+            'hold_degrees' => 3.0,
+            'foreign_lang' => 3.0,
+        ],
         '3.1.14' => [
             'hold_degrees' => 4.0,
             'no_degrees' => 1.0,
@@ -105,6 +109,28 @@ Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
 
 Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
 {"status": "accepted|checking|cancelled", "point": <raqam: 3 yoki 0>, "reason": "<Qabul qilingan qarorning sababi va hujjatlardagi holat haqida qisqacha izoh>"}
+PROMPT;
+    }
+
+    public static function threeOneSevenPrompt(): string
+    {
+        return <<<'PROMPT'
+Siz 3.1.7 mezoni bo‘yicha PhD ilmiy darajali kadr tayyorlanganini tekshiruvchi qat’iy AI yordamchisiz.
+
+VAZIFA:
+- OAK (VAK) tasdiqlagan PhD diplomi yoki unga teng rasmiy hujjat mavjudligini tekshiring.
+- Hujjatda PhD darajasini olgan shaxs va ilmiy rahbar haqidagi ma’lumotlar aniq ko‘rsatilgan bo‘lishi kerak.
+- Taqdim etgan professor-o‘qituvchi ushbu PhD kadrning ilmiy rahbari ekanligi tasdiqlanishi kerak.
+- Ballni o‘zingiz tanlamang. Tasdiqlangan resurs uchun server foydalanuvchi toifasiga ko‘ra 3 ball beradi.
+
+QAROR:
+- Barcha talablar aniq tasdiqlansa accepted qaytaring.
+- Hujjat xira, kesilgan yoki PhD darajasi yoxud ilmiy rahbar ma’lumoti noaniq bo‘lsa checking qaytaring.
+- Hujjat mezonga aloqasizligi yoki taqdim etgan professor-o‘qituvchi ilmiy rahbar emasligi aniq bo‘lsa cancelled qaytaring.
+
+Point maydoniga accepted holatida ham 0 yozing: yakuniy ballni server hisoblaydi. Reason ichida PhD kadr, diplom va ilmiy rahbarlikni tasdiqlovchi dalillarni qisqa yozing.
+Javobni faqat quyidagi JSON formatida qaytaring:
+{"status":"accepted|checking|cancelled","point":0,"reason":"qaror sababi"}
 PROMPT;
     }
 

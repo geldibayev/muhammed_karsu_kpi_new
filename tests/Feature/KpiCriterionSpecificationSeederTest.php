@@ -167,6 +167,12 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             $criterionThreeOneThirteen->ai_prompt,
         );
 
+        $criterionThreeOneSeven = Criterion::query()->where('code', '3.1.7')->firstOrFail();
+        $this->assertSame(
+            FixedPerResourceHumanReviewCriterionRule::threeOneSevenPrompt(),
+            $criterionThreeOneSeven->ai_prompt,
+        );
+
         $criterionThreeOneFourteen = Criterion::query()->where('code', '3.1.14')->firstOrFail();
         $this->assertSame(
             FixedPerResourceHumanReviewCriterionRule::threeOneFourteenPrompt(),
