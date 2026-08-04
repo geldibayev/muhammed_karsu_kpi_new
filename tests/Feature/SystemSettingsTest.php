@@ -11,6 +11,7 @@ use App\Models\Report;
 use App\Models\User;
 use App\Models\Year;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -136,6 +137,7 @@ class SystemSettingsTest extends TestCase
 
         $this->assertFalse(Option::aiEvaluationsEnabled());
         $this->assertTrue(Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE));
+        $this->assertTrue(Option::aiQueuePausedBySetting());
         $this->assertDatabaseHas('options', [
             'key' => Option::AI_EVALUATIONS_ENABLED,
             'value' => '0',
@@ -145,6 +147,59 @@ class SystemSettingsTest extends TestCase
             ->get(route('ai-status.index'))
             ->assertOk()
             ->assertSee('AI o‘chirilgan');
+
+        $this->actingAs($manager)
+            ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'AI tekshiruvi qayta yoqildi va navbat davom ettirildi.');
+
+        $this->assertTrue(Option::aiEvaluationsEnabled());
+        $this->assertFalse(Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE));
+        $this->assertFalse(Option::aiQueuePausedBySetting());
+    }
+
+    public function test_enabling_ai_does_not_clear_a_system_safety_pause(): void
+    {
+        config()->set('kpi.settings_manager_hemis_id', '3172011004');
+        $manager = User::factory()->create(['hemis_id' => 3172011004]);
+        $connection = (string) config('queue.default');
+
+        Queue::pause($connection, ProcessAiDatumEvaluation::QUEUE);
+        Cache::put('kpi:ai-worker:paused-reason', 'Gemini krediti tugagan.', now()->addHour());
+
+        $this->actingAs($manager)
+            ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => '0'])
+            ->assertRedirect();
+
+        $this->assertFalse(Option::aiQueuePausedBySetting());
+
+        $this->actingAs($manager)
+            ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas(
+                'success',
+                'AI sozlamasi yoqildi, lekin AI navbati tizim yoki Gemini krediti sabab pauzada qolmoqda.',
+            );
+
+        $this->assertTrue(Option::aiEvaluationsEnabled());
+        $this->assertTrue(Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE));
+
+        $this->actingAs($manager)
+            ->get(route('settings.index'))
+            ->assertOk()
+            ->assertSee('AI navbati:')
+            ->assertSee('tizim yoki Gemini krediti sabab')
+            ->assertSee('Gemini krediti tugagan.');
+    }
+
+    public function test_legacy_disabled_setting_can_resume_its_queue(): void
+    {
+        config()->set('kpi.settings_manager_hemis_id', '3172011004');
+        $manager = User::factory()->create(['hemis_id' => 3172011004]);
+        $connection = (string) config('queue.default');
+
+        Option::setAiEvaluationsEnabled(false);
+        Queue::pause($connection, ProcessAiDatumEvaluation::QUEUE);
 
         $this->actingAs($manager)
             ->put(route('settings.ai.update'), ['ai_evaluations_enabled' => '1'])

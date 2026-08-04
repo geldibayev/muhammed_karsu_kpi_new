@@ -53,7 +53,7 @@
                         </form>
                     </div>
 
-                    <div class="card card-outline {{ $aiEvaluationsEnabled ? 'card-success' : 'card-danger' }} shadow-sm">
+                    <div class="card card-outline {{ $aiEvaluationsEnabled && ! $aiQueuePaused ? 'card-success' : 'card-danger' }} shadow-sm">
                         <div class="card-header">
                             <h3 class="card-title font-weight-bold">
                                 <i class="fas fa-robot mr-1" aria-hidden="true"></i>
@@ -64,15 +64,32 @@
                             @csrf
                             @method('PUT')
                             <div class="card-body">
-                                <div class="alert {{ $aiEvaluationsEnabled ? 'alert-success' : 'alert-danger' }}">
+                                <div class="alert {{ $aiEvaluationsEnabled && ! $aiQueuePaused ? 'alert-success' : 'alert-danger' }}">
                                     <div class="font-weight-bold">
-                                        Joriy holat:
+                                        Global sozlama:
                                         {{ $aiEvaluationsEnabled ? 'AI tekshiruvi yoqilgan' : 'AI tekshiruvi o‘chirilgan' }}
                                     </div>
+                                    <div class="font-weight-bold mt-1">
+                                        AI navbati:
+                                        {{ $aiQueuePaused ? 'Pauzada' : 'Ishlashga tayyor' }}
+                                        @if ($aiQueuePaused && $aiQueuePausedBySetting)
+                                            (ushbu sozlama orqali)
+                                        @elseif ($aiQueuePaused)
+                                            (tizim yoki Gemini krediti sabab)
+                                        @endif
+                                    </div>
+                                    @if ($aiQueuePaused && ! $aiQueuePausedBySetting && is_string($aiQueuePausedReason))
+                                        <div class="small mt-1">Sabab: {{ $aiQueuePausedReason }}</div>
+                                    @endif
                                     <div class="small mt-1">
                                         O‘chirilganda Gemini’ga yangi so‘rov yuborilmaydi. Navbatdagi resurslar o‘chirilmaydi;
                                         AI qayta yoqilganda worker ularni davom ettiradi. Hozir ishlanayotgan bitta so‘rov yakunlanishi mumkin.
                                     </div>
+                                    @if ($aiEvaluationsEnabled && $aiQueuePaused)
+                                        <div class="small font-weight-bold mt-2">
+                                            Sozlama yoqilgan, ammo xavfsizlik pauzasi avtomatik bekor qilinmadi. Gemini krediti va AI holati sahifasini tekshiring.
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <div class="form-group mb-0">

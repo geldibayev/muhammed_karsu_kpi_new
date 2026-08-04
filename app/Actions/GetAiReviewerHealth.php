@@ -88,6 +88,7 @@ class GetAiReviewerHealth
         $workerLastFailureAt = $this->toDate(Cache::get('kpi:ai-worker:last-failure-at'));
         $workerLastFailureReason = Cache::get('kpi:ai-worker:last-failure-reason');
         $workerLastFailureDatumId = Cache::get('kpi:ai-worker:last-failure-datum-id');
+        $queuePausedReason = Cache::get('kpi:ai-worker:paused-reason');
         $workerHeartbeatAt = $this->toDate(Cache::get('kpi:ai-worker:heartbeat-at'));
         $workerStaleAfterSeconds = max(75, (int) config('kpi.ai_worker_stale_after_seconds', 90));
         $workerIsActive = $workerHeartbeatAt?->gt(now()->subSeconds($workerStaleAfterSeconds)) ?? false;
@@ -136,7 +137,9 @@ class GetAiReviewerHealth
 
         $reason = match (true) {
             ! $aiEvaluationsEnabled => 'AI tekshiruvi administrator tomonidan vaqtincha o\'chirilgan.',
-            $isQueuePaused => 'AI tekshiruvi administrator yoki tizim tomonidan vaqtincha to‘xtatilgan.',
+            $isQueuePaused => is_string($queuePausedReason)
+                ? $queuePausedReason
+                : 'AI tekshiruvi administrator yoki tizim tomonidan vaqtincha to‘xtatilgan.',
             $isRetryingAfterAttemptFailure => is_string($workerLastFailureReason)
                 ? $workerLastFailureReason.' Tizim avtomatik qayta urinadi.'
                 : 'AI urinishida xato yuz berdi. Tizim avtomatik qayta urinadi.',

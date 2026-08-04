@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Actions\SetAiEvaluationState;
 use App\Http\Requests\UpdateAiSettingsRequest;
 use App\Http\Requests\UpdateUploadSettingsRequest;
+use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Option;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\View\View;
 
 class SystemSettingsController extends Controller
@@ -16,10 +19,14 @@ class SystemSettingsController extends Controller
     public function index(): View
     {
         Gate::authorize('manage-kpi-settings');
+        $connection = (string) config('queue.default');
 
         return view('pages.settings.index', [
             'resourceUploadsEnabled' => Option::resourceUploadsEnabled(),
             'aiEvaluationsEnabled' => Option::aiEvaluationsEnabled(),
+            'aiQueuePaused' => Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE),
+            'aiQueuePausedBySetting' => Option::aiQueuePausedBySetting() === true,
+            'aiQueuePausedReason' => Cache::get('kpi:ai-worker:paused-reason'),
             'breadcrumbs' => [
                 ['url' => route('home'), 'name' => 'Asosiy sahifa'],
                 ['url' => '#', 'name' => 'Sozlamalar'],
@@ -33,19 +40,23 @@ class SystemSettingsController extends Controller
     ): RedirectResponse {
         $enabled = (bool) $request->validated('ai_evaluations_enabled');
 
-        $setAiEvaluationState->handle($enabled);
+        $state = $setAiEvaluationState->handle($enabled);
 
         Log::info('Global AI evaluation setting changed.', [
             'enabled' => $enabled,
+            'queue_paused' => $state['queue_paused'],
+            'queue_resumed' => $state['queue_resumed'],
             'user_id' => $request->user()->getKey(),
             'hemis_id' => $request->user()->hemis_id,
         ]);
 
         return back()->with(
             'success',
-            $enabled
-                ? 'AI tekshiruvi qayta yoqildi va navbat davom ettirildi.'
-                : 'AI tekshiruvi vaqtincha o\'chirildi. Navbatdagi resurslar saqlanib qoladi.',
+            match (true) {
+                ! $enabled => 'AI tekshiruvi vaqtincha o\'chirildi. Navbatdagi resurslar saqlanib qoladi.',
+                $state['queue_paused'] => 'AI sozlamasi yoqildi, lekin AI navbati tizim yoki Gemini krediti sabab pauzada qolmoqda.',
+                default => 'AI tekshiruvi qayta yoqildi va navbat davom ettirildi.',
+            },
         );
     }
 
