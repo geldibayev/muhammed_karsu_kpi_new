@@ -29,6 +29,7 @@ TASDIQLASH TALABLARI:
 
 BALL QOIDASI:
 - Ballni o‘zingiz hisoblamang va point maydoniga 0 yozing.
+- Reason ichida ball, foiz yoki arifmetik hisob-kitob yozmang; faqat tekshiruv dalillari va reyting o‘rnini yozing.
 - Server top_100 uchun maksimal ballning 100 foizini, top_300 uchun 75 foizini, top_500 uchun 50 foizini, top_1000 uchun 25 foizini beradi.
 - Foydalanuvchi toifasiga mos maksimal ball tizim tomonidan ishonchli aniqlanadi: ilmiy darajali va xorijiy til toifasi uchun 2 ball; ilmiy darajasiz va jismoniy toifa uchun 3 ball.
 
@@ -94,12 +95,47 @@ PROMPT;
         return new AiEvaluationResult(
             status: 'accepted',
             point: $point,
-            reason: $result->reason,
+            reason: self::authoritativeReason(
+                $result->reason,
+                $maximumPoint,
+                $point,
+                $result->universityTier,
+            ),
             authorCount: $result->authorCount,
             resourceDate: $result->resourceDate,
             pageCount: $result->pageCount,
             receivedAmount: $result->receivedAmount,
             universityTier: $result->universityTier,
         );
+    }
+
+    private static function authoritativeReason(
+        string $aiReason,
+        float $maximumPoint,
+        float $point,
+        string $universityTier,
+    ): string {
+        $evidenceReason = preg_replace(
+            '/\s*Ball\s*:\s*.*?(?=\s+(?:Manba|Source|Источник)\s*:|$)/isu',
+            ' ',
+            $aiReason,
+        );
+        $evidenceReason = trim((string) preg_replace('/\s+/u', ' ', (string) $evidenceReason));
+        [$tierLabel, $percentage] = match ($universityTier) {
+            'top_100' => ['Top-1–100', 100],
+            'top_300' => ['Top-101–300', 75],
+            'top_500' => ['Top-301–500', 50],
+            'top_1000' => ['Top-501–1000', 25],
+        };
+        $calculation = 'Tizim hisob-kitobi: '
+            .$tierLabel.' — '.$percentage.'%; '
+            .self::formatPoint($maximumPoint).' × '.$percentage.'% = '.self::formatPoint($point).' ball.';
+
+        return $evidenceReason === '' ? $calculation : $evidenceReason.' '.$calculation;
+    }
+
+    private static function formatPoint(float $point): string
+    {
+        return rtrim(rtrim(number_format($point, 4, '.', ''), '0'), '.');
     }
 }

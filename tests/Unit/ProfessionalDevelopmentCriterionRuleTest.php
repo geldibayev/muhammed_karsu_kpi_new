@@ -66,6 +66,24 @@ class ProfessionalDevelopmentCriterionRuleTest extends TestCase
         $this->assertSame('top_300', $calculated->universityTier);
     }
 
+    public function test_ai_calculation_in_reason_is_replaced_by_authoritative_server_calculation(): void
+    {
+        $result = new AiEvaluationResult(
+            status: 'accepted',
+            point: 1.4,
+            reason: 'Al-Farabi universiteti QS reytingida 163-o‘rinda. Ball: 2 * 70% = 1.4. Manba: https://example.com/ranking',
+            universityTier: 'top_300',
+        );
+
+        $calculated = ProfessionalDevelopmentCriterionRule::apply($result, 2.0);
+
+        $this->assertSame(1.5, $calculated->point);
+        $this->assertStringNotContainsString('70%', $calculated->reason);
+        $this->assertStringNotContainsString('1.4', $calculated->reason);
+        $this->assertStringContainsString('Manba: https://example.com/ranking', $calculated->reason);
+        $this->assertStringContainsString('Top-101–300 — 75%; 2 × 75% = 1.5 ball', $calculated->reason);
+    }
+
     public function test_invalid_maximum_or_tier_requires_human_review(): void
     {
         $invalidTier = ProfessionalDevelopmentCriterionRule::apply(
@@ -96,5 +114,6 @@ class ProfessionalDevelopmentCriterionRuleTest extends TestCase
         $this->assertStringContainsString('75 foizini', $prompt);
         $this->assertStringContainsString('50 foizini', $prompt);
         $this->assertStringContainsString('25 foizini', $prompt);
+        $this->assertStringContainsString('Reason ichida ball, foiz yoki arifmetik hisob-kitob yozmang', $prompt);
     }
 }
