@@ -96,6 +96,14 @@
                                 </form>
                             @endcan
 
+                            @can('overrideAiAcceptance', $datum)
+                                <button type="button" class="btn btn-danger btn-sm ml-2"
+                                        data-toggle="modal" data-target="#reject-accepted-ai-modal">
+                                    <i class="fas fa-user-times mr-1"></i>
+                                    Gemini tasdig‘ini bekor qilish
+                                </button>
+                            @endcan
+
                             @can('download', $datum)
                                 @if($datum->storagePath() !== null)
                                     <a href="{{ route('upload.file.download', $datum) }}"
@@ -158,6 +166,48 @@
                     </div>
                 </div>
             </div>
+
+            @can('overrideAiAcceptance', $datum)
+                <div class="modal fade" id="reject-accepted-ai-modal" tabindex="-1" role="dialog"
+                     aria-labelledby="reject-accepted-ai-modal-title" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <form method="POST" action="{{ route('ai-human-reviews.reject-accepted', $datum) }}"
+                              class="modal-content">
+                            @csrf
+                            @method('PATCH')
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="reject-accepted-ai-modal-title">
+                                    Gemini tasdig‘ini bekor qilish
+                                </h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <label for="accepted-ai-rejection-reason">
+                                    Gemini xulosasidagi xato va rad etish sababi
+                                </label>
+                                <textarea id="accepted-ai-rejection-reason" name="reason" rows="5"
+                                          maxlength="5000" required
+                                          class="form-control @error('reason') is-invalid @enderror">{{ old('reason') }}</textarea>
+                                @error('reason')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                                <button type="submit" class="btn btn-danger">Izoh bilan rad etish</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            @endcan
         </div>
     </section>
+@endsection
+
+@section('script')
+    @if($errors->has('reason'))
+        <script>$('#reject-accepted-ai-modal').modal('show');</script>
+    @endif
 @endsection

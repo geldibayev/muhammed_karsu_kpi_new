@@ -27,6 +27,7 @@ class DatumPolicy
         return $datum->status !== 'deleted'
             && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
                 || $this->isAssignedReviewer($user, $datum)
+                || $this->overrideAiAcceptance($user, $datum)
                 || (Gate::forUser($user)->allows('view-ai-status') && $datum->usesAiChecking())
                 || $this->isRatingSubmissionVisible($user, $datum));
     }
@@ -50,6 +51,25 @@ class DatumPolicy
             && $this->isAssignedReviewer($user, $datum);
     }
 
+    public function overrideAiAcceptance(User $user, Datum $datum): bool
+    {
+        if ($datum->status !== DatumStatus::Accepted->value
+            || ! $datum->usesAiChecking()
+            || ! $datum->histories()
+                ->where('message_type', 'ai_evaluation')
+                ->where('type', 'success')
+                ->exists()) {
+            return false;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        return (string) config('kpi.accepted_ai_reviewer_hemis_id')
+            === (string) $user->hemis_id;
+    }
+
     public function requeueAiEvaluation(User $user, Datum $datum): bool
     {
         if (! $user->isSuperAdmin()
@@ -64,6 +84,7 @@ class DatumPolicy
             'manual_review_approved',
             'manual_review_rejected',
             'h_index_review_approved',
+            'human_override_ai_rejected',
             'criterion_transferred',
         ]);
 

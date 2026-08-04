@@ -14,6 +14,7 @@ use App\Http\Controllers\HemisController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ManualReviewController;
 use App\Http\Controllers\RatingController;
+use App\Http\Controllers\RejectAcceptedAiDatumController;
 use App\Http\Controllers\RequeueCancelledAiDatumController;
 use App\Http\Controllers\ResourceStatisticsController;
 use App\Http\Controllers\ReviewerAssignmentController;
@@ -76,6 +77,8 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/ai-human-reviews', AiHumanReviewController::class)
         ->middleware('can:access-ai-human-reviews')
         ->name('ai-human-reviews.index');
+    Route::patch('/ai-human-reviews/{datum}/reject-accepted', RejectAcceptedAiDatumController::class)
+        ->name('ai-human-reviews.reject-accepted');
     Route::get('/reviews/{datum}', [ManualReviewController::class, 'show'])->name('reviews.show');
     Route::patch('/reviews/{datum}/approve', [ManualReviewController::class, 'approve'])->name('reviews.approve');
     Route::patch('/reviews/{datum}/reject', [ManualReviewController::class, 'reject'])->name('reviews.reject');
