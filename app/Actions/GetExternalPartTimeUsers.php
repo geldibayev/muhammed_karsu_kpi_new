@@ -33,11 +33,13 @@ class GetExternalPartTimeUsers
     {
         return User::query()
             ->select(['id', 'hemis_id', 'name'])
+            ->active()
             ->whereHas(
                 'workplaces',
                 fn (Builder $query): Builder => $query
                     ->where('form_id', EmploymentForm::EXTERNAL_PART_TIME_ID),
             )
+            ->withExists('primaryWorkplaces')
             ->with([
                 'workplaces' => fn (HasMany $query): HasMany => $query
                     ->where('form_id', EmploymentForm::EXTERNAL_PART_TIME_ID)
@@ -52,7 +54,7 @@ class GetExternalPartTimeUsers
             ->orderBy('name->full');
     }
 
-    /** @return array{id: int, hemis_id: int|string, name: string, faculties: string, departments: string, positions: string, forms: string} */
+    /** @return array{id: int, hemis_id: int|string, name: string, faculties: string, departments: string, positions: string, forms: string, can_delete: bool} */
     private function row(User $user): array
     {
         $faculties = $user->workplaces
@@ -81,6 +83,7 @@ class GetExternalPartTimeUsers
             'departments' => $departments ?: '—',
             'positions' => $positions ?: '—',
             'forms' => $forms ?: 'O‘rindoshlik (tashqi)',
+            'can_delete' => ! (bool) $user->primary_workplaces_exists,
         ];
     }
 }

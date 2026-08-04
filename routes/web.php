@@ -9,6 +9,7 @@ use App\Http\Controllers\CriterionRatingController;
 use App\Http\Controllers\CriterionResourceStatisticsController;
 use App\Http\Controllers\DatumController;
 use App\Http\Controllers\DatumHistoryController;
+use App\Http\Controllers\DeleteExternalPartTimeUserController;
 use App\Http\Controllers\ExternalPartTimeUserController;
 use App\Http\Controllers\ExternalPartTimeUserExportController;
 use App\Http\Controllers\HemisController;
@@ -28,7 +29,7 @@ Route::get('/', [CriterionController::class, 'index']);
 Route::get('/login/user', [HemisController::class, 'index'])->name('login.user');
 Route::get('/login/d', [CriterionController::class, 'index']);
 
-Route::prefix('home')->middleware(['auth'])->group(function () {
+Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
     Route::post('/logout', [HomeController::class, 'logout'])->name('auth.logout');
     Route::get('/profile', [HomeController::class, 'profile'])->name('profile');
@@ -69,6 +70,8 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
     Route::get('/users/external-part-timers/export', ExternalPartTimeUserExportController::class)
         ->middleware('can:export-employment-data')
         ->name('users.external-part-timers.export');
+    Route::delete('/users/external-part-timers/{user}', DeleteExternalPartTimeUserController::class)
+        ->name('users.external-part-timers.destroy');
     Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
     Route::get('/reviewer-assignments', [ReviewerAssignmentController::class, 'index'])
         ->name('reviewer-assignments.index');

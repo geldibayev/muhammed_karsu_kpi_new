@@ -47,6 +47,7 @@ class RecalculateReportPoints
     {
         Datum::query()
             ->where('status', 'accepted')
+            ->whereHas('user', fn ($query) => $query->active())
             ->whereNotNull('received_amount')
             ->whereNotNull('author_count')
             ->whereHas('criterion', fn ($query) => $query
@@ -85,6 +86,7 @@ class RecalculateReportPoints
     {
         Datum::query()
             ->where('status', 'accepted')
+            ->whereHas('user', fn ($query) => $query->active())
             ->whereNotNull('page_count')
             ->whereNotNull('author_count')
             ->whereHas('criterion', fn ($query) => $query
@@ -127,6 +129,7 @@ class RecalculateReportPoints
     {
         Datum::query()
             ->where('status', 'accepted')
+            ->whereHas('user', fn ($query) => $query->active())
             ->whereNotNull('author_count')
             ->whereHas('criterion', fn ($query) => $query
                 ->whereBelongsTo($report)
@@ -169,6 +172,7 @@ class RecalculateReportPoints
             ->selectRaw('SUM(point) as point')
             ->selectRaw('COUNT(*) as files')
             ->where('status', 'accepted')
+            ->whereHas('user', fn ($query) => $query->active())
             ->whereHas('criterion', fn ($query) => $query->where('report_id', $report->getKey()))
             ->groupBy('user_id', 'criterion_id')
             ->get();

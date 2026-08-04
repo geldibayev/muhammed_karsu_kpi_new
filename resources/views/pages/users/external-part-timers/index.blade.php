@@ -24,6 +24,7 @@
                             <th>Kafedra</th>
                             <th>Lavozim</th>
                             <th>Mehnat shakli</th>
+                            <th style="width: 130px">Amal</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -36,10 +37,27 @@
                                 <td>{{ $user['departments'] }}</td>
                                 <td>{{ $user['positions'] }}</td>
                                 <td>{{ $user['forms'] }}</td>
+                                <td>
+                                    @if($user['can_delete'])
+                                        <form method="POST" action="{{ route('users.external-part-timers.destroy', $user['id']) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Ushbu tashqi o‘rindoshni o‘chirish, tizimga kirishini bloklash va barcha ballarini olib tashlashni tasdiqlaysizmi?')">
+                                                <i class="fas fa-trash mr-1"></i> O‘chirish
+                                            </button>
+                                        </form>
+                                    @else
+                                        <button type="button" class="btn btn-secondary btn-sm" disabled
+                                                title="Foydalanuvchida asosiy ish joyi ham mavjud">
+                                            <i class="fas fa-lock mr-1"></i> O‘chirib bo‘lmaydi
+                                        </button>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">
+                                <td colspan="8" class="text-center text-muted py-4">
                                     Tashqi o‘rindosh foydalanuvchilar topilmadi.
                                 </td>
                             </tr>

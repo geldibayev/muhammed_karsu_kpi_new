@@ -44,6 +44,14 @@ class HemisController extends Controller
             $hemisUser = $provider->getResourceOwner($accessToken)->toArray();
 
             $user = $this->storeUser($hemisUser);
+
+            if (! $user->isActive()) {
+                return to_route('login')->with(
+                    'error',
+                    'Hisobingiz administrator tomonidan faolsizlantirilgan. Tizimga kirish taqiqlangan.',
+                );
+            }
+
             $user = $syncHemisWorkplacesForLogin->handle($user);
 
             Auth::login($user);
@@ -134,6 +142,7 @@ class HemisController extends Controller
         if (! $user->exists) {
             $user->pos = 'user';
             $user->rol = $userId == 1568 ? ['super_admin', 'teacher'] : ['teacher'];
+            $user->status = '1';
         }
 
         $user->save();

@@ -110,6 +110,16 @@ class User extends Authenticatable
         return $this->hasRole('super_admin');
     }
 
+    public function isActive(): bool
+    {
+        return $this->status === '1';
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', '1');
+    }
+
     public function workplaces(): HasMany
     {
         return $this->hasMany(Workplace::class, 'user_id');
@@ -143,6 +153,16 @@ class User extends Authenticatable
     public function points(): HasMany
     {
         return $this->hasMany(Point::class);
+    }
+
+    public function criterionPoints(): HasMany
+    {
+        return $this->hasMany(CriterionPoint::class);
+    }
+
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Datum::class);
     }
 
     public function criterionReviewerAssignments(): HasMany
