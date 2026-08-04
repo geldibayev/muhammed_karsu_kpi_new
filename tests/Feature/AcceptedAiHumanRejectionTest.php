@@ -46,7 +46,7 @@ class AcceptedAiHumanRejectionTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('upload.details', $datum))
             ->assertOk()
-            ->assertSee('Gemini tasdig‘ini bekor qilish')
+            ->assertSee('Tasdiqlangan resursni rad etish')
             ->assertSee(route('ai-human-reviews.reject-accepted', $datum))
             ->assertDontSee(route('reviews.approve', $datum));
 
@@ -113,7 +113,7 @@ class AcceptedAiHumanRejectionTest extends TestCase
         $this->actingAs($unassignedUser)
             ->get(route('upload.details', $datum))
             ->assertOk()
-            ->assertDontSee('Gemini tasdig‘ini bekor qilish');
+            ->assertDontSee('Tasdiqlangan resursni rad etish');
         $this->actingAs($unassignedUser)
             ->patch(route('ai-human-reviews.reject-accepted', $datum), ['reason' => 'Noto‘g‘ri.'])
             ->assertForbidden();
@@ -133,7 +133,7 @@ class AcceptedAiHumanRejectionTest extends TestCase
         $this->actingAs($superAdmin)
             ->get(route('upload.details', $datum))
             ->assertOk()
-            ->assertSee('Gemini tasdig‘ini bekor qilish');
+            ->assertSee('Tasdiqlangan resursni rad etish');
         $this->actingAs($superAdmin)
             ->patch(route('ai-human-reviews.reject-accepted', $datum), [
                 'reason' => 'Super administrator tekshiruvida dalil noto‘g‘ri deb topildi.',
@@ -148,7 +148,7 @@ class AcceptedAiHumanRejectionTest extends TestCase
         $this->assertSame('cancelled', $datum->fresh()->status);
     }
 
-    public function test_non_ai_or_non_gemini_acceptance_cannot_be_overridden(): void
+    public function test_accepted_resource_without_ai_history_can_be_rejected_but_pending_resource_cannot(): void
     {
         [$reviewer, $owner, $report, $criterion] = $this->context();
         $withoutAiHistory = Datum::query()->create([
@@ -162,14 +162,19 @@ class AcceptedAiHumanRejectionTest extends TestCase
         $pending = $this->acceptedAiDatum($owner, $criterion, 0);
         $pending->update(['status' => 'checking']);
 
-        foreach ([$withoutAiHistory, $pending] as $datum) {
-            $this->actingAs($reviewer)
-                ->patch(route('ai-human-reviews.reject-accepted', $datum), ['reason' => 'Noto‘g‘ri.'])
-                ->assertForbidden();
-        }
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.reject-accepted', $withoutAiHistory), ['reason' => 'Noto‘g‘ri.'])
+            ->assertRedirect(route('upload.details', $withoutAiHistory));
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.reject-accepted', $pending), ['reason' => 'Noto‘g‘ri.'])
+            ->assertForbidden();
 
-        $this->assertSame('accepted', $withoutAiHistory->fresh()->status);
+        $this->assertSame('cancelled', $withoutAiHistory->fresh()->status);
         $this->assertSame('checking', $pending->fresh()->status);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $withoutAiHistory->getKey(),
+            'message_type' => 'human_override_rejected',
+        ]);
     }
 
     public function test_repeated_rejection_is_forbidden_and_does_not_duplicate_history(): void

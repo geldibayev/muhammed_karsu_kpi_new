@@ -17,7 +17,7 @@ class ApproveCancelledAiDatumRequest extends FormRequest
         $datum = $this->route('datum');
 
         return $datum instanceof Datum
-            && $this->user()?->can('overrideAiCancellation', $datum) === true;
+            && $this->user()?->can('overrideCancellation', $datum) === true;
     }
 
     /**

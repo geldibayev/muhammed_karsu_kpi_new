@@ -84,7 +84,7 @@ class DatumController extends Controller
     {
         $this->authorize('view', $datum);
 
-        $aiCancellationPointMaximum = auth()->user()?->can('overrideAiCancellation', $datum) === true
+        $decisionOverridePointMaximum = auth()->user()?->can('overrideCancellation', $datum) === true
             ? $maximumResolver->handle($datum)
             : null;
 
@@ -121,7 +121,7 @@ class DatumController extends Controller
             'datum',
             'status',
             'breadcrumbs',
-            'aiCancellationPointMaximum',
+            'decisionOverridePointMaximum',
         ));
     }
 

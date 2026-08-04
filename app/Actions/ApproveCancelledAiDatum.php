@@ -31,7 +31,7 @@ class ApproveCancelledAiDatum
                 ->lockForUpdate()
                 ->findOrFail($datum->getKey());
 
-            Gate::forUser($reviewer)->authorize('overrideAiCancellation', $lockedDatum);
+            Gate::forUser($reviewer)->authorize('overrideCancellation', $lockedDatum);
 
             $maximumPoint = $this->maximumResolver->handle($lockedDatum);
 
@@ -45,7 +45,11 @@ class ApproveCancelledAiDatum
             }
 
             $point = round($point, 4);
-            $auditMessage = 'Gemini rad etgan resurs inson tekshiruvida tasdiqlandi. '
+            $aiDecision = $this->latestDecisionWasAi($lockedDatum);
+            $auditMessage = ($aiDecision
+                ? 'Gemini rad etgan resurs'
+                : 'Oldin rad etilgan resurs')
+                .' inson tekshiruvida tasdiqlandi. '
                 .'Qo‘lda kiritilgan ball: '.number_format($point, 4, '.', '').'. '
                 .'Maksimal ruxsat etilgan ball: '.number_format($maximumPoint, 4, '.', '').'.';
 
@@ -59,7 +63,9 @@ class ApproveCancelledAiDatum
                 'user_id' => $reviewer->getKey(),
                 'type' => 'success',
                 'message' => $auditMessage,
-                'message_type' => 'human_override_ai_approved',
+                'message_type' => $aiDecision
+                    ? 'human_override_ai_approved'
+                    : 'human_override_approved',
             ]);
             $this->identifierRegistry->register(
                 $lockedDatum,
@@ -73,5 +79,27 @@ class ApproveCancelledAiDatum
         $this->recalculateReportPoints->handle($approvedDatum->criterion->report);
 
         return $approvedDatum->refresh();
+    }
+
+    private function latestDecisionWasAi(Datum $datum): bool
+    {
+        $lastAiCancellationId = (int) $datum->histories()
+            ->where('message_type', 'ai_evaluation')
+            ->where('type', 'error')
+            ->max('id');
+        $lastHumanDecisionId = (int) $datum->histories()
+            ->whereIn('message_type', [
+                'manual_review_approved',
+                'manual_review_rejected',
+                'h_index_review_approved',
+                'human_override_ai_rejected',
+                'human_override_ai_approved',
+                'human_override_rejected',
+                'human_override_approved',
+                'criterion_transferred',
+            ])
+            ->max('id');
+
+        return $lastAiCancellationId > $lastHumanDecisionId;
     }
 }

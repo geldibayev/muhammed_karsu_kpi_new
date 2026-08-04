@@ -25,7 +25,7 @@ class RejectAcceptedAiDatumRequest extends FormRequest
         $datum = $this->route('datum');
 
         return $datum instanceof Datum
-            && $this->user()?->can('overrideAiAcceptance', $datum) === true;
+            && $this->user()?->can('overrideAcceptance', $datum) === true;
     }
 
     /**
@@ -44,7 +44,7 @@ class RejectAcceptedAiDatumRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'reason.required' => 'Gemini qarorini bekor qilish sababini yozish majburiy.',
+            'reason.required' => 'Tasdiqlangan qarorni bekor qilish sababini yozish majburiy.',
             'reason.max' => 'Rad etish sababi 5000 belgidan oshmasligi kerak.',
         ];
     }

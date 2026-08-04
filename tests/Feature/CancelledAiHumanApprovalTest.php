@@ -33,7 +33,7 @@ class CancelledAiHumanApprovalTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('upload.details', $datum))
             ->assertOk()
-            ->assertSee('AI rad javobini tasdiqlash')
+            ->assertSee('Rad etilgan resursni tasdiqlash')
             ->assertSee('0–5.0000')
             ->assertSee('max="5"', false)
             ->assertSee(route('ai-human-reviews.approve-cancelled', $datum));
@@ -118,7 +118,7 @@ class CancelledAiHumanApprovalTest extends TestCase
         $this->actingAs($superAdmin)
             ->get(route('upload.details', $datum))
             ->assertOk()
-            ->assertSee('AI rad javobini tasdiqlash');
+            ->assertSee('Rad etilgan resursni tasdiqlash');
         $this->actingAs($superAdmin)
             ->patch(route('ai-human-reviews.approve-cancelled', $datum), ['point' => 3])
             ->assertRedirect(route('upload.details', $datum));
@@ -139,7 +139,7 @@ class CancelledAiHumanApprovalTest extends TestCase
         $this->actingAs($otherUser)
             ->get(route('upload.details', $datum))
             ->assertOk()
-            ->assertDontSee('AI rad javobini tasdiqlash');
+            ->assertDontSee('Rad etilgan resursni tasdiqlash');
         $this->actingAs($otherUser)
             ->patch(route('ai-human-reviews.approve-cancelled', $datum), ['point' => 3])
             ->assertForbidden();
@@ -147,7 +147,7 @@ class CancelledAiHumanApprovalTest extends TestCase
         $this->assertSame('cancelled', $datum->fresh()->status);
     }
 
-    public function test_non_ai_rejection_and_human_rejection_cannot_be_approved_as_ai_rejection(): void
+    public function test_cancelled_resources_without_latest_ai_rejection_can_also_be_approved(): void
     {
         [$reviewer, $owner, $report, $criterion] = $this->context();
         $withoutAiHistory = Datum::query()->create([
@@ -169,7 +169,13 @@ class CancelledAiHumanApprovalTest extends TestCase
         foreach ([$withoutAiHistory, $humanRejectedAfterAi] as $datum) {
             $this->actingAs($reviewer)
                 ->patch(route('ai-human-reviews.approve-cancelled', $datum), ['point' => 2])
-                ->assertForbidden();
+                ->assertRedirect(route('upload.details', $datum));
+
+            $this->assertSame('accepted', $datum->fresh()->status);
+            $this->assertDatabaseHas('datum_histories', [
+                'datum_id' => $datum->getKey(),
+                'message_type' => 'human_override_approved',
+            ]);
         }
     }
 

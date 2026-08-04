@@ -19,9 +19,13 @@ class RejectAcceptedAiDatum
                 ->lockForUpdate()
                 ->findOrFail($datum->getKey());
 
-            Gate::forUser($reviewer)->authorize('overrideAiAcceptance', $lockedDatum);
+            Gate::forUser($reviewer)->authorize('overrideAcceptance', $lockedDatum);
 
-            $auditMessage = 'Gemini tasdiqlagan resurs inson tekshiruvida xato deb topildi va rad etildi. Sabab: '.trim($reason);
+            $aiDecision = $this->latestDecisionWasAi($lockedDatum);
+            $auditMessage = ($aiDecision
+                ? 'Gemini tasdiqlagan resurs'
+                : 'Oldin tasdiqlangan resurs')
+                .' inson tekshiruvida xato deb topildi va rad etildi. Sabab: '.trim($reason);
 
             $lockedDatum->update([
                 'status' => 'cancelled',
@@ -39,7 +43,9 @@ class RejectAcceptedAiDatum
                 'user_id' => $reviewer->getKey(),
                 'type' => 'error',
                 'message' => $auditMessage,
-                'message_type' => 'human_override_ai_rejected',
+                'message_type' => $aiDecision
+                    ? 'human_override_ai_rejected'
+                    : 'human_override_rejected',
             ]);
 
             return $lockedDatum;
@@ -48,5 +54,27 @@ class RejectAcceptedAiDatum
         $this->recalculateReportPoints->handle($rejectedDatum->criterion->report);
 
         return $rejectedDatum->refresh();
+    }
+
+    private function latestDecisionWasAi(Datum $datum): bool
+    {
+        $lastAiAcceptanceId = (int) $datum->histories()
+            ->where('message_type', 'ai_evaluation')
+            ->where('type', 'success')
+            ->max('id');
+        $lastHumanDecisionId = (int) $datum->histories()
+            ->whereIn('message_type', [
+                'manual_review_approved',
+                'manual_review_rejected',
+                'h_index_review_approved',
+                'human_override_ai_rejected',
+                'human_override_ai_approved',
+                'human_override_rejected',
+                'human_override_approved',
+                'criterion_transferred',
+            ])
+            ->max('id');
+
+        return $lastAiAcceptanceId > $lastHumanDecisionId;
     }
 }

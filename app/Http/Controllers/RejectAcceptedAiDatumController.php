@@ -21,6 +21,6 @@ class RejectAcceptedAiDatumController extends Controller
 
         return redirect()
             ->route('upload.details', $datum)
-            ->with('success', 'Gemini tasdiqlagan resurs izoh bilan rad etildi.');
+            ->with('success', 'Tasdiqlangan resurs izoh bilan rad etildi.');
     }
 }

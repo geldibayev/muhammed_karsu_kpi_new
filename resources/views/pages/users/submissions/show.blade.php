@@ -96,26 +96,26 @@
                                 </form>
                             @endcan
 
-                            @can('overrideAiAcceptance', $datum)
+                            @can('overrideAcceptance', $datum)
                                 <button type="button" class="btn btn-danger btn-sm ml-2"
                                         data-toggle="modal" data-target="#reject-accepted-ai-modal">
                                     <i class="fas fa-user-times mr-1"></i>
-                                    Gemini tasdig‘ini bekor qilish
+                                    Tasdiqlangan resursni rad etish
                                 </button>
                             @endcan
 
-                            @can('overrideAiCancellation', $datum)
-                                @if($aiCancellationPointMaximum !== null)
+                            @can('overrideCancellation', $datum)
+                                @if($decisionOverridePointMaximum !== null)
                                     <button type="button" class="btn btn-success btn-sm ml-2"
                                             data-toggle="modal" data-target="#approve-cancelled-ai-modal">
                                         <i class="fas fa-user-check mr-1"></i>
-                                        AI rad javobini tasdiqlash
+                                        Rad etilgan resursni tasdiqlash
                                     </button>
                                 @else
                                     <button type="button" class="btn btn-success btn-sm ml-2" disabled
                                             title="Foydalanuvchi uchun maksimal ball sozlanmagan">
                                         <i class="fas fa-user-check mr-1"></i>
-                                        AI rad javobini tasdiqlash
+                                        Rad etilgan resursni tasdiqlash
                                     </button>
                                 @endif
                             @endcan
@@ -183,7 +183,7 @@
                 </div>
             </div>
 
-            @can('overrideAiAcceptance', $datum)
+            @can('overrideAcceptance', $datum)
                 <div class="modal fade" id="reject-accepted-ai-modal" tabindex="-1" role="dialog"
                      aria-labelledby="reject-accepted-ai-modal-title" aria-hidden="true">
                     <div class="modal-dialog" role="document">
@@ -193,7 +193,7 @@
                             @method('PATCH')
                             <div class="modal-header">
                                 <h5 class="modal-title" id="reject-accepted-ai-modal-title">
-                                    Gemini tasdig‘ini bekor qilish
+                                    Tasdiqlangan resursni rad etish
                                 </h5>
                                 <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
                                     <span aria-hidden="true">&times;</span>
@@ -201,7 +201,7 @@
                             </div>
                             <div class="modal-body">
                                 <label for="accepted-ai-rejection-reason">
-                                    Gemini xulosasidagi xato va rad etish sababi
+                                    Oldingi qarordagi xato va rad etish sababi
                                 </label>
                                 <textarea id="accepted-ai-rejection-reason" name="reason" rows="5"
                                           maxlength="5000" required
@@ -219,8 +219,8 @@
                 </div>
             @endcan
 
-            @can('overrideAiCancellation', $datum)
-                @if($aiCancellationPointMaximum !== null)
+            @can('overrideCancellation', $datum)
+                @if($decisionOverridePointMaximum !== null)
                 <div class="modal fade" id="approve-cancelled-ai-modal" tabindex="-1" role="dialog"
                      aria-labelledby="approve-cancelled-ai-modal-title" aria-hidden="true">
                     <div class="modal-dialog" role="document">
@@ -230,7 +230,7 @@
                             @method('PATCH')
                             <div class="modal-header">
                                 <h5 class="modal-title" id="approve-cancelled-ai-modal-title">
-                                    AI rad javobini inson tomonidan tasdiqlash
+                                    Rad etilgan resursni tasdiqlash
                                 </h5>
                                 <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
                                     <span aria-hidden="true">&times;</span>
@@ -239,11 +239,11 @@
                             <div class="modal-body">
                                 <div class="alert alert-info py-2">
                                     Ruxsat etilgan ball oralig‘i:
-                                    <strong>0–{{ number_format((float) $aiCancellationPointMaximum, 4, '.', '') }}</strong>
+                                    <strong>0–{{ number_format((float) $decisionOverridePointMaximum, 4, '.', '') }}</strong>
                                 </div>
                                 <label for="cancelled-ai-approval-point">Tasdiqlash balli</label>
                                 <input id="cancelled-ai-approval-point" type="number" name="point"
-                                       min="0" max="{{ $aiCancellationPointMaximum }}" step="0.0001" required
+                                       min="0" max="{{ $decisionOverridePointMaximum }}" step="0.0001" required
                                        value="{{ old('point') }}"
                                        class="form-control @error('point') is-invalid @enderror">
                                 @error('point')

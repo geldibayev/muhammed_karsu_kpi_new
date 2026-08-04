@@ -21,6 +21,6 @@ class ApproveCancelledAiDatumController extends Controller
 
         return redirect()
             ->route('upload.details', $datum)
-            ->with('success', 'Gemini rad etgan resurs qo‘lda kiritilgan ball bilan tasdiqlandi.');
+            ->with('success', 'Rad etilgan resurs qo‘lda kiritilgan ball bilan tasdiqlandi.');
     }
 }

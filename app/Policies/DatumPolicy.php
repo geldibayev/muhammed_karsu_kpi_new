@@ -27,8 +27,8 @@ class DatumPolicy
         return $datum->status !== 'deleted'
             && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
                 || $this->isAssignedReviewer($user, $datum)
-                || $this->overrideAiAcceptance($user, $datum)
-                || $this->overrideAiCancellation($user, $datum)
+                || $this->overrideAcceptance($user, $datum)
+                || $this->overrideCancellation($user, $datum)
                 || (Gate::forUser($user)->allows('view-ai-status') && $datum->usesAiChecking())
                 || $this->isRatingSubmissionVisible($user, $datum));
     }
@@ -38,8 +38,8 @@ class DatumPolicy
         return $datum->status !== 'deleted'
             && ($this->ownsDatumOrIsSuperAdmin($user, $datum)
                 || $this->isAssignedReviewer($user, $datum)
-                || $this->overrideAiAcceptance($user, $datum)
-                || $this->overrideAiCancellation($user, $datum)
+                || $this->overrideAcceptance($user, $datum)
+                || $this->overrideCancellation($user, $datum)
                 || $this->isRatingSubmissionVisible($user, $datum));
     }
 
@@ -54,41 +54,28 @@ class DatumPolicy
             && $this->isAssignedReviewer($user, $datum);
     }
 
+    public function overrideAcceptance(User $user, Datum $datum): bool
+    {
+        return $datum->status === DatumStatus::Accepted->value
+            && $datum->usesAiChecking()
+            && $this->canOverrideFinalDecision($user);
+    }
+
+    public function overrideCancellation(User $user, Datum $datum): bool
+    {
+        return $datum->status === DatumStatus::Cancelled->value
+            && $datum->usesAiChecking()
+            && $this->canOverrideFinalDecision($user);
+    }
+
     public function overrideAiAcceptance(User $user, Datum $datum): bool
     {
-        if ($datum->status !== DatumStatus::Accepted->value
-            || ! $datum->usesAiChecking()
-            || ! $datum->histories()
-                ->where('message_type', 'ai_evaluation')
-                ->where('type', 'success')
-                ->exists()) {
-            return false;
-        }
-
-        return $this->canOverrideAiDecision($user);
+        return $this->overrideAcceptance($user, $datum);
     }
 
     public function overrideAiCancellation(User $user, Datum $datum): bool
     {
-        if ($datum->status !== DatumStatus::Cancelled->value
-            || ! $datum->usesAiChecking()) {
-            return false;
-        }
-
-        $lastAiRejectionId = (int) $datum->histories()
-            ->where('message_type', 'ai_evaluation')
-            ->where('type', 'error')
-            ->max('id');
-        $lastHumanDecisionId = $this->latestHistoryId($datum, [
-            'manual_review_approved',
-            'manual_review_rejected',
-            'human_override_ai_rejected',
-            'human_override_ai_approved',
-            'criterion_transferred',
-        ]);
-
-        return $lastAiRejectionId > $lastHumanDecisionId
-            && $this->canOverrideAiDecision($user);
+        return $this->overrideCancellation($user, $datum);
     }
 
     public function requeueAiEvaluation(User $user, Datum $datum): bool
@@ -107,6 +94,8 @@ class DatumPolicy
             'h_index_review_approved',
             'human_override_ai_rejected',
             'human_override_ai_approved',
+            'human_override_rejected',
+            'human_override_approved',
             'criterion_transferred',
         ]);
 
@@ -129,7 +118,7 @@ class DatumPolicy
         return $user->isSuperAdmin() || $datum->user_id === $user->id;
     }
 
-    private function canOverrideAiDecision(User $user): bool
+    private function canOverrideFinalDecision(User $user): bool
     {
         return $user->isSuperAdmin()
             || (string) config('kpi.accepted_ai_reviewer_hemis_id') === (string) $user->hemis_id;
