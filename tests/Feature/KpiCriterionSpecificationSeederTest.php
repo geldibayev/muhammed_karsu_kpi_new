@@ -9,6 +9,7 @@ use App\Models\Report;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\KpiCriterionSpecification;
+use App\Support\MasterClassCriterionRule;
 use Database\Seeders\CriterionSeeder;
 use Database\Seeders\KpiCriterionSpecificationSeeder;
 use Database\Seeders\LanguageSeeder;
@@ -187,6 +188,8 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             ->where('code', '1.10')
             ->firstOrFail();
         $this->assertSame(1, $criterionOneTen->file_limit);
+        $this->assertSame(Formula::Maximum, $criterionOneTen->formula->code);
+        $this->assertSame(MasterClassCriterionRule::PROMPT, $criterionOneTen->ai_prompt);
         foreach (['hold_degrees' => 2, 'no_degrees' => 2, 'foreign_lang' => 3, 'physical' => 4] as $evaluation => $score) {
             $this->assertSame(
                 $score,

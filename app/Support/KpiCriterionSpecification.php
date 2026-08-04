@@ -43,7 +43,13 @@ class KpiCriterionSpecification
                 [3, 3, 3, 3],
                 descriptionUz: 'Abituriyentlarni universitetga jalb qilish, xorijiy talabalarni jalb qilish va bitiruvchilarning bandligini ta’minlash bo‘yicha har bir tasdiqlangan yo‘nalish uchun 1 balldan beriladi. Avvalgi o‘quv yili natijalari hisobga olinadi.',
             ),
-            '1.10' => self::rule(self::Competition, 1, 'current', [2, 2, 3, 4]),
+            '1.10' => self::rule(
+                self::Maximum,
+                1,
+                'current',
+                [2, 2, 3, 4],
+                aiPrompt: MasterClassCriterionRule::PROMPT,
+            ),
 
             '2.1.1' => self::rule(self::Maximum, 1, 'current', [1, 2, 2, 2]),
             '2.1.2' => self::rule(self::Maximum, 1, 'current', [2, 2, null, 2]),

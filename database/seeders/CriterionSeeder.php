@@ -11,6 +11,7 @@ use App\Models\Year;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
+use App\Support\MasterClassCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use App\Support\ScopusCriterionRule;
 use Illuminate\Database\Seeder;
@@ -400,24 +401,13 @@ class CriterionSeeder extends Seeder
                             'hold_degrees' => 2,
                             'no_degrees' => 2,
                             'foreign_lang' => 3,
-                            'physical' => 3,
+                            'physical' => 4,
                         ],
                         'year' => 2025,
-                        'formula_id' => 1,
+                        'formula_id' => 2,
+                        'file_limit' => 1,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (dars ishlanmasi, tahlil qog'ozlari, tasdiqlovchi xatlar) yoki videofayllar/havolalarni tahlil qilib, professor-o'qituvchining Master-klass darsi o'tganligini baholang.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Mashg'ulot aynan Professional ta'lim muassasasi, akademik litsey, kasb-hunar maktabi yoki o'rta ta'lim maktabida o'tkazilganligi aniq bo'lishi kerak.
-                        2. Tasdiqlovchi hujjatda (muhr yoki imzo bilan) yoki videoda ushbu jarayon (Master-klass) o'tkazilganligi aniq aks etgan bo'lishi shart.
-                        3. Mezon bajarilganligi tasdiqlansa, unga 1 ball beriladi.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar taqdim etilgan dalillarda professorning maktab/litseyda master-klass o'tganligi aniq va shubhasiz tasdiqlansa: \"accepted\" statusini bering va \"point\" qismiga 1 yozing.
-                        - Agar hujjatlar xira tushgan bo'lsa, videodagi jarayon qayerda bo'layotganini aniqlab bo'lmasa, yoki master-klass ekanligi shubha tug'dirib, administrator ko'rib chiqishi zarur bo'lsa: \"checking\" statusini bering.
-                        - Agar taqdim etilgan dalillarning ushbu mezonga umuman aloqasi bo'lmasa (masalan, oddiy OTM darsi, universitet ichidagi yig'ilish) yoki umuman tasdiqlanmasa: \"cancelled\" statusini bering.
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <faqat raqam, masalan 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, aniq qaysi shartlar bajarilganligi yoki nima sababdan rad/tekshiruvga yuborilganligi>\"}",
+                        'ai_prompt' => MasterClassCriterionRule::PROMPT,
                     ],
                 ],
             ],

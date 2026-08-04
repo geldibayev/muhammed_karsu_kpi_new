@@ -8,6 +8,12 @@ class FixedPerResourceHumanReviewCriterionRule
 {
     /** @var array<string, array<string, float>> */
     private const POINTS = [
+        '1.10' => [
+            'hold_degrees' => 2.0,
+            'no_degrees' => 2.0,
+            'foreign_lang' => 3.0,
+            'physical' => 4.0,
+        ],
         '3.1.12' => [
             'hold_degrees' => 3.0,
             'no_degrees' => 3.0,
