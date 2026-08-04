@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\CreateDatumSubmission;
+use App\Actions\ResolveAiManualPointMaximum;
 use App\Enums\DatumStatus;
 use App\Http\Requests\StoreDatumRequest;
 use App\Models\Criterion;
@@ -79,9 +80,13 @@ class DatumController extends Controller
         return back()->with('error', 'Fayl topilmadi!');
     }
 
-    public function details(Datum $datum): View
+    public function details(Datum $datum, ResolveAiManualPointMaximum $maximumResolver): View
     {
         $this->authorize('view', $datum);
+
+        $aiCancellationPointMaximum = auth()->user()?->can('overrideAiCancellation', $datum) === true
+            ? $maximumResolver->handle($datum)
+            : null;
 
         $datum->load([
             'criterion:id,name,checking',
@@ -112,7 +117,12 @@ class DatumController extends Controller
             ],
         ];
 
-        return view('pages.users.submissions.show', compact('datum', 'status', 'breadcrumbs'));
+        return view('pages.users.submissions.show', compact(
+            'datum',
+            'status',
+            'breadcrumbs',
+            'aiCancellationPointMaximum',
+        ));
     }
 
     public function destroy(Datum $datum): RedirectResponse

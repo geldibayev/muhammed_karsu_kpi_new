@@ -104,6 +104,22 @@
                                 </button>
                             @endcan
 
+                            @can('overrideAiCancellation', $datum)
+                                @if($aiCancellationPointMaximum !== null)
+                                    <button type="button" class="btn btn-success btn-sm ml-2"
+                                            data-toggle="modal" data-target="#approve-cancelled-ai-modal">
+                                        <i class="fas fa-user-check mr-1"></i>
+                                        AI rad javobini tasdiqlash
+                                    </button>
+                                @else
+                                    <button type="button" class="btn btn-success btn-sm ml-2" disabled
+                                            title="Foydalanuvchi uchun maksimal ball sozlanmagan">
+                                        <i class="fas fa-user-check mr-1"></i>
+                                        AI rad javobini tasdiqlash
+                                    </button>
+                                @endif
+                            @endcan
+
                             @can('download', $datum)
                                 @if($datum->storagePath() !== null)
                                     <a href="{{ route('upload.file.download', $datum) }}"
@@ -202,12 +218,55 @@
                     </div>
                 </div>
             @endcan
+
+            @can('overrideAiCancellation', $datum)
+                @if($aiCancellationPointMaximum !== null)
+                <div class="modal fade" id="approve-cancelled-ai-modal" tabindex="-1" role="dialog"
+                     aria-labelledby="approve-cancelled-ai-modal-title" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <form method="POST" action="{{ route('ai-human-reviews.approve-cancelled', $datum) }}"
+                              class="modal-content">
+                            @csrf
+                            @method('PATCH')
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="approve-cancelled-ai-modal-title">
+                                    AI rad javobini inson tomonidan tasdiqlash
+                                </h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info py-2">
+                                    Ruxsat etilgan ball oralig‘i:
+                                    <strong>0–{{ number_format((float) $aiCancellationPointMaximum, 4, '.', '') }}</strong>
+                                </div>
+                                <label for="cancelled-ai-approval-point">Tasdiqlash balli</label>
+                                <input id="cancelled-ai-approval-point" type="number" name="point"
+                                       min="0" max="{{ $aiCancellationPointMaximum }}" step="0.0001" required
+                                       value="{{ old('point') }}"
+                                       class="form-control @error('point') is-invalid @enderror">
+                                @error('point')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                                <button type="submit" class="btn btn-success">Ball bilan tasdiqlash</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                @endif
+            @endcan
         </div>
     </section>
 @endsection
 
 @section('script')
-    @if($errors->has('reason'))
+    @if($errors->has('point'))
+        <script>$('#approve-cancelled-ai-modal').modal('show');</script>
+    @elseif($errors->has('reason'))
         <script>$('#reject-accepted-ai-modal').modal('show');</script>
     @endif
 @endsection

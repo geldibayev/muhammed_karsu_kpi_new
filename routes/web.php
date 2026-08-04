@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AiHumanReviewController;
 use App\Http\Controllers\AiReviewerStatusController;
+use App\Http\Controllers\ApproveCancelledAiDatumController;
 use App\Http\Controllers\CriterionController;
 use App\Http\Controllers\CriterionPointController;
 use App\Http\Controllers\CriterionRatingController;
@@ -79,6 +80,8 @@ Route::prefix('home')->middleware(['auth'])->group(function () {
         ->name('ai-human-reviews.index');
     Route::patch('/ai-human-reviews/{datum}/reject-accepted', RejectAcceptedAiDatumController::class)
         ->name('ai-human-reviews.reject-accepted');
+    Route::patch('/ai-human-reviews/{datum}/approve-cancelled', ApproveCancelledAiDatumController::class)
+        ->name('ai-human-reviews.approve-cancelled');
     Route::get('/reviews/{datum}', [ManualReviewController::class, 'show'])->name('reviews.show');
     Route::patch('/reviews/{datum}/approve', [ManualReviewController::class, 'approve'])->name('reviews.approve');
     Route::patch('/reviews/{datum}/reject', [ManualReviewController::class, 'reject'])->name('reviews.reject');
