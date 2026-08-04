@@ -10,6 +10,7 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
+use ZipArchive;
 
 class ResourceStatisticsTest extends TestCase
 {
@@ -197,6 +198,101 @@ class ResourceStatisticsTest extends TestCase
                 'direction' => 'desc',
             ]))
             ->assertSessionHasErrors('sort');
+    }
+
+    public function test_configured_viewer_can_download_sorted_criterion_statistics_as_xlsx(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $viewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $owner = User::factory()->create();
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Eksport hisoboti'],
+            'status' => '1',
+        ]);
+        $parent = Criterion::query()->create([
+            'name' => ['uz' => 'Eksport bo‘limi'],
+            'report_id' => $report->id,
+            'upload' => '0',
+            'status' => '1',
+        ]);
+        $smallerCriterion = Criterion::query()->create([
+            'code' => '1.1',
+            'name' => ['uz' => 'Kam resursli kriteriya'],
+            'parent_id' => $parent->id,
+            'report_id' => $report->id,
+            'upload' => '1',
+            'status' => '1',
+        ]);
+        $largerCriterion = Criterion::query()->create([
+            'code' => '1.2',
+            'name' => ['uz' => 'Ko‘p resursli kriteriya'],
+            'parent_id' => $parent->id,
+            'report_id' => $report->id,
+            'upload' => '1',
+            'checking' => 'ai',
+            'status' => '1',
+        ]);
+
+        foreach ([$smallerCriterion, $largerCriterion, $largerCriterion] as $criterion) {
+            Datum::query()->create([
+                'name' => 'Eksport qilinadigan resurs',
+                'user_id' => $owner->id,
+                'criterion_id' => $criterion->id,
+                'status' => 'accepted',
+                'point' => 0,
+            ]);
+        }
+
+        $filters = ['sort' => 'total', 'direction' => 'desc'];
+
+        $this->actingAs($viewer)
+            ->get(route('criterion-resource-statistics.index', $filters))
+            ->assertOk()
+            ->assertSee('Excelga yuklash')
+            ->assertSee(route('criterion-resource-statistics.export', $filters));
+
+        $response = $this->actingAs($viewer)
+            ->get(route('criterion-resource-statistics.export', $filters));
+
+        $response
+            ->assertOk()
+            ->assertDownload()
+            ->assertHeader(
+                'content-type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            );
+
+        $path = $response->baseResponse->getFile()->getPathname();
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        @unlink($path);
+
+        $this->assertIsString($sheet);
+        $this->assertStringContainsString('Kriteriya', $sheet);
+        $this->assertStringContainsString('Tekshirilmagan', $sheet);
+        $this->assertStringContainsString('Eksport bo‘limi', $sheet);
+        $this->assertStringContainsString('Sun’iy intellekt', $sheet);
+        $this->assertLessThan(
+            strpos($sheet, 'Kam resursli kriteriya'),
+            strpos($sheet, 'Ko‘p resursli kriteriya'),
+        );
+    }
+
+    public function test_criterion_statistics_export_is_forbidden_for_unconfigured_users(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        $otherUser = User::factory()->create(['hemis_id' => 9999999999]);
+
+        $this->actingAs($otherUser)
+            ->get(route('criterion-resource-statistics.export'))
+            ->assertForbidden();
+
+        auth()->logout();
+
+        $this->get(route('criterion-resource-statistics.export'))
+            ->assertRedirect(route('login'));
     }
 
     public function test_configured_hemis_user_sees_all_resource_status_statistics(): void

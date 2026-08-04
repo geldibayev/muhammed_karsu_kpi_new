@@ -16,6 +16,15 @@
         <div class="card">
             <div class="card-header">
                 <h3 class="card-title font-weight-bold">Kriteriyalar bo‘yicha yuklangan resurslar</h3>
+                <div class="card-tools">
+                    <a href="{{ route('criterion-resource-statistics.export', array_filter([
+                        'sort' => $sort,
+                        'direction' => $direction,
+                    ])) }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-file-excel mr-1" aria-hidden="true"></i>
+                        Excelga yuklash
+                    </a>
+                </div>
             </div>
             <div class="card-body p-0 table-responsive">
                 <table class="table table-hover table-bordered mb-0">
