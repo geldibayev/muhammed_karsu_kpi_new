@@ -176,9 +176,9 @@
                                                 </div>
                                                 <div class="text-danger small mt-1" id="limit_error"
                                                      style="display: none;">
-                                                    <i class="fas fa-exclamation-triangle mr-1"></i> Fayl limiti 2
-                                                    megabaytdan oshib ketdi. Maksimal hajm:
-                                                    {{ (int) config('kpi.upload_max_file_size_mb', 5) }} MB.
+                                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                                    Fayl hajmi {{ (int) config('kpi.upload_max_file_size_mb', 5) }} MB
+                                                    dan oshmasligi kerak.
                                                 </div>
                                             @endif
 
