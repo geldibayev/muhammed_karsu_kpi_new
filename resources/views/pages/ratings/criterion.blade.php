@@ -25,6 +25,7 @@
                                 <th class="text-center" style="width: 8%;">O‘rin</th>
                                 <th>Professor-o‘qituvchi</th>
                                 <th>Bo‘lim va lavozim</th>
+                                <th class="text-center" style="width: 15%;">Tasdiqlangan resurslar</th>
                                 <th class="text-center" style="width: 15%;">Ball</th>
                             </tr>
                             </thead>
@@ -65,6 +66,11 @@
                                         </div>
                                     </td>
                                     <td class="text-center align-middle">
+                                        <span class="badge badge-success px-3 py-2">
+                                            {{ $point->user?->accepted_submissions_count ?? 0 }} ta
+                                        </span>
+                                    </td>
+                                    <td class="text-center align-middle">
                                         <span class="font-weight-bold text-success">
                                             {{ number_format($point->point, 2) }}
                                         </span>
@@ -72,7 +78,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted py-5">
+                                    <td colspan="5" class="text-center text-muted py-5">
                                         Ushbu kriteriya bo‘yicha reyting natijalari hali mavjud emas.
                                     </td>
                                 </tr>
