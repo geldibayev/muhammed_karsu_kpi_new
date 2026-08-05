@@ -3,9 +3,13 @@
 namespace App\Http\Requests;
 
 use App\Actions\ResolveAiManualPointMaximum;
+use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
+use App\Support\EducationalContentCriterionRule;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ApproveCancelledAiDatumRequest extends FormRequest
 {
@@ -31,13 +35,27 @@ class ApproveCancelledAiDatumRequest extends FormRequest
         $maximumPoint = $datum instanceof Datum
             ? $maximumResolver->handle($datum)
             : null;
+        $isEducationalContentCriterion = $datum instanceof Datum
+            && $datum->criterion()->where('code', EducationalContentCriterionRule::CODE)->exists();
 
         return [
             'point' => [
-                'required',
+                Rule::requiredIf(! $isEducationalContentCriterion),
+                Rule::prohibitedIf($isEducationalContentCriterion),
+                'nullable',
                 'numeric',
                 'min:0',
                 'max:'.($maximumPoint ?? 0),
+            ],
+            'score_option_id' => [
+                Rule::requiredIf($isEducationalContentCriterion),
+                Rule::prohibitedIf(! $isEducationalContentCriterion),
+                'nullable',
+                'integer',
+                Rule::exists(CriterionManualScoreOption::class, 'id')
+                    ->where(fn (Builder $query): Builder => $query
+                        ->where('criterion_id', $datum instanceof Datum ? $datum->criterion_id : 0)
+                        ->where('active', true)),
             ],
         ];
     }
@@ -50,6 +68,8 @@ class ApproveCancelledAiDatumRequest extends FormRequest
             'point.numeric' => 'Ball raqam bo‘lishi kerak.',
             'point.min' => 'Ball 0 dan kam bo‘lishi mumkin emas.',
             'point.max' => 'Kiritilgan ball foydalanuvchi uchun belgilangan maksimal chegaradan oshdi.',
+            'score_option_id.required' => 'Tasdiqlash uchun bo‘sh resurs turini tanlang.',
+            'score_option_id.exists' => 'Tanlangan resurs turi ushbu mezonga tegishli emas.',
         ];
     }
 }

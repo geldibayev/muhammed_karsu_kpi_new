@@ -9,6 +9,7 @@ use App\Http\Requests\StoreDatumRequest;
 use App\Models\Criterion;
 use App\Models\Datum;
 use App\Models\Language;
+use App\Support\EducationalContentCriterionRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -89,9 +90,12 @@ class DatumController extends Controller
             : null;
 
         $datum->load([
-            'criterion:id,name,checking',
+            'criterion:id,code,name,checking,report_id',
+            'criterion.criterionEvaluations:id,criterion_id,evaluation,has,score',
+            'criterion.manualScoreOptions',
             'duplicateOf:id,name,status',
-            'user:id,name',
+            'manualScoreOption:id,criterion_id,code,label',
+            'user:id,name,degree',
             'year:id,name',
             'histories' => fn ($query) => $query->latest(),
         ]);
@@ -102,6 +106,31 @@ class DatumController extends Controller
                 ->values(),
         );
         $status = DatumStatus::from($datum->status);
+        $educationalContentTypeOptions = collect();
+        $educationalContentTypeDuplicate = false;
+        $educationalContentMaximum = null;
+
+        $canChooseEducationalContentType = $datum->criterion?->code === EducationalContentCriterionRule::CODE
+            && (auth()->user()?->can('changeEducationalContentType', $datum) === true
+                || auth()->user()?->can('overrideCancellation', $datum) === true);
+
+        if ($canChooseEducationalContentType) {
+            $usedOptionIds = Datum::query()
+                ->where('user_id', $datum->user_id)
+                ->where('criterion_id', $datum->criterion_id)
+                ->where('status', DatumStatus::Accepted->value)
+                ->where('id', '!=', $datum->getKey())
+                ->whereNotNull('manual_score_option_id')
+                ->pluck('manual_score_option_id');
+            $educationalContentTypeOptions = $datum->criterion->manualScoreOptions
+                ->filter(fn ($option): bool => EducationalContentCriterionRule::percentageFor($option->code) !== null)
+                ->reject(fn ($option): bool => $usedOptionIds->contains($option->getKey()))
+                ->values();
+            $educationalContentTypeDuplicate = $datum->manual_score_option_id !== null
+                && $usedOptionIds->contains($datum->manual_score_option_id);
+            $educationalContentMaximum = (float) $datum->criterion->criterionEvaluations
+                ->firstWhere('evaluation', $datum->user->degree)?->score;
+        }
         $breadcrumbs = [
             [
                 'url' => route('home'),
@@ -122,6 +151,9 @@ class DatumController extends Controller
             'status',
             'breadcrumbs',
             'decisionOverridePointMaximum',
+            'educationalContentTypeOptions',
+            'educationalContentTypeDuplicate',
+            'educationalContentMaximum',
         ));
     }
 

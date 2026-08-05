@@ -61,6 +61,11 @@ class ReviewDatumSubmission
 
             Gate::forUser($reviewer)->authorize('review', $lockedDatum);
 
+            User::query()
+                ->whereKey($lockedDatum->user_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             $evaluation = CriterionEvaluation::query()
                 ->where('criterion_id', $lockedDatum->criterion_id)
                 ->where('evaluation', $lockedDatum->user->degree)
@@ -389,6 +394,20 @@ class ReviewDatumSubmission
             if ($percentage === null || $point === null) {
                 throw ValidationException::withMessages([
                     'score_option_id' => '1.1 mezoni uchun tanlangan resurs turi qo‘llab-quvvatlanmaydi.',
+                ]);
+            }
+
+            $alreadyUsed = Datum::query()
+                ->where('user_id', $datum->user_id)
+                ->where('criterion_id', $datum->criterion_id)
+                ->where('status', 'accepted')
+                ->where('manual_score_option_id', $option->getKey())
+                ->whereKeyNot($datum->getKey())
+                ->exists();
+
+            if ($alreadyUsed) {
+                throw ValidationException::withMessages([
+                    'score_option_id' => 'Bu foydalanuvchining 1.1 mezonida ushbu resurs turi allaqachon tasdiqlangan.',
                 ]);
             }
 

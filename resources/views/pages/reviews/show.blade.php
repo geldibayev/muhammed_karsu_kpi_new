@@ -152,7 +152,7 @@
                                         title="Baholash qoidasi sozlanmagan">
                                     <i class="fas fa-check mr-1"></i> Tasdiqlash
                                 </button>
-                            @elseif($isManualCriterion && $scoreOptions->count() > 1)
+                            @elseif($isManualCriterion && ($educationalContentScoring !== null || $scoreOptions->count() > 1))
                                 <button type="button" class="btn btn-success btn-sm mr-2"
                                         data-toggle="modal" data-target="#approve-modal">
                                     <i class="fas fa-check mr-1"></i> Tasdiqlash
@@ -240,7 +240,7 @@
         </div>
     </section>
 
-    @if($isManualCriterion && $scoreOptions->count() > 1)
+    @if($isManualCriterion && ($educationalContentScoring !== null || $scoreOptions->count() > 1))
         <div class="modal fade" id="approve-modal" tabindex="-1" role="dialog"
              aria-labelledby="approve-modal-title" aria-hidden="true">
             <div class="modal-dialog" role="document">

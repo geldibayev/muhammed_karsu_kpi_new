@@ -88,15 +88,15 @@ class CriterionOneOneManualScoringTest extends TestCase
             'criterion_code' => '1.1',
         ]);
 
-        foreach (range(1, 3) as $index) {
+        foreach (array_values($options) as $index => $option) {
             $this->actingAs($reviewer)
                 ->patch(route('reviews.approve', $this->createDatum($owner, $criterion, "Videodars {$index}")), [
-                    'score_option_id' => $options['video_lesson']->getKey(),
+                    'score_option_id' => $option->getKey(),
                 ])
                 ->assertRedirect(route('reviews.index'));
         }
 
-        $this->assertSame(9.0, Datum::query()
+        $this->assertSame(6.0, Datum::query()
             ->whereBelongsTo($owner)
             ->whereBelongsTo($criterion)
             ->sum('point'));
@@ -104,6 +104,145 @@ class CriterionOneOneManualScoringTest extends TestCase
             ->whereBelongsTo($owner)
             ->whereBelongsTo($criterion)
             ->value('point'));
+    }
+
+    public function test_review_only_shows_resource_types_not_yet_accepted_for_the_user(): void
+    {
+        [$criterion, $options] = $this->criterionFixture();
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        CriterionReviewerAssignment::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'hemis_id' => $reviewer->hemis_id,
+            'criterion_code' => '1.1',
+        ]);
+
+        $first = $this->createDatum($owner, $criterion, 'Birinchi');
+        $this->actingAs($reviewer)->get(route('reviews.show', $first))
+            ->assertSee('Videodars')->assertSee('Videorolik')->assertSee('Taqdimot');
+        $this->actingAs($reviewer)->patch(route('reviews.approve', $first), [
+            'score_option_id' => $options['video_lesson']->getKey(),
+        ]);
+
+        $second = $this->createDatum($owner, $criterion, 'Ikkinchi');
+        $this->actingAs($reviewer)->get(route('reviews.show', $second))
+            ->assertDontSee('50% = 3.00 ball')
+            ->assertSee('40% = 2.40 ball')
+            ->assertSee('10% = 0.60 ball');
+        $this->actingAs($reviewer)->patch(route('reviews.approve', $second), [
+            'score_option_id' => $options['video_clip']->getKey(),
+        ]);
+
+        $third = $this->createDatum($owner, $criterion, 'Uchinchi');
+        $this->actingAs($reviewer)->get(route('reviews.show', $third))
+            ->assertDontSee('50% = 3.00 ball')
+            ->assertDontSee('40% = 2.40 ball')
+            ->assertSee('10% = 0.60 ball')
+            ->assertSee('name="score_option_id"', false);
+    }
+
+    public function test_same_resource_type_cannot_be_approved_twice_for_one_user(): void
+    {
+        [$criterion, $options] = $this->criterionFixture();
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        CriterionReviewerAssignment::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'hemis_id' => $reviewer->hemis_id,
+            'criterion_code' => '1.1',
+        ]);
+        $first = $this->createDatum($owner, $criterion, 'Birinchi');
+        $second = $this->createDatum($owner, $criterion, 'Ikkinchi');
+
+        $this->actingAs($reviewer)->patch(route('reviews.approve', $first), [
+            'score_option_id' => $options['video_lesson']->getKey(),
+        ]);
+        $this->actingAs($reviewer)
+            ->from(route('reviews.show', $second))
+            ->patch(route('reviews.approve', $second), [
+                'score_option_id' => $options['video_lesson']->getKey(),
+            ])
+            ->assertRedirect(route('reviews.show', $second))
+            ->assertSessionHasErrors('score_option_id');
+
+        $this->assertSame('received', $second->fresh()->status);
+    }
+
+    public function test_assigned_reviewer_can_move_legacy_duplicate_to_an_unused_type(): void
+    {
+        [$criterion, $options] = $this->criterionFixture();
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        CriterionReviewerAssignment::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'hemis_id' => $reviewer->hemis_id,
+            'criterion_code' => '1.1',
+        ]);
+        $first = $this->createDatum($owner, $criterion, 'Eski birinchi');
+        $second = $this->createDatum($owner, $criterion, 'Eski takror');
+        foreach ([$first, $second] as $datum) {
+            $datum->update([
+                'status' => 'accepted',
+                'point' => 3,
+                'manual_score_option_id' => $options['video_lesson']->getKey(),
+            ]);
+        }
+
+        $this->actingAs($reviewer)->get(route('upload.details', $second))
+            ->assertOk()
+            ->assertSee('Takrorlangan toifa')
+            ->assertSee('Videorolik')
+            ->assertSee('Taqdimot');
+        $this->actingAs($reviewer)
+            ->patch(route('upload.educational-content-type.update', $second), [
+                'score_option_id' => $options['video_clip']->getKey(),
+            ])
+            ->assertRedirect(route('upload.details', $second));
+
+        $this->assertSame($options['video_clip']->getKey(), $second->fresh()->manual_score_option_id);
+        $this->assertSame(2.4, $second->fresh()->point);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $second->getKey(),
+            'message_type' => 'criterion_1_1_resource_type_changed',
+        ]);
+
+        $this->actingAs($reviewer)
+            ->from(route('upload.details', $second))
+            ->patch(route('upload.educational-content-type.update', $second), [
+                'score_option_id' => $options['video_lesson']->getKey(),
+            ])
+            ->assertSessionHasErrors('score_option_id');
+    }
+
+    public function test_cancelled_resource_reapproval_uses_an_unused_type_and_automatic_point(): void
+    {
+        [$criterion, $options] = $this->criterionFixture();
+        $reviewer = User::factory()->create();
+        config()->set('kpi.accepted_ai_reviewer_hemis_id', $reviewer->hemis_id);
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $accepted = $this->createDatum($owner, $criterion, 'Tasdiqlangan');
+        $accepted->update([
+            'status' => 'accepted',
+            'point' => 3,
+            'manual_score_option_id' => $options['video_lesson']->getKey(),
+        ]);
+        $cancelled = $this->createDatum($owner, $criterion, 'Qaytarilgan');
+        $cancelled->update(['status' => 'cancelled']);
+
+        $this->actingAs($reviewer)->get(route('upload.details', $cancelled))
+            ->assertOk()
+            ->assertDontSee('50%')
+            ->assertSee('40%')
+            ->assertSee('10%');
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.approve-cancelled', $cancelled), [
+                'score_option_id' => $options['video_clip']->getKey(),
+            ])
+            ->assertRedirect(route('upload.details', $cancelled));
+
+        $this->assertSame('accepted', $cancelled->fresh()->status);
+        $this->assertSame(2.4, $cancelled->fresh()->point);
+        $this->assertSame($options['video_clip']->getKey(), $cancelled->fresh()->manual_score_option_id);
     }
 
     public function test_report_recalculation_uses_stored_resource_type_after_user_category_changes(): void

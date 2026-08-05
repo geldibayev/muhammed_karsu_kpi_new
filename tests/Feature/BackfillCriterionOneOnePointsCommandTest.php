@@ -87,6 +87,31 @@ class BackfillCriterionOneOnePointsCommandTest extends TestCase
         $this->assertDatabaseCount('datum_histories', 0);
     }
 
+    public function test_command_moves_legacy_duplicate_types_to_remaining_categories(): void
+    {
+        [$report, $criterion, $options] = $this->criterionFixture();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $firstVideoLesson = $this->acceptedDatum($owner, $criterion, 1.5);
+        $duplicateVideoLesson = $this->acceptedDatum($owner, $criterion, 1.5);
+        $videoClip = $this->acceptedDatum($owner, $criterion, 1.0);
+
+        $this->artisan('kpi:criteria:recalculate-1-1-points', [
+            'report' => $report->getKey(),
+            '--apply' => true,
+        ])->assertSuccessful();
+
+        $this->assertSame($options['video_lesson']->getKey(), $firstVideoLesson->fresh()->manual_score_option_id);
+        $this->assertSame($options['presentation']->getKey(), $duplicateVideoLesson->fresh()->manual_score_option_id);
+        $this->assertSame(0.6, $duplicateVideoLesson->fresh()->point);
+        $this->assertSame($options['video_clip']->getKey(), $videoClip->fresh()->manual_score_option_id);
+
+        $this->assertSame(3, Datum::query()
+            ->whereBelongsTo($owner)
+            ->whereBelongsTo($criterion)
+            ->distinct('manual_score_option_id')
+            ->count('manual_score_option_id'));
+    }
+
     /** @return array{Report, Criterion, array<string, CriterionManualScoreOption>} */
     private function criterionFixture(): array
     {

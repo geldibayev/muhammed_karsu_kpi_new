@@ -2,9 +2,11 @@
 
 namespace App\Actions;
 
+use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Models\User;
 use App\Services\DatumResourceFingerprintGenerator;
+use App\Support\EducationalContentCriterionRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -18,9 +20,13 @@ class ApproveCancelledAiDatum
         private RecalculateReportPoints $recalculateReportPoints,
     ) {}
 
-    public function handle(User $reviewer, Datum $datum, float $point): Datum
-    {
-        $approvedDatum = DB::transaction(function () use ($reviewer, $datum, $point): Datum {
+    public function handle(
+        User $reviewer,
+        Datum $datum,
+        ?float $point,
+        ?int $scoreOptionId = null,
+    ): Datum {
+        $approvedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $scoreOptionId): Datum {
             $lockedDatum = Datum::query()
                 ->with([
                     'criterion.report',
@@ -33,9 +39,44 @@ class ApproveCancelledAiDatum
 
             Gate::forUser($reviewer)->authorize('overrideCancellation', $lockedDatum);
 
+            User::query()
+                ->whereKey($lockedDatum->user_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             $maximumPoint = $this->maximumResolver->handle($lockedDatum);
 
+            $scoreOption = null;
+            if ($lockedDatum->criterion->code === EducationalContentCriterionRule::CODE) {
+                $scoreOption = CriterionManualScoreOption::query()
+                    ->whereKey($scoreOptionId)
+                    ->where('criterion_id', $lockedDatum->criterion_id)
+                    ->where('active', true)
+                    ->lockForUpdate()
+                    ->first();
+                $point = $scoreOption === null || $maximumPoint === null
+                    ? null
+                    : EducationalContentCriterionRule::pointFor($maximumPoint, $scoreOption->code);
+
+                $alreadyUsed = $scoreOption !== null && Datum::query()
+                    ->where('user_id', $lockedDatum->user_id)
+                    ->where('criterion_id', $lockedDatum->criterion_id)
+                    ->where('status', 'accepted')
+                    ->where('manual_score_option_id', $scoreOption->getKey())
+                    ->where('id', '!=', $lockedDatum->getKey())
+                    ->exists();
+
+                if ($point === null || $alreadyUsed) {
+                    throw ValidationException::withMessages([
+                        'score_option_id' => $alreadyUsed
+                            ? 'Bu foydalanuvchining 1.1 mezonida ushbu resurs turi allaqachon tasdiqlangan.'
+                            : '1.1 mezoni uchun bo‘sh va qo‘llab-quvvatlanadigan resurs turini tanlang.',
+                    ]);
+                }
+            }
+
             if ($maximumPoint === null
+                || $point === null
                 || ! is_finite($point)
                 || $point < 0
                 || $point > $maximumPoint) {
@@ -50,12 +91,16 @@ class ApproveCancelledAiDatum
                 ? 'Gemini rad etgan resurs'
                 : 'Oldin rad etilgan resurs')
                 .' inson tekshiruvida tasdiqlandi. '
-                .'Qo‘lda kiritilgan ball: '.number_format($point, 4, '.', '').'. '
+                .($scoreOption === null
+                    ? 'Qo‘lda kiritilgan ball: '
+                    : 'Tanlangan resurs turi: '.data_get($scoreOption->label, 'uz', $scoreOption->code).'. Hisoblangan ball: ')
+                .number_format($point, 4, '.', '').'. '
                 .'Maksimal ruxsat etilgan ball: '.number_format($maximumPoint, 4, '.', '').'.';
 
             $lockedDatum->update([
                 'status' => 'accepted',
                 'point' => $point,
+                'manual_score_option_id' => $scoreOption?->getKey(),
                 'reviewer_hemis_id' => null,
                 'reason' => $auditMessage,
             ]);

@@ -75,6 +75,16 @@
                                     {{ $status === \App\Enums\DatumStatus::Accepted ? number_format($datum->point, 2) : '—' }}
                                 </dd>
 
+                                @if($datum->criterion?->code === \App\Support\EducationalContentCriterionRule::CODE)
+                                    <dt class="col-sm-4">1.1 resurs turi</dt>
+                                    <dd class="col-sm-8">
+                                        {{ data_get($datum->manualScoreOption?->label, 'uz', 'Hali belgilanmagan') }}
+                                        @if($educationalContentTypeDuplicate)
+                                            <span class="badge badge-warning ml-1">Takrorlangan toifa</span>
+                                        @endif
+                                    </dd>
+                                @endif
+
                                 <dt class="col-sm-4">Tekshiruv xulosasi</dt>
                                 <dd class="col-sm-8 text-break" style="white-space: pre-line;">{{ $datum->reason ?: 'Xulosa hali mavjud emas.' }}</dd>
                             </dl>
@@ -104,8 +114,19 @@
                                 </button>
                             @endcan
 
+                            @can('changeEducationalContentType', $datum)
+                                <button type="button" class="btn btn-warning btn-sm ml-2"
+                                        data-toggle="modal" data-target="#change-educational-content-type-modal"
+                                        @disabled($educationalContentTypeOptions->isEmpty())>
+                                    <i class="fas fa-tags mr-1"></i>
+                                    Resurs turini o‘zgartirish
+                                </button>
+                            @endcan
+
                             @can('overrideCancellation', $datum)
-                                @if($decisionOverridePointMaximum !== null)
+                                @if($decisionOverridePointMaximum !== null
+                                    && ($datum->criterion?->code !== \App\Support\EducationalContentCriterionRule::CODE
+                                        || $educationalContentTypeOptions->isNotEmpty()))
                                     <button type="button" class="btn btn-success btn-sm ml-2"
                                             data-toggle="modal" data-target="#approve-cancelled-ai-modal">
                                         <i class="fas fa-user-check mr-1"></i>
@@ -219,6 +240,57 @@
                 </div>
             @endcan
 
+            @can('changeEducationalContentType', $datum)
+                @if($educationalContentTypeOptions->isNotEmpty())
+                    <div class="modal fade" id="change-educational-content-type-modal" tabindex="-1" role="dialog"
+                         aria-labelledby="change-educational-content-type-modal-title" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <form method="POST" action="{{ route('upload.educational-content-type.update', $datum) }}"
+                                  class="modal-content">
+                                @csrf
+                                @method('PATCH')
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="change-educational-content-type-modal-title">
+                                        1.1 resurs turini o‘zgartirish
+                                    </h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    @if($educationalContentTypeDuplicate)
+                                        <div class="alert alert-warning py-2">
+                                            Bu toifa foydalanuvchining boshqa tasdiqlangan resursida ham bor.
+                                            Bo‘sh toifalardan birini tanlang.
+                                        </div>
+                                    @endif
+                                    <label for="accepted-educational-content-type">Resurs turi</label>
+                                    <select id="accepted-educational-content-type" name="score_option_id" required
+                                            class="form-control @error('score_option_id') is-invalid @enderror">
+                                        <option value="">Tanlang</option>
+                                        @foreach($educationalContentTypeOptions as $scoreOption)
+                                            <option value="{{ $scoreOption->id }}"
+                                                @selected(old('score_option_id', $datum->manual_score_option_id) == $scoreOption->id)>
+                                                {{ data_get($scoreOption->label, 'uz', $scoreOption->code) }}
+                                                — {{ \App\Support\EducationalContentCriterionRule::percentageFor($scoreOption->code) }}%
+                                                = {{ number_format((float) \App\Support\EducationalContentCriterionRule::pointFor((float) $educationalContentMaximum, $scoreOption->code), 2) }} ball
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('score_option_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                                    <button type="submit" class="btn btn-warning">Saqlash va ballni hisoblash</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+            @endcan
+
             @can('overrideCancellation', $datum)
                 @if($decisionOverridePointMaximum !== null)
                 <div class="modal fade" id="approve-cancelled-ai-modal" tabindex="-1" role="dialog"
@@ -237,6 +309,26 @@
                                 </button>
                             </div>
                             <div class="modal-body">
+                                @if($datum->criterion?->code === \App\Support\EducationalContentCriterionRule::CODE)
+                                    <div class="alert alert-info py-2">
+                                        Faqat foydalanuvchi hali ishlatmagan turlar ko‘rsatiladi.
+                                        Ball tanlangan tur bo‘yicha avtomatik hisoblanadi.
+                                    </div>
+                                    <label for="cancelled-educational-content-type">Resurs turi</label>
+                                    <select id="cancelled-educational-content-type" name="score_option_id" required
+                                            class="form-control @error('score_option_id') is-invalid @enderror">
+                                        <option value="">Tanlang</option>
+                                        @foreach($educationalContentTypeOptions as $scoreOption)
+                                            <option value="{{ $scoreOption->id }}" @selected(old('score_option_id') == $scoreOption->id)>
+                                                {{ data_get($scoreOption->label, 'uz', $scoreOption->code) }}
+                                                — {{ \App\Support\EducationalContentCriterionRule::percentageFor($scoreOption->code) }}%
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('score_option_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                @else
                                 <div class="alert alert-info py-2">
                                     Ruxsat etilgan ball oralig‘i:
                                     <strong>0–{{ number_format((float) $decisionOverridePointMaximum, 4, '.', '') }}</strong>
@@ -249,10 +341,11 @@
                                 @error('point')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                                @endif
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
-                                <button type="submit" class="btn btn-success">Ball bilan tasdiqlash</button>
+                                <button type="submit" class="btn btn-success">Tasdiqlash</button>
                             </div>
                         </form>
                     </div>
@@ -264,7 +357,9 @@
 @endsection
 
 @section('script')
-    @if($errors->has('point'))
+    @if($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Accepted)
+        <script>$('#change-educational-content-type-modal').modal('show');</script>
+    @elseif($errors->has('point') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
         <script>$('#approve-cancelled-ai-modal').modal('show');</script>
     @elseif($errors->has('reason'))
         <script>$('#reject-accepted-ai-modal').modal('show');</script>

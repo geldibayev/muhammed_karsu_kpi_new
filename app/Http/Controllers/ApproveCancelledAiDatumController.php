@@ -17,7 +17,12 @@ class ApproveCancelledAiDatumController extends Controller
         Datum $datum,
         ApproveCancelledAiDatum $action,
     ): RedirectResponse {
-        $action->handle($request->user(), $datum, $request->float('point'));
+        $action->handle(
+            $request->user(),
+            $datum,
+            $request->filled('point') ? $request->float('point') : null,
+            $request->filled('score_option_id') ? $request->integer('score_option_id') : null,
+        );
 
         return redirect()
             ->route('upload.details', $datum)

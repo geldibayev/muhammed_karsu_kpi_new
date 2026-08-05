@@ -72,6 +72,17 @@ class ManualReviewController extends Controller
         ]);
         $status = DatumStatus::from($datum->status);
         $scoreOptions = $datum->criterion?->manualScoreOptions ?? collect();
+        if ($datum->criterion?->code === EducationalContentCriterionRule::CODE) {
+            $usedScoreOptionIds = Datum::query()
+                ->where('user_id', $datum->user_id)
+                ->where('criterion_id', $datum->criterion_id)
+                ->where('status', DatumStatus::Accepted->value)
+                ->whereNotNull('manual_score_option_id')
+                ->pluck('manual_score_option_id');
+            $scoreOptions = $scoreOptions
+                ->whereNotIn('id', $usedScoreOptionIds)
+                ->values();
+        }
         $evaluationMaximum = (float) $datum->criterion?->criterionEvaluations
             ->firstWhere('evaluation', $datum->user?->degree)?->score;
         $educationalContentScoring = $datum->criterion?->code === EducationalContentCriterionRule::CODE

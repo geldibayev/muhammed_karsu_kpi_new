@@ -7,6 +7,7 @@ use App\Models\CriterionManualScoreOption;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\User;
+use App\Support\EducationalContentCriterionRule;
 use Illuminate\Support\Facades\Gate;
 
 class DatumPolicy
@@ -74,6 +75,13 @@ class DatumPolicy
     public function overrideAiCancellation(User $user, Datum $datum): bool
     {
         return $this->overrideCancellation($user, $datum);
+    }
+
+    public function changeEducationalContentType(User $user, Datum $datum): bool
+    {
+        return $datum->status === DatumStatus::Accepted->value
+            && $datum->criterion()->where('code', EducationalContentCriterionRule::CODE)->exists()
+            && ($this->canOverrideFinalDecision($user) || $this->isAssignedReviewer($user, $datum));
     }
 
     public function requeueAiEvaluation(User $user, Datum $datum): bool

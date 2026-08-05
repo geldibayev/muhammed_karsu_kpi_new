@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
+use App\Support\EducationalContentCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Query\Builder;
@@ -36,6 +37,7 @@ class ApproveDatumRequest extends FormRequest
             : null;
         $criterionId = $datum instanceof Datum ? $datum->criterion_id : 0;
         $isManualCriterion = $criterion?->checking === 'manual';
+        $isEducationalContentCriterion = $criterion?->code === EducationalContentCriterionRule::CODE;
         $isAiCriterion = $criterion?->checking === 'ai';
         $isOakArticleCriterion = $criterion?->isOakArticleCriterion() === true;
         $isPrintedLiteratureCriterion = $criterion?->isPrintedEducationalLiteratureCriterion() === true;
@@ -58,7 +60,8 @@ class ApproveDatumRequest extends FormRequest
 
         return [
             'score_option_id' => [
-                Rule::requiredIf($isManualCriterion && $activeScoreOptionCount !== 1),
+                Rule::requiredIf($isManualCriterion
+                    && ($isEducationalContentCriterion || $activeScoreOptionCount !== 1)),
                 Rule::prohibitedIf(! $isManualCriterion),
                 'nullable',
                 'integer',

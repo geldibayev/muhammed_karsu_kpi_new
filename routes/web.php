@@ -3,6 +3,7 @@
 use App\Http\Controllers\AiHumanReviewController;
 use App\Http\Controllers\AiReviewerStatusController;
 use App\Http\Controllers\ApproveCancelledAiDatumController;
+use App\Http\Controllers\ChangeEducationalContentTypeController;
 use App\Http\Controllers\CriterionController;
 use App\Http\Controllers\CriterionPointController;
 use App\Http\Controllers\CriterionRatingController;
@@ -100,6 +101,8 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
     Route::get('/submissions/{datum}', [DatumController::class, 'details'])->name('upload.details');
     Route::post('/submissions/{datum}/requeue-ai', RequeueCancelledAiDatumController::class)
         ->name('upload.ai-requeue');
+    Route::patch('/submissions/{datum}/educational-content-type', ChangeEducationalContentTypeController::class)
+        ->name('upload.educational-content-type.update');
     Route::delete('/submissions/{datum}', [DatumController::class, 'destroy'])->name('upload.destroy');
     Route::get('/files/{status}', [DatumHistoryController::class, 'index'])->name('files.show');
     Route::get('/submissions/{datum}/download', [DatumController::class, 'download'])->name('upload.file.download');

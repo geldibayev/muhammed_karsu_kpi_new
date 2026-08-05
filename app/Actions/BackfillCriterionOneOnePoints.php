@@ -7,6 +7,7 @@ use App\Models\Datum;
 use App\Models\Report;
 use App\Support\EducationalContentCriterionRule;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class BackfillCriterionOneOnePoints
@@ -14,15 +15,16 @@ class BackfillCriterionOneOnePoints
     /** @return array{total: int, changed: int, unchanged: int, unresolved_ids: array<int, int>} */
     public function preview(Report $report): array
     {
+        $data = $this->acceptedDataQuery($report)->get();
         $result = $this->emptyResult();
+        [$targets, $unresolvedIds] = $this->targetsFor($data);
+        $result['unresolved_ids'] = $unresolvedIds;
 
-        foreach ($this->acceptedDataQuery($report)->lazyById(200, column: 'data.id', alias: 'id') as $datum) {
+        foreach ($data as $datum) {
             $result['total']++;
-            $target = $this->targetFor($datum);
+            $target = $targets[$datum->getKey()] ?? null;
 
             if ($target === null) {
-                $result['unresolved_ids'][] = $datum->getKey();
-
                 continue;
             }
 
@@ -39,21 +41,19 @@ class BackfillCriterionOneOnePoints
             Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
             $data = $this->acceptedDataQuery($report)->lockForUpdate()->get();
             $result = $this->emptyResult();
-            $targets = [];
+            [$resolvedTargets, $unresolvedIds] = $this->targetsFor($data);
+            $result['unresolved_ids'] = $unresolvedIds;
 
             foreach ($data as $datum) {
                 $result['total']++;
-                $target = $this->targetFor($datum);
+                $target = $resolvedTargets[$datum->getKey()] ?? null;
 
                 if ($target === null) {
-                    $result['unresolved_ids'][] = $datum->getKey();
-
                     continue;
                 }
 
                 if ($this->needsUpdate($datum, $target)) {
                     $result['changed']++;
-                    $targets[$datum->getKey()] = $target;
                 } else {
                     $result['unchanged']++;
                 }
@@ -64,8 +64,9 @@ class BackfillCriterionOneOnePoints
             }
 
             foreach ($data as $datum) {
-                if (isset($targets[$datum->getKey()])) {
-                    $this->applyTarget($datum, $targets[$datum->getKey()]);
+                if (isset($resolvedTargets[$datum->getKey()])
+                    && $this->needsUpdate($datum, $resolvedTargets[$datum->getKey()])) {
+                    $this->applyTarget($datum, $resolvedTargets[$datum->getKey()]);
                 }
             }
 
@@ -136,13 +137,12 @@ class BackfillCriterionOneOnePoints
     }
 
     /** @return array{option: CriterionManualScoreOption, point: float, percentage: int}|null */
-    private function targetFor(Datum $datum): ?array
+    private function targetForResourceType(Datum $datum, ?string $resourceType): ?array
     {
         if ($datum->criterion === null || $datum->user === null) {
             return null;
         }
 
-        $resourceType = $this->resourceTypeFor($datum);
         $option = $resourceType === null
             ? null
             : $datum->criterion->manualScoreOptions->firstWhere('code', $resourceType);
@@ -161,6 +161,58 @@ class BackfillCriterionOneOnePoints
         }
 
         return compact('option', 'point', 'percentage');
+    }
+
+    /**
+     * @param  Collection<int, Datum>  $data
+     * @return array{array<int, array{option: CriterionManualScoreOption, point: float, percentage: int}>, array<int, int>}
+     */
+    private function targetsFor(Collection $data): array
+    {
+        $targets = [];
+        $unresolvedIds = [];
+
+        foreach ($data->groupBy(fn (Datum $datum): string => $datum->user_id.':'.$datum->criterion_id) as $group) {
+            $usedResourceTypes = [];
+            $duplicates = [];
+
+            foreach ($group as $datum) {
+                $resourceType = $this->resourceTypeFor($datum);
+
+                if ($resourceType === null) {
+                    $unresolvedIds[] = $datum->getKey();
+                } elseif (in_array($resourceType, $usedResourceTypes, true)) {
+                    $duplicates[] = $datum;
+                } else {
+                    $usedResourceTypes[] = $resourceType;
+                    $target = $this->targetForResourceType($datum, $resourceType);
+
+                    if ($target === null) {
+                        $unresolvedIds[] = $datum->getKey();
+                    } else {
+                        $targets[$datum->getKey()] = $target;
+                    }
+                }
+            }
+
+            $availableResourceTypes = array_values(array_diff(
+                array_keys(EducationalContentCriterionRule::PERCENTAGES),
+                $usedResourceTypes,
+            ));
+
+            foreach ($duplicates as $datum) {
+                $resourceType = array_shift($availableResourceTypes);
+                $target = $this->targetForResourceType($datum, $resourceType);
+
+                if ($target === null) {
+                    $unresolvedIds[] = $datum->getKey();
+                } else {
+                    $targets[$datum->getKey()] = $target;
+                }
+            }
+        }
+
+        return [$targets, array_values(array_unique($unresolvedIds))];
     }
 
     private function resourceTypeFor(Datum $datum): ?string
