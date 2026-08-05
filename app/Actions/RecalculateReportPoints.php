@@ -11,6 +11,7 @@ use App\Models\Report;
 use App\Services\IndustryFundingScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
+use App\Support\EducationalContentCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use Illuminate\Support\Carbon;
@@ -34,12 +35,57 @@ class RecalculateReportPoints
                 DB::transaction(function () use ($report): void {
                     Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
 
+                    $this->refreshEducationalContentDatumPoints($report);
                     $this->refreshOakArticleDatumPoints($report);
                     $this->refreshPrintedLiteratureDatumPoints($report);
                     $this->refreshIndustryFundingDatumPoints($report);
                     $this->rebuildCriterionPoints($report);
                     $this->rebuildFinalPoints($report);
                 }, attempts: 5);
+            });
+    }
+
+    private function refreshEducationalContentDatumPoints(Report $report): void
+    {
+        Datum::query()
+            ->where('status', 'accepted')
+            ->whereNotNull('manual_score_option_id')
+            ->whereHas('user', fn ($query) => $query->active())
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->where('code', EducationalContentCriterionRule::CODE))
+            ->with([
+                'user:id,degree',
+                'manualScoreOption:id,criterion_id,code',
+                'criterion:id,code',
+                'criterion.criterionEvaluations:id,criterion_id,evaluation,has,score',
+            ])
+            ->lockForUpdate()
+            ->get()
+            ->each(function (Datum $datum): void {
+                $evaluation = $datum->criterion?->criterionEvaluations
+                    ->firstWhere('evaluation', $datum->user?->degree);
+                $point = $datum->manualScoreOption === null || $evaluation?->has !== '1'
+                    ? null
+                    : EducationalContentCriterionRule::pointFor(
+                        (float) $evaluation->score,
+                        $datum->manualScoreOption->code,
+                    );
+
+                if ($point === null || abs($datum->point - $point) < 0.00005) {
+                    return;
+                }
+
+                $oldPoint = $datum->point;
+                $datum->update(['point' => $point]);
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => 'info',
+                    'message' => '1.1 balli saqlangan resurs turi va foydalanuvchining joriy toifasi bo‘yicha qayta hisoblandi. '
+                        .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
+                        .'Yangi ball: '.number_format($point, 4, '.', '').'.',
+                    'message_type' => 'criterion_1_1_point_recalculated',
+                ]);
             });
     }
 

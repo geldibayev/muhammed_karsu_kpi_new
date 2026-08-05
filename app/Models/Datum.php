@@ -17,7 +17,7 @@ class Datum extends Model
     protected $fillable = [
         'id', 'name', 'material', 'user_id', 'criterion_id', 'reviewer_hemis_id', 'status', 'year_id', 'language_id',
         'point', 'author_count', 'page_count', 'impact_factor', 'publication_tier', 'university_tier', 'reason',
-        'received_amount', 'duplicate_of_id',
+        'received_amount', 'duplicate_of_id', 'manual_score_option_id',
     ];
 
     /** @return array<int, string> */
@@ -63,6 +63,11 @@ class Datum extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function manualScoreOption(): BelongsTo
+    {
+        return $this->belongsTo(CriterionManualScoreOption::class);
     }
 
     public function year(): BelongsTo
@@ -154,6 +159,7 @@ class Datum extends Model
             'received_amount' => 'decimal:2',
             'reviewer_hemis_id' => 'integer',
             'duplicate_of_id' => 'integer',
+            'manual_score_option_id' => 'integer',
         ];
     }
 

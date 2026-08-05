@@ -11,6 +11,7 @@ use App\Http\Requests\TransferDatumCriterionRequest;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Services\OakArticleScoreCalculator;
+use App\Support\EducationalContentCriterionRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -71,6 +72,25 @@ class ManualReviewController extends Controller
         ]);
         $status = DatumStatus::from($datum->status);
         $scoreOptions = $datum->criterion?->manualScoreOptions ?? collect();
+        $evaluationMaximum = (float) $datum->criterion?->criterionEvaluations
+            ->firstWhere('evaluation', $datum->user?->degree)?->score;
+        $educationalContentScoring = $datum->criterion?->code === EducationalContentCriterionRule::CODE
+            ? [
+                'category' => match ($datum->user?->degree) {
+                    'hold_degrees' => 'Ilmiy darajali',
+                    'foreign_lang' => 'Chet tillari yo‘nalishi',
+                    'physical' => 'Jismoniy madaniyat yo‘nalishi',
+                    default => 'Ilmiy darajasiz',
+                },
+                'maximum' => $evaluationMaximum,
+                'options' => $scoreOptions->mapWithKeys(function ($option) use ($evaluationMaximum): array {
+                    return [$option->getKey() => [
+                        'percentage' => EducationalContentCriterionRule::percentageFor($option->code),
+                        'point' => EducationalContentCriterionRule::pointFor($evaluationMaximum, $option->code),
+                    ]];
+                })->all(),
+            ]
+            : null;
         $oakArticleBasePoint = $datum->criterion?->isOakArticleCriterion() === true
             ? $oakArticleScoreCalculator->basePoint($datum->user?->degree ?? '')
             : null;
@@ -93,6 +113,7 @@ class ManualReviewController extends Controller
             'reviewIndexRoute',
             'reviewQueue',
             'oakArticleBasePoint',
+            'educationalContentScoring',
         ));
     }
 

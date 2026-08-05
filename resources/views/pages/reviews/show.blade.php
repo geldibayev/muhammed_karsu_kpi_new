@@ -254,14 +254,33 @@
                         </button>
                     </div>
                     <div class="modal-body">
+                        @if($educationalContentScoring !== null)
+                            <div class="alert alert-info py-2">
+                                <div><strong>{{ $educationalContentScoring['category'] }}</strong></div>
+                                <div class="small">
+                                    Maksimal ball: {{ number_format($educationalContentScoring['maximum'], 2) }}.
+                                    Ushbu mezonga ko‘pi bilan 3 ta resurs yuklanadi.
+                                </div>
+                            </div>
+                        @endif
                         <label for="score-option">Tavsifga mos variant</label>
                         <select id="score-option" name="score_option_id" required
                                 class="form-control @error('score_option_id') is-invalid @enderror">
                             <option value="">Variantni tanlang</option>
                             @foreach($scoreOptions as $scoreOption)
+                                @php
+                                    $scorePresentation = data_get(
+                                        $educationalContentScoring,
+                                        'options.'.$scoreOption->id,
+                                    );
+                                @endphp
                                 <option value="{{ $scoreOption->id }}" @selected(old('score_option_id') == $scoreOption->id)>
                                     {{ data_get($scoreOption->label, 'uz', $scoreOption->code) }}
-                                    — {{ number_format($scoreOption->point, 2) }} ball
+                                    @if($scorePresentation !== null)
+                                        — {{ $scorePresentation['percentage'] }}% = {{ number_format($scorePresentation['point'], 2) }} ball
+                                    @else
+                                        — {{ number_format($scoreOption->point, 2) }} ball
+                                    @endif
                                 </option>
                             @endforeach
                         </select>

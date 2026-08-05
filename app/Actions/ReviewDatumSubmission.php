@@ -11,6 +11,7 @@ use App\Services\IndustryFundingScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
+use App\Support\EducationalContentCriterionRule;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
@@ -121,6 +122,9 @@ class ReviewDatumSubmission
             $lockedDatum->update([
                 'status' => 'accepted',
                 'point' => $point,
+                'manual_score_option_id' => $lockedDatum->criterion->code === EducationalContentCriterionRule::CODE
+                    ? $scoreOptionId
+                    : null,
                 'author_count' => ($lockedDatum->criterion->isOakArticleCriterion()
                     || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()
                     || $lockedDatum->criterion->isIndustryFundingCriterion()
@@ -377,6 +381,23 @@ class ReviewDatumSubmission
         }
 
         $point = max(0, (float) $option->point);
+
+        if ($datum->criterion->code === EducationalContentCriterionRule::CODE) {
+            $percentage = EducationalContentCriterionRule::percentageFor($option->code);
+            $point = EducationalContentCriterionRule::pointFor($maximumPoint, $option->code);
+
+            if ($percentage === null || $point === null) {
+                throw ValidationException::withMessages([
+                    'score_option_id' => '1.1 mezoni uchun tanlangan resurs turi qo‘llab-quvvatlanmaydi.',
+                ]);
+            }
+
+            return [
+                'point' => $point,
+                'rule' => (string) data_get($option->label, 'uz', $option->code)
+                    .' — '.$percentage.'% × '.number_format($maximumPoint, 2, '.', '').' maksimal ball',
+            ];
+        }
 
         if ($point > $maximumPoint) {
             throw ValidationException::withMessages([

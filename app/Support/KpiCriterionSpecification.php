@@ -28,7 +28,13 @@ class KpiCriterionSpecification
     public static function criteria(): array
     {
         return [
-            '1.1' => self::rule(self::Maximum, 3, 'current', [3, 6, 4, 4]),
+            '1.1' => self::rule(
+                self::Maximum,
+                3,
+                'current',
+                [3, 6, 4, 4],
+                descriptionUz: 'Ko‘pi bilan 3 ta o‘quv kontenti YouTube havolasi orqali taqdim etiladi. Tasdiqlangan videodars maksimal ballning 50%, videorolik 40%, taqdimot 10% miqdorida baholanadi. Maksimal ball: chet tillari va jismoniy madaniyat yo‘nalishlari uchun 4 ball, ilmiy darajali uchun 3 ball, ilmiy darajasiz uchun 6 ball.',
+            ),
             '1.2' => self::rule(self::Unlimited, 0, 'current', [6, 5, 5, 5], 100, true),
             '1.3' => self::rule(self::Unlimited, 0, 'current', [5, 4, 4, 4], 100, true),
             '1.4' => self::rule(self::Maximum, 1, 'current', [5, 4, 4, 4], null, true),
