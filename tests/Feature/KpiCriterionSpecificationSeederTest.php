@@ -180,6 +180,12 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             $criterionThreeOneSeven->ai_prompt,
         );
 
+        $criterionThreeOneEleven = Criterion::query()->where('code', '3.1.11')->firstOrFail();
+        $this->assertSame(
+            FixedPerResourceHumanReviewCriterionRule::threeOneElevenPrompt(),
+            $criterionThreeOneEleven->ai_prompt,
+        );
+
         $criterionThreeOneFourteen = Criterion::query()->where('code', '3.1.14')->firstOrFail();
         $this->assertSame(
             FixedPerResourceHumanReviewCriterionRule::threeOneFourteenPrompt(),

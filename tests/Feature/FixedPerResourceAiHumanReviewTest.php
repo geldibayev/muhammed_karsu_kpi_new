@@ -122,10 +122,27 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
     {
         $fixture = $this->createCriteria();
         $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $criterion = Criterion::query()->create([
+            'code' => '3.1.11',
+            'name' => ['uz' => 'Talaba stipendiatligi'],
+            'parent_id' => $fixture['criteria']['3.1.12']->parent_id,
+            'report_id' => $fixture['report']->getKey(),
+            'formula_id' => $fixture['criteria']['3.1.12']->formula_id,
+            'checking' => 'ai',
+            'file_limit' => 1,
+            'upload' => '1',
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 4,
+        ]);
         $datum = Datum::query()->create([
             'name' => 'Eski AI tasdiqlagan resurs',
             'user_id' => $owner->getKey(),
-            'criterion_id' => $fixture['criteria']['3.1.12']->getKey(),
+            'criterion_id' => $criterion->getKey(),
             'status' => 'accepted',
             'point' => 1,
         ]);
@@ -140,13 +157,13 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
             ->expectsOutput('Qayta hisoblangan accepted resurslar: 0')
             ->assertSuccessful();
 
-        $this->assertSame(3.0, $datum->fresh()->point);
+        $this->assertSame(4.0, $datum->fresh()->point);
         $this->assertSame(1, $datum->histories()
             ->where('message_type', 'fixed_resource_point_recalculated')
             ->count());
-        $this->assertSame(3.0, (float) Point::query()
+        $this->assertSame(4.0, (float) Point::query()
             ->where('report_id', $fixture['report']->getKey())
-            ->where('criterion_id', $fixture['criteria']['3.1.12']->getKey())
+            ->where('criterion_id', $criterion->getKey())
             ->where('user_id', $owner->getKey())
             ->value('point'));
     }

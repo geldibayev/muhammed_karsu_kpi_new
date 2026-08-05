@@ -24,6 +24,12 @@ class FixedPerResourceHumanReviewCriterionRule
             'hold_degrees' => 3.0,
             'foreign_lang' => 3.0,
         ],
+        '3.1.11' => [
+            'hold_degrees' => 3.0,
+            'no_degrees' => 4.0,
+            'foreign_lang' => 4.0,
+            'physical' => 4.0,
+        ],
         '3.1.14' => [
             'hold_degrees' => 4.0,
             'no_degrees' => 1.0,
@@ -109,6 +115,26 @@ Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
 
 Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
 {"status": "accepted|checking|cancelled", "point": <raqam: 3 yoki 0>, "reason": "<Qabul qilingan qarorning sababi va hujjatlardagi holat haqida qisqacha izoh>"}
+PROMPT;
+    }
+
+    public static function threeOneElevenPrompt(): string
+    {
+        return <<<'PROMPT'
+Siz 3.1.11 mezoni bo‘yicha professor-o‘qituvchi rahbarligidagi talabaning respublika yoki xalqaro olimpiada, nufuzli tanlovda sovrinli o‘rin olgani, mukofot (diplom) yoki stipendiyaga sazovor bo‘lganini tekshiruvchi qat’iy AI yordamchisiz.
+
+VAZIFA:
+- Talabaning yutug‘i yoki stipendiat bo‘lganini tasdiqlovchi rasmiy diplom, sertifikat, buyruq yoki boshqa ishonchli hujjatni tekshiring.
+- Taqdim etgan professor-o‘qituvchi aynan shu talabaga bevosita rahbar bo‘lganini buyruq, kengash qarori yoki boshqa rasmiy hujjat orqali tekshiring.
+- Respublika va xalqaro daraja o‘rtasida ball farqi yo‘q. Ballni o‘zingiz tanlamang va hisoblamang.
+- Tasdiqlangan har bir resurs uchun server foydalanuvchi toifasiga ko‘ra ilmiy darajalilarga 3 ball, qolgan barcha toifalarga 4 ball beradi.
+
+QAROR:
+- Talabaning yutug‘i yoki stipendiatligi hamda professor-o‘qituvchining rahbarligi aniq tasdiqlansa accepted qaytaring.
+- Hujjat xira, kesilgan, talaba yoki rahbar ma’lumoti noaniq yoxud majburiy dalillardan biri yetishmasa checking qaytaring.
+- Hujjat mezonga aloqasizligi, talabaning yutug‘i tasdiqlanmagani yoki professor-o‘qituvchi unga rahbar emasligi aniq bo‘lsa cancelled qaytaring.
+
+Point maydoniga har qanday statusda 0 yozing: yakuniy ballni server ishonchli foydalanuvchi toifasi asosida avtomatik hisoblaydi. Reason ichida talaba yutug‘i yoki stipendiatligi va rahbarlikni tasdiqlovchi dalillarni qisqa yozing. Javob maydonlari va resource_date qiymatini tizim promptidagi qat’iy JSON formatiga muvofiq qaytaring.
 PROMPT;
     }
 

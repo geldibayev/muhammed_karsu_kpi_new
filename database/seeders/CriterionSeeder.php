@@ -1049,20 +1049,9 @@ class CriterionSeeder extends Seeder
                             'physical' => 4,
                         ],
                         'year' => 2025,
-                        'formula_id' => 2,
+                        'formula_id' => 3,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (diplom, sertifikat, talabaga rahbarlik buyrug'i) tahlil qilib, professor-o'qituvchining talabalarni nufuzli olimpiada yoki tanlovga tayyorlaganligini baholang.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Talabaning sovrinli o'rni yoki stipendiat bo'lganligini tasdiqlovchi hujjat (diplom/sertifikat) bo'lishi shart.
-                        2. O'qituvchining talabaga rahbar ekanligini tasdiqlovchi buyruq yoki kengash qarori bo'lishi shart.
-                        3. Ballar: Xalqaro sovrin/stipendiya = 2 ball, Respublika miqyosidagi sovrin/stipendiya = 1 ball
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar talabaning sovrinli o'rni VA o'qituvchining rahbarligi hujjatlar bilan tasdiqlansa: \"accepted\" statusini bering. \"point\" qismiga tadbir darajasiga qarab 2 yoki 1 yozing.
-                        - Agar hujjatlar xira bo'lsa, o'qituvchi va talaba ism-shariflarini moslashtirish qiyin bo'lsa, yoki tadbir darajasi (xalqaro/respublika) noaniq bo'lib, administrator tekshiruvi zarur bo'lsa: \"checking\" statusini bering (\"point\": 0).
-                        - Agar taqdim etilgan hujjatlarning ushbu mezonga umuman aloqasi bo'lmasa (masalan, o'qituvchining shaxsiy yutug'i, talabaning aloqador bo'lmagan sertifikati): \"cancelled\" statusini bering (\"point\": 0).
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, masalan 2 yoki 1>, \"reason\": \"<Qabul qilingan qarorning sababi, tadbir nomi, darajasi va nima uchun aynan shu ball berilganligi haqida izoh>\"}",
+                        'ai_prompt' => FixedPerResourceHumanReviewCriterionRule::threeOneElevenPrompt(),
                     ],
                     [
                         'name' => [

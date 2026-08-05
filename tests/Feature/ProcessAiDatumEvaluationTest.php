@@ -125,6 +125,48 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertSame(3.0, $datum->fresh()->point);
     }
 
+    public function test_job_ignores_gemini_point_and_assigns_criterion_three_one_eleven_point_from_user_category(): void
+    {
+        foreach (['hold_degrees' => 3.0, 'no_degrees' => 4.0, 'foreign_lang' => 4.0, 'physical' => 4.0] as $degree => $expectedPoint) {
+            $datum = $this->createDatum();
+            $datum->criterion->update(['code' => '3.1.11']);
+            $datum->user->update(['degree' => $degree]);
+            $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+            $evaluator->shouldReceive('evaluate')
+                ->once()
+                ->andReturn(new AiEvaluationResult('accepted', 1, 'Stipendiat va rahbarlik tasdiqlandi.'));
+            $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+            $recalculateReportPoints->shouldReceive('handle')
+                ->once()
+                ->with(Mockery::type(Report::class));
+
+            (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+
+            $this->assertSame('accepted', $datum->fresh()->status);
+            $this->assertSame($expectedPoint, $datum->fresh()->point);
+        }
+    }
+
+    public function test_job_assigns_zero_when_criterion_three_one_eleven_is_not_accepted(): void
+    {
+        $datum = $this->createDatum();
+        $datum->criterion->update(['code' => '3.1.11']);
+        $datum->user->update(['degree' => 'no_degrees']);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturn(new AiEvaluationResult('cancelled', 2, 'Stipendiatlik tasdiqlanmadi.'));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(Report::class));
+
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+
+        $this->assertSame('cancelled', $datum->fresh()->status);
+        $this->assertSame(0.0, $datum->fresh()->point);
+    }
+
     public function test_job_persists_professional_development_top_tier_and_server_point(): void
     {
         $datum = $this->createDatum();
