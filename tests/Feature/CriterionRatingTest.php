@@ -51,6 +51,8 @@ class CriterionRatingTest extends TestCase
             ->assertSee('Kriteriya reytingi')
             ->assertSee('Darajali Ustoz')
             ->assertSee('Darajasiz Ustoz')
+            ->assertSee(route('ratings.show', $withDegree))
+            ->assertSee(route('ratings.show', $withoutDegree))
             ->assertSeeInOrder(['Darajasiz Ustoz', 'Darajali Ustoz'])
             ->assertViewHas('rankedPoints', function (LengthAwarePaginator $points) use ($withoutDegree, $withDegree): bool {
                 return $points->total() === 2

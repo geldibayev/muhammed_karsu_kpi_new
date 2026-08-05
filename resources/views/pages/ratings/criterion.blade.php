@@ -42,7 +42,17 @@
                                     </td>
                                     <td class="align-middle">
                                         <div class="font-weight-bold">
-                                            {{ $point->user?->full ?: ($point->user?->short ?: 'Noma’lum foydalanuvchi') }}
+                                            @if($point->user)
+                                                <a href="{{ route('ratings.show', $point->user) }}"
+                                                   class="text-primary"
+                                                   title="Foydalanuvchi resurslarini ko‘rish">
+                                                    {{ $point->user->full ?: ($point->user->short ?: 'Noma’lum foydalanuvchi') }}
+                                                    <i class="fas fa-folder-open ml-1" aria-hidden="true"></i>
+                                                    <span class="sr-only">— foydalanuvchi resurslarini ko‘rish</span>
+                                                </a>
+                                            @else
+                                                Noma’lum foydalanuvchi
+                                            @endif
                                         </div>
                                         <div class="small text-muted">
                                             HEMIS ID: {{ $point->user?->hemis_id ?? 'ko‘rsatilmagan' }}
