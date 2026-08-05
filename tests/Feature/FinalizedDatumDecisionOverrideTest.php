@@ -10,6 +10,7 @@ use App\Models\Formula;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class FinalizedDatumDecisionOverrideTest extends TestCase
@@ -58,29 +59,59 @@ class FinalizedDatumDecisionOverrideTest extends TestCase
         }
     }
 
-    public function test_non_ai_final_decisions_remain_outside_the_ai_override_flow(): void
+    #[DataProvider('checkingModes')]
+    public function test_final_decisions_can_be_reversed_for_every_checking_mode(string $checking): void
     {
-        [$reviewer, $owner, $criterion] = $this->context('manual');
+        [$reviewer, $owner, $criterion] = $this->context($checking);
         $accepted = $this->datum($owner, $criterion, 'accepted', 3, 'Manual tasdiq.');
         $cancelled = $this->datum($owner, $criterion, 'cancelled', 0, 'Manual rad javobi.');
 
         $this->actingAs($reviewer)
             ->get(route('upload.details', $accepted))
             ->assertOk()
-            ->assertDontSee('Tasdiqlangan resursni rad etish');
+            ->assertSee('Tasdiqlangan resursni rad etish');
         $this->actingAs($reviewer)
             ->get(route('upload.details', $cancelled))
             ->assertOk()
-            ->assertDontSee('Rad etilgan resursni tasdiqlash');
+            ->assertSee('Rad etilgan resursni tasdiqlash')
+            ->assertSee('max="5"', false);
         $this->actingAs($reviewer)
-            ->patch(route('ai-human-reviews.reject-accepted', $accepted), ['reason' => 'Ruxsatsiz.'])
-            ->assertForbidden();
-        $this->actingAs($reviewer)
-            ->patch(route('ai-human-reviews.approve-cancelled', $cancelled), ['point' => 2])
-            ->assertForbidden();
+            ->patch(route('ai-human-reviews.reject-accepted', $accepted), [
+                'reason' => 'Yakuniy qaror qayta tekshirildi.',
+            ])
+            ->assertRedirect(route('upload.details', $accepted));
 
-        $this->assertSame('accepted', $accepted->fresh()->status);
-        $this->assertSame('cancelled', $cancelled->fresh()->status);
+        $this->assertSame('cancelled', $accepted->fresh()->status);
+        $this->assertSame(0.0, $accepted->fresh()->point);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $accepted->getKey(),
+            'message_type' => 'human_override_rejected',
+        ]);
+
+        foreach ([$accepted, $cancelled] as $datum) {
+            $this->actingAs($reviewer)
+                ->patch(route('ai-human-reviews.approve-cancelled', $datum), ['point' => 4.25])
+                ->assertRedirect(route('upload.details', $datum));
+
+            $this->assertSame('accepted', $datum->fresh()->status);
+            $this->assertSame(4.25, $datum->fresh()->point);
+            $this->assertDatabaseHas('datum_histories', [
+                'datum_id' => $datum->getKey(),
+                'message_type' => 'human_override_approved',
+            ]);
+        }
+    }
+
+    /** @return array<string, array{string}> */
+    public static function checkingModes(): array
+    {
+        return [
+            'manual' => ['manual'],
+            'pointing' => ['pointing'],
+            'department' => ['department'],
+            'HEMIS' => ['hemis:employee'],
+            'site' => ['site:publication'],
+        ];
     }
 
     /** @return array{User, User, Criterion} */

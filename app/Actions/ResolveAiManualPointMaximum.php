@@ -17,7 +17,7 @@ class ResolveAiManualPointMaximum
         ]);
         $criterion = $datum->criterion;
 
-        if ($criterion === null || $criterion->checking !== 'ai') {
+        if ($criterion === null) {
             return null;
         }
 

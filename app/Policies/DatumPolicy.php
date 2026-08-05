@@ -57,14 +57,12 @@ class DatumPolicy
     public function overrideAcceptance(User $user, Datum $datum): bool
     {
         return $datum->status === DatumStatus::Accepted->value
-            && $datum->usesAiChecking()
             && $this->canOverrideFinalDecision($user);
     }
 
     public function overrideCancellation(User $user, Datum $datum): bool
     {
         return $datum->status === DatumStatus::Cancelled->value
-            && $datum->usesAiChecking()
             && $this->canOverrideFinalDecision($user);
     }
 
