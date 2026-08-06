@@ -44,6 +44,7 @@ class AiEvaluationResult
             $allowedPayloadKeys = [[
                 'author_count',
                 'is_translation',
+                'page_count',
                 'point',
                 'reason',
                 'resource_date',
@@ -159,12 +160,14 @@ class AiEvaluationResult
 
             $sourceLanguage = trim($sourceLanguage);
             $targetLanguage = trim($targetLanguage);
+            $sourceLanguageCode = self::normalizedLanguageCode($sourceLanguage);
 
             if ($status === 'accepted'
                 && (! $isTranslation
                     || $sourceLanguage === ''
                     || $targetLanguage === ''
-                    || mb_strtolower($sourceLanguage) === mb_strtolower($targetLanguage))) {
+                    || ! in_array($targetLanguage, ['uz', 'kaa', 'ru'], true)
+                    || $sourceLanguageCode === $targetLanguage)) {
                 throw new UnexpectedValueException('1.4 mezoni uchun tarjima va o‘zaro farqli tillar tasdiqlanmadi.');
             }
         }
@@ -217,5 +220,17 @@ class AiEvaluationResult
     public static function checking(string $reason): self
     {
         return new self('checking', 0, $reason);
+    }
+
+    private static function normalizedLanguageCode(string $language): string
+    {
+        $normalizedLanguage = mb_strtolower(str_replace(['’', '‘', '`', 'ʻ'], "'", trim($language)));
+
+        return match ($normalizedLanguage) {
+            'uz', "o'zbek", 'ozbek', 'uzbek', 'узбек', 'узбекский' => 'uz',
+            'kaa', 'qoraqalpoq', 'karakalpak', 'қарақалпақ', 'каракалпак', 'каракалпакский' => 'kaa',
+            'ru', 'rus', 'russian', 'рус', 'русский' => 'ru',
+            default => $normalizedLanguage,
+        };
     }
 }

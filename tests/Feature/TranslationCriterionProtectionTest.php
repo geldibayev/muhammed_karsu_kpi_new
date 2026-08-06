@@ -118,10 +118,11 @@ class TranslationCriterionProtectionTest extends TestCase
             'status' => 'accepted',
             'point' => 1,
             'author_count' => 1,
+            'page_count' => 160,
             'resource_date' => '2026',
             'is_translation' => false,
             'source_language' => 'O‘zbek',
-            'target_language' => 'O‘zbek',
+            'target_language' => 'uz',
             'reason' => 'Oddiy darslik.',
         ];
 
@@ -136,18 +137,18 @@ class TranslationCriterionProtectionTest extends TestCase
             'status' => 'accepted',
             'point' => 1,
             'author_count' => 2,
+            'page_count' => 160,
             'resource_date' => '2026',
             'is_translation' => true,
             'source_language' => 'Ingliz',
-            'target_language' => 'O‘zbek',
+            'target_language' => 'uz',
             'reason' => 'Ingliz tilidagi asarning o‘zbekcha tarjimasi titul varaqda tasdiqlangan.',
         ], 5, requiresTranslationEvidence: true);
 
         $this->assertSame('accepted', $result->status);
-        $this->assertStringContainsString(
-            'source_language va target_language',
-            TranslatedEducationalLiteratureCriterionRule::aiInstruction(),
-        );
+        $this->assertSame(160, $result->pageCount);
+        $this->assertStringContainsString('source_language', TranslatedEducationalLiteratureCriterionRule::aiInstruction());
+        $this->assertStringContainsString('target_language', TranslatedEducationalLiteratureCriterionRule::aiInstruction());
     }
 
     public function test_one_four_ai_request_requires_translation_evidence_fields(): void
@@ -177,12 +178,13 @@ class TranslationCriterionProtectionTest extends TestCase
                         'parts' => [[
                             'text' => json_encode([
                                 'status' => 'accepted',
-                                'point' => 1,
-                                'author_count' => 1,
+                                'point' => 0,
+                                'author_count' => 2,
+                                'page_count' => 160,
                                 'resource_date' => '2026-01-10',
                                 'is_translation' => true,
                                 'source_language' => 'Ingliz',
-                                'target_language' => 'O‘zbek',
+                                'target_language' => 'uz',
                                 'reason' => 'Tarjima titul varaqda tasdiqlangan.',
                             ], JSON_THROW_ON_ERROR),
                         ]],
@@ -194,6 +196,10 @@ class TranslationCriterionProtectionTest extends TestCase
         $result = $this->app->make(AiSubmissionEvaluator::class)->evaluate($datum);
 
         $this->assertSame('accepted', $result->status);
+        $this->assertSame(1.5, $result->point);
+        $this->assertSame(160, $result->pageCount);
+        $this->assertSame(2, $result->authorCount);
+        $this->assertStringContainsString('160 sahifa / 16 × 0.3 / 2 muallif', $result->reason);
         Gemini::assertSent(
             resource: GenerativeModel::class,
             model: 'gemini-test',
@@ -206,7 +212,11 @@ class TranslationCriterionProtectionTest extends TestCase
                     && str_contains($prompt, 'TARJIMA HOLATINI MAJBURIY TEKSHIRISH')
                     && str_contains($prompt, 'is_translation true')
                     && str_contains($prompt, 'source_language')
-                    && str_contains($prompt, 'target_language');
+                    && str_contains($prompt, 'target_language')
+                    && str_contains($prompt, 'o‘zbek, qoraqalpoq yoki rus tilida')
+                    && str_contains($prompt, 'ISBN')
+                    && str_contains($prompt, '(jami sahifalar / 16) × 0.3 / jami mualliflar')
+                    && str_contains($prompt, '2025 yoki 2026');
             },
         );
         Gemini::assertFunctionCalled(
@@ -218,10 +228,29 @@ class TranslationCriterionProtectionTest extends TestCase
 
                 return $method === 'withGenerationConfig'
                     && data_get($schema, 'properties.is_translation.type') === 'BOOLEAN'
+                    && data_get($schema, 'properties.page_count.type') === 'INTEGER'
                     && data_get($schema, 'properties.source_language.type') === 'STRING'
-                    && data_get($schema, 'properties.target_language.type') === 'STRING';
+                    && data_get($schema, 'properties.target_language.type') === 'STRING'
+                    && data_get($schema, 'properties.target_language.enum') === ['uz', 'kaa', 'ru'];
             },
         );
+    }
+
+    public function test_ai_cannot_accept_one_four_in_an_unsupported_target_language(): void
+    {
+        $this->expectException(UnexpectedValueException::class);
+
+        AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 0,
+            'author_count' => 1,
+            'page_count' => 160,
+            'resource_date' => '2026',
+            'is_translation' => true,
+            'source_language' => 'Nemis',
+            'target_language' => 'en',
+            'reason' => 'Nemis tilidan ingliz tiliga tarjima.',
+        ], 5, requiresTranslationEvidence: true);
     }
 
     /** @return array{User, Report, Year, Criterion, Criterion} */

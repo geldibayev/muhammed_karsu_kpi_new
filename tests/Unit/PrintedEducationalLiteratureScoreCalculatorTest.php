@@ -64,6 +64,7 @@ class PrintedEducationalLiteratureScoreCalculatorTest extends TestCase
     {
         yield 'textbook ten sheets two authors' => ['1.2', 160, 2, 2.0];
         yield 'study guide ten sheets two authors' => ['1.3', 160, 2, 1.5];
+        yield 'translated literature ten sheets two authors' => ['1.4', 160, 2, 1.5];
         yield 'fractional sheet is not rounded early' => ['1.2', 17, 3, 0.1417];
         yield 'less than one sheet remains fractional' => ['1.3', 15, 1, 0.2813];
     }

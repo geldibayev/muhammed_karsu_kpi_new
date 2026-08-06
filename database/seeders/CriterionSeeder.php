@@ -15,6 +15,7 @@ use App\Support\MasterClassCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
 use App\Support\ScopusCriterionRule;
+use App\Support\TranslatedEducationalLiteratureCriterionRule;
 use Illuminate\Database\Seeder;
 use RuntimeException;
 
@@ -179,23 +180,7 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 2,
                         'ai_model' => self::ADVANCED_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatni (elektron darslik, o'quv qo'llanma yoki uning tarjimasi) tahlil qiling va qoidalarga mosligini tekshiring.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Hujjatda kitobning ISBN raqami aniq ko'rsatilgan bo'lishi shart.
-                        2. Hujjatda universitetning nashr ruxsatnomasi (Kengash qarori yoki ruxsat beruvchi buyruq) mavjud bo'lishi shart.
-                        3. Mualliflik ulushini aniqlash uchun hujjatdagi mualliflar (hammualliflar) sonini aniqlang. Asosiy ball 1 ball deb olinadi.
-                        4. Hujjat oddiy darslik yoki yangi asar emas, boshqa tildagi mavjud darslik yoki o'quv qo'llanmaning tarjimasi ekanini rasmiy bibliografik/titul ma'lumoti bilan tekshiring.
-                        5. Asarning manba tili va tarjima qilingan nashrning maqsad tilini alohida aniqlang; ular o'zaro farqli bo'lishi shart.
-                        6. Tarjima ekanligi aniq tasdiqlanmasa accepted bermang: tarjima emasligi aniq bo'lsa cancelled, dalil yoki tillar noaniq bo'lsa checking qaytaring.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar hujjatda ISBN raqami VA universitet ruxsatnomasi mavjud bo'lsa, tarjima holati hamda o'zaro farqli manba va maqsad tillari aniq tasdiqlansa: \"accepted\" statusini bering. \"point\" ga 1 yozing (mualliflik ulushi dastur tomonidan bo'linadi) va \"author_count\" ga mualliflar sonini kiriting.
-                        - Agar hujjat xira bo'lsa, sahifalar yetishmasa, ISBN yoki ruxsatnomani aniq o'qib bo'lmasa (inson ko'zdan kechirishi kerak bo'lsa): \"checking\" statusini bering.
-                        - Agar hujjat tarjima bo'lmasa, manba va maqsad tillari bir xil bo'lsa, hujjat umuman boshqa turdagi resurs bo'lsa, ISBN raqami yoki nashr ruxsatnomasi umuman topilmasa: \"cancelled\" statusini bering.
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, masalan 1>, \"author_count\": <mualliflar soni raqamda>, \"is_translation\": <true|false>, \"source_language\": \"<manba tili>\", \"target_language\": \"<tarjima tili>\", \"reason\": \"<Qabul qilingan qarorning sababi, tarjima dalili va tillar>\"
-                        ",
+                        'ai_prompt' => TranslatedEducationalLiteratureCriterionRule::PROMPT,
                     ],
                     [
                         'name' => [

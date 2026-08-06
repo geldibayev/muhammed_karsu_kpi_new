@@ -1571,21 +1571,27 @@ class ManualReviewWorkflowTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $criterionOneFourWithDegreeDatum))
             ->assertOk()
-            ->assertSee('Tasdiqlash')
+            ->assertSee('Sahifa va mualliflar bilan tasdiqlash')
             ->assertDontSee('name="point"', false)
-            ->assertDontSee('name="author_count"', false)
-            ->assertDontSee('name="page_count"', false);
+            ->assertSee('name="author_count"', false)
+            ->assertSee('name="page_count"', false);
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $criterionOneFourWithDegreeDatum))
+            ->patch(route('reviews.approve', $criterionOneFourWithDegreeDatum), [
+                'page_count' => 160,
+                'author_count' => 2,
+            ])
             ->assertRedirect(route('ai-human-reviews.index'));
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $criterionOneFourWithoutDegreeDatum))
+            ->patch(route('reviews.approve', $criterionOneFourWithoutDegreeDatum), [
+                'page_count' => 160,
+                'author_count' => 4,
+            ])
             ->assertRedirect(route('ai-human-reviews.index'));
 
         $this->assertSame(2.0, $criterionOneTwoDatum->fresh()->point);
         $this->assertSame(1.5, $criterionOneThreeDatum->fresh()->point);
-        $this->assertSame(5.0, $criterionOneFourWithDegreeDatum->fresh()->point);
-        $this->assertSame(4.0, $criterionOneFourWithoutDegreeDatum->fresh()->point);
+        $this->assertSame(1.5, $criterionOneFourWithDegreeDatum->fresh()->point);
+        $this->assertSame(0.75, $criterionOneFourWithoutDegreeDatum->fresh()->point);
     }
 
     public function test_criterion_1_10_human_approval_uses_the_evaluation_category_score(): void

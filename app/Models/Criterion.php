@@ -17,7 +17,7 @@ class Criterion extends Model
 {
     public const H_INDEX_CODE = '3.1.4';
 
-    public const AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES = ['1.4', '1.10', '2.1.1', '3.1.15'];
+    public const AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES = ['1.10', '2.1.1', '3.1.15'];
 
     public const IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE = '3.1.2';
 
@@ -25,7 +25,7 @@ class Criterion extends Model
 
     public const AUTHOR_DIVIDED_AI_HUMAN_REVIEW_CODE = '3.1.8';
 
-    public const PRINTED_EDUCATIONAL_LITERATURE_CODES = ['1.2', '1.3'];
+    public const PRINTED_EDUCATIONAL_LITERATURE_CODES = ['1.2', '1.3', '1.4'];
 
     protected $fillable = [
         'id', 'code', 'name', 'desc', 'parent_id', 'sort_order', 'template',

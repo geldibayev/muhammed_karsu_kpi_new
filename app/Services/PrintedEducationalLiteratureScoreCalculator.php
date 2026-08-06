@@ -12,6 +12,7 @@ class PrintedEducationalLiteratureScoreCalculator
     private const array PointsPerPrintedSheet = [
         '1.2' => 0.4,
         '1.3' => 0.3,
+        '1.4' => 0.3,
     ];
 
     public function calculate(string $criterionCode, int $pageCount, int $authorCount): float

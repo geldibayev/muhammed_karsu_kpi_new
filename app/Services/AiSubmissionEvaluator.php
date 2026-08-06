@@ -416,7 +416,7 @@ PROMPT;
             ? 'YYYY-MM-DD yoki faqat YYYY'
             : 'YYYY-MM-DD';
         $responseExample = match (true) {
-            $requiresTranslationEvidence => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"is_translation\":true,\"source_language\":\"manba tili\",\"target_language\":\"tarjima tili\",\"reason\":\"qisqa asos\"}",
+            $requiresTranslationEvidence => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"is_translation\":true,\"source_language\":\"manba tili\",\"target_language\":\"uz|kaa|ru\",\"reason\":\"qisqa asos\"}",
             $requiresUniversityTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"university_tier\":\"top_100|top_300|top_500|top_1000|outside_top_1000|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresPageCount => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresReceivedAmount => "{\"status\":\"accepted|cancelled|checking\",\"received_amount\":12500000.50,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
@@ -553,7 +553,10 @@ PROMPT;
         if ($requiresTranslationEvidence) {
             $properties['is_translation'] = new Schema(type: DataType::BOOLEAN);
             $properties['source_language'] = new Schema(type: DataType::STRING);
-            $properties['target_language'] = new Schema(type: DataType::STRING);
+            $properties['target_language'] = new Schema(
+                type: DataType::STRING,
+                enum: ['uz', 'kaa', 'ru'],
+            );
         }
 
         if ($requiresUniversityTier) {
