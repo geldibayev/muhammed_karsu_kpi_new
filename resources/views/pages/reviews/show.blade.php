@@ -22,6 +22,7 @@
         $isManualCriterion = $datum->criterion?->checking === 'manual';
         $isAiCriterion = $datum->criterion?->checking === 'ai';
         $isOakArticleCriterion = $datum->criterion?->isOakArticleCriterion() === true;
+        $isLaboratoryWorkCriterion = $datum->criterion?->isLaboratoryWorkCriterion() === true;
         $isPrintedLiteratureCriterion = $datum->criterion?->isPrintedEducationalLiteratureCriterion() === true;
         $usesAutomaticAiHumanReviewScore = $datum->criterion?->usesAutomaticAiHumanReviewScore() === true;
         $usesImpactFactorScore = $datum->criterion?->usesImpactFactorAiHumanReviewScore() === true;
@@ -369,7 +370,7 @@
                                 Bazaviy {{ number_format($oakArticleBasePoint, 2) }} ball kiritilgan mualliflar soniga avtomatik bo‘linadi.
                             </div>
                         @elseif($usesAuthorDividedScore)
-                            <label for="author-count">Patentdagi jami mualliflar soni</label>
+                            <label for="author-count">{{ $isLaboratoryWorkCriterion ? 'Resursdagi jami mualliflar soni' : 'Patentdagi jami mualliflar soni' }}</label>
                             <input id="author-count" name="author_count" type="number" min="1" max="1000"
                                    step="1" required value="{{ old('author_count', $datum->author_count) }}"
                                    class="form-control @error('author_count') is-invalid @enderror">
@@ -377,7 +378,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <div class="small text-muted mt-2">
-                                Bazaviy {{ number_format($evaluationMaximum, 2) }} ball mualliflar soniga avtomatik bo‘linadi.
+                                Bazaviy {{ number_format($isLaboratoryWorkCriterion ? \App\Support\LaboratoryWorkCriterionRule::BASE_POINT : $evaluationMaximum, 2) }} ball mualliflar soniga avtomatik bo‘linadi.
                             </div>
                         @elseif($usesImpactFactorScore)
                             <label for="impact-factor">Jurnalning impakt faktori</label>

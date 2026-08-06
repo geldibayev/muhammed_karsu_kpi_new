@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
+use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
 use Illuminate\Database\Eloquent\Model;
@@ -125,6 +126,11 @@ class Criterion extends Model
         return $this->code === IndustryFundingCriterionRule::CODE;
     }
 
+    public function isLaboratoryWorkCriterion(): bool
+    {
+        return LaboratoryWorkCriterionRule::supports($this->code);
+    }
+
     public function isPrintedEducationalLiteratureCriterion(): bool
     {
         return in_array($this->code, self::PRINTED_EDUCATIONAL_LITERATURE_CODES, true);
@@ -149,7 +155,9 @@ class Criterion extends Model
 
     public function usesAuthorDividedAiHumanReviewScore(): bool
     {
-        return $this->checking === 'ai' && $this->code === self::AUTHOR_DIVIDED_AI_HUMAN_REVIEW_CODE;
+        return $this->checking === 'ai'
+            && ($this->code === self::AUTHOR_DIVIDED_AI_HUMAN_REVIEW_CODE
+                || $this->isLaboratoryWorkCriterion());
     }
 
     /** @return array<int, 'file'|'url'> */

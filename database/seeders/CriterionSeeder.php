@@ -11,6 +11,7 @@ use App\Models\Year;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
+use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\MasterClassCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
@@ -280,35 +281,27 @@ class CriterionSeeder extends Seeder
                             'en' => 'Methodological guidelines for laboratory and practical sessions for the preparation and implementation of existing and new laboratory work, as well as the preparation and implementation of virtual laboratory work',
                         ],
                         'desc' => [
-                            'uz' => 'Yangi laboratoriya va virtual laboratoriya-1 ball<br>Laboratoriya va amaliy mashg‘ulotlar uchun uslubiy qo‘llanma-1 ball',
-                            'kaa' => 'Jańa laboratoriya hám virtual laboratoriya-1 ball<br>Laboratoriya hám ámeliy sabaqlar ushın metodikalıq qollanba-1 ball',
-                            'ru' => 'Новая лаборатория и виртуальная лаборатория-1 балл<br>Методическое пособие для лабораторных и практических занятий-1 балл',
-                            'en' => 'New laboratory and virtual laboratory - 1 point<br>Methodological guide for laboratory and practical sessions - 1 point',
+                            'uz' => LaboratoryWorkCriterionRule::DESCRIPTION_UZ,
+                            'kaa' => 'Kóbi menen 4 resurs júklenedi. Hár bir tastıyıqlanǵan laboratoriyalıq jumıs yamasa metodikalıq kórsetpe ushın 0,5 ball beriledi hám resurs ballı ulıwma avtorlar sanına bólinedi.',
+                            'ru' => 'Можно загрузить не более 4 ресурсов. За каждую утвержденную лабораторную работу или методическое указание начисляется 0,5 балла, которые делятся на общее число авторов.',
+                            'en' => 'Up to 4 resources may be uploaded. Each approved laboratory work or methodological guide receives 0.5 points divided by the total number of authors.',
                         ],
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'ai',
                         'template' => '0',
                         'res_type' => 'all',
-                        'upload' => '1', 'status' => '1',
+                        'upload' => '1', 'file_limit' => 4, 'status' => '1',
                         'evaluation' => [
                             'hold_degrees' => 2,
                             'no_degrees' => 2,
                         ],
                         'year' => 2025,
-                        'formula_id' => 1,
+                        'formula_id' => 2,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni tahlil qilib, professor-o'qituvchining laboratoriya ishlariga oid faoliyatini baholang.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Yangi laboratoriya ishi yoki virtual laboratoriya ishi tayyorlanganligi va joriy etilganligi tasdiqlansa: +1 ball.
-                        2. Laboratoriya va amaliy mashg'ulotlar uchun uslubiy qo'llanma (yoki ko'rsatma) tayyorlanganligi tasdiqlansa: +1 ball.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar taqdim etilgan hujjatlarda yuqoridagi shartlarning kamida bittasi (yoki ikkalasi ham) aniq va tushunarli tasdiqlansa: \"accepted\" statusini bering. \"point\" qismiga tasdiqlangan holatlar yig'indisini (1 yoki 2 ball) yozing.
-                        - Agar hujjatlar xira tushgan bo'lsa, matnni o'qish qiyin bo'lsa, yoki hujjat shunchaki maqola/darslikning bir qismi bo'lib uning aniq \"uslubiy qo'llanma\" yoki \"yangi laboratoriya\" ekanligi shubha tug'dirsa (administrator ko'rib chiqishi zarur bo'lsa): \"checking\" statusini bering .
-                            -Agar taqdim etilgan hujjatlarning ushbu mezonga umuman aloqasi bo'lmasa: \"cancelled\" statusini bering.
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <faqat raqam, masalan 1 yoki 2 >, \"reason\": \"<Qabul qilingan qarorning sababi, aniq qaysi shartlar bajarilganligi yoki nima sababdan rad/tekshiruvga yuborilganligi>\"}",
+                        'ai_submission_max_point' => LaboratoryWorkCriterionRule::BASE_POINT,
+                        'divide_ai_point_by_authors' => false,
+                        'ai_prompt' => LaboratoryWorkCriterionRule::PROMPT,
                     ],
                     [
                         'name' => [

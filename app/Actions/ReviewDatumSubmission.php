@@ -14,6 +14,7 @@ use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
+use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -337,6 +338,13 @@ class ReviewDatumSubmission
                     throw ValidationException::withMessages([
                         'author_count' => 'Mualliflar soni 1 dan 1000 gacha bo‘lishi kerak.',
                     ]);
+                }
+
+                if ($datum->criterion->isLaboratoryWorkCriterion()) {
+                    return [
+                        'point' => LaboratoryWorkCriterionRule::pointForAuthorCount($authorCount),
+                        'rule' => '0.5 ball / '.$authorCount.' muallif',
+                    ];
                 }
 
                 return [

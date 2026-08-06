@@ -13,6 +13,7 @@ use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
+use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -39,9 +40,46 @@ class RecalculateReportPoints
                     $this->refreshOakArticleDatumPoints($report);
                     $this->refreshPrintedLiteratureDatumPoints($report);
                     $this->refreshIndustryFundingDatumPoints($report);
+                    $this->refreshLaboratoryWorkDatumPoints($report);
                     $this->rebuildCriterionPoints($report);
                     $this->rebuildFinalPoints($report);
                 }, attempts: 5);
+            });
+    }
+
+    private function refreshLaboratoryWorkDatumPoints(Report $report): void
+    {
+        Datum::query()
+            ->where('status', 'accepted')
+            ->whereNotNull('author_count')
+            ->whereHas('user', fn ($query) => $query->active())
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->where('code', LaboratoryWorkCriterionRule::CODE))
+            ->lockForUpdate()
+            ->get()
+            ->each(function (Datum $datum): void {
+                if ($datum->author_count === null) {
+                    return;
+                }
+
+                $point = LaboratoryWorkCriterionRule::pointForAuthorCount($datum->author_count);
+
+                if ($point <= 0 || abs($datum->point - $point) < 0.00005) {
+                    return;
+                }
+
+                $oldPoint = $datum->point;
+                $datum->update(['point' => $point]);
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => 'info',
+                    'message' => '1.8 balli saqlangan mualliflar soni bo‘yicha qayta hisoblandi. '
+                        .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
+                        .'Hisob: 0.5 / '.$datum->author_count.' muallif = '
+                        .number_format($point, 4, '.', '').' ball.',
+                    'message_type' => 'criterion_1_8_point_recalculated',
+                ]);
             });
     }
 

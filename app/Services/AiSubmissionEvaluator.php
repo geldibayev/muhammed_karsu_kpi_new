@@ -7,6 +7,7 @@ use App\Data\AiEvaluationResult;
 use App\Models\Datum;
 use App\Models\Formula;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
 use App\Support\TranslatedEducationalLiteratureCriterionRule;
 use Gemini\Data\Blob;
@@ -234,6 +235,10 @@ PROMPT;
 
             if ($criterion->isIndustryFundingCriterion()) {
                 return $this->industryFundingScoreCalculator->apply($result);
+            }
+
+            if ($criterion->isLaboratoryWorkCriterion()) {
+                return LaboratoryWorkCriterionRule::apply($result);
             }
 
             if (FixedPerResourceHumanReviewCriterionRule::supports($criterion->code)) {

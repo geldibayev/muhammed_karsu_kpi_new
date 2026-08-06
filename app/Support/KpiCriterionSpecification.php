@@ -41,7 +41,16 @@ class KpiCriterionSpecification
             '1.5' => self::rule(self::Competition, 0, 'current', [3, 3, 3, 3]),
             '1.6' => self::rule(self::Competition, 0, 'current', [4, 4, 4, 4]),
             '1.7' => self::rule(self::Maximum, 0, 'current', [2, 2, 2, 2]),
-            '1.8' => self::rule(self::Competition, 4, 'current', [2, 2, null, null]),
+            '1.8' => self::rule(
+                self::Maximum,
+                4,
+                'current',
+                [2, 2, null, null],
+                LaboratoryWorkCriterionRule::BASE_POINT,
+                false,
+                LaboratoryWorkCriterionRule::DESCRIPTION_UZ,
+                LaboratoryWorkCriterionRule::PROMPT,
+            ),
             '1.9' => self::rule(
                 self::Competition,
                 0,
