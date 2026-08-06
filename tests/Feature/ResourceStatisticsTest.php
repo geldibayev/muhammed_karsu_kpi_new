@@ -16,6 +16,41 @@ class ResourceStatisticsTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_additional_statistics_viewer_sees_requested_sections_without_ai_status_access(): void
+    {
+        config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        config()->set('kpi.resource_statistics_viewer_hemis_ids', ['3862011004']);
+
+        $viewer = User::factory()->create(['hemis_id' => 3862011004]);
+
+        $this->actingAs($viewer)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee('Kriteriyalar statistikasi')
+            ->assertSee(route('criterion-resource-statistics.index'))
+            ->assertSee('Statistika')
+            ->assertSee(route('statistics.index'))
+            ->assertSee('Ma’sullar')
+            ->assertSee(route('reviewer-assignments.index'))
+            ->assertDontSee(route('ai-status.index'));
+
+        $this->actingAs($viewer)
+            ->get(route('criterion-resource-statistics.index'))
+            ->assertOk();
+
+        $this->actingAs($viewer)
+            ->get(route('statistics.index'))
+            ->assertOk();
+
+        $this->actingAs($viewer)
+            ->get(route('reviewer-assignments.index'))
+            ->assertOk();
+
+        $this->actingAs($viewer)
+            ->get(route('ai-status.index'))
+            ->assertForbidden();
+    }
+
     public function test_configured_viewer_sees_per_criterion_statistics_on_its_own_page(): void
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');

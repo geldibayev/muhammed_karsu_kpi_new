@@ -127,7 +127,12 @@ class AppServiceProvider extends ServiceProvider
         );
         Gate::define(
             'view-resource-statistics',
-            fn (User $user): bool => Gate::forUser($user)->allows('view-ai-status'),
+            fn (User $user): bool => Gate::forUser($user)->allows('view-ai-status')
+                || in_array(
+                    (string) $user->hemis_id,
+                    array_map('strval', config('kpi.resource_statistics_viewer_hemis_ids', [])),
+                    true,
+                ),
         );
         Gate::define(
             'view-ratings',
