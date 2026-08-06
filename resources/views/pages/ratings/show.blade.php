@@ -67,6 +67,7 @@
                                 @php
                                     $acceptedCollapseId = 'accepted-submissions-'.$score['criterion']->getKey();
                                     $cancelledCollapseId = 'cancelled-submissions-'.$score['criterion']->getKey();
+                                    $pendingCollapseId = 'pending-submissions-'.$score['criterion']->getKey();
                                 @endphp
                                 <article data-testid="rating-criterion-row"
                                          @class(['px-3 py-3', 'border-bottom' => ! $loop->last])>
@@ -121,9 +122,22 @@
                                             <div class="small text-muted text-uppercase font-weight-bold mb-2">
                                                 Resurslar
                                             </div>
+                                            @if($score['pending_submissions']->isNotEmpty())
+                                                <button type="button"
+                                                        class="btn btn-outline-warning btn-sm text-left"
+                                                        data-toggle="collapse"
+                                                        data-target="#{{ $pendingCollapseId }}"
+                                                        aria-controls="{{ $pendingCollapseId }}"
+                                                        aria-expanded="false">
+                                                    <i class="fas fa-clock mr-1" aria-hidden="true"></i>
+                                                    {{ $score['pending_submissions']->count() }} ta baholanmagan
+                                                    <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
+                                                </button>
+                                            @endif
+
                                             @if($score['accepted_submissions']->isNotEmpty())
                                                 <button type="button"
-                                                        class="btn btn-outline-success btn-sm text-left"
+                                                        class="btn btn-outline-success btn-sm text-left mt-1"
                                                         data-toggle="collapse"
                                                         data-target="#{{ $acceptedCollapseId }}"
                                                         aria-controls="{{ $acceptedCollapseId }}"
@@ -132,7 +146,7 @@
                                                     {{ $score['accepted_submissions']->count() }} ta tasdiqlangan
                                                     <i class="fas fa-chevron-down ml-1" aria-hidden="true"></i>
                                                 </button>
-                                            @elseif($score['cancelled_submissions']->isEmpty())
+                                            @elseif($score['cancelled_submissions']->isEmpty() && $score['pending_submissions']->isEmpty())
                                                 <span class="text-muted small">
                                                     <i class="far fa-folder-open mr-1" aria-hidden="true"></i>
                                                     Resurs yo‘q
@@ -173,6 +187,25 @@
                                             </div>
                                         </div>
                                     </div>
+
+                                    @if($score['pending_submissions']->isNotEmpty())
+                                        <div id="{{ $pendingCollapseId }}" class="collapse mt-3">
+                                            <div class="list-group list-group-flush border border-warning rounded">
+                                                @foreach($score['pending_submissions'] as $submission)
+                                                    <a href="{{ route('upload.details', $submission) }}"
+                                                       class="list-group-item list-group-item-warning list-group-item-action d-flex align-items-center justify-content-between py-2">
+                                                        <span class="text-dark text-nowrap">
+                                                            <i class="fas fa-file-alt mr-2" aria-hidden="true"></i>
+                                                            Resurs #{{ $submission->id }}
+                                                        </span>
+                                                        <span class="badge badge-warning px-2 py-1 ml-3 text-nowrap">
+                                                            {{ \App\Enums\DatumStatus::from($submission->status)->label() }}
+                                                        </span>
+                                                    </a>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
 
                                     @if($score['accepted_submissions']->isNotEmpty())
                                         <div id="{{ $acceptedCollapseId }}" class="collapse mt-3">

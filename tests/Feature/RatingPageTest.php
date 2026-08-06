@@ -6,6 +6,7 @@ use App\Models\AcademicDegree;
 use App\Models\AcademicRank;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
+use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\DatumHistory;
 use App\Models\Department;
@@ -579,9 +580,9 @@ class RatingPageTest extends TestCase
         ]);
         $additionalAiSubmissions = collect([1.10, 1.20, 1.30])
             ->map(fn (float $point): Datum => $this->createAcceptedDatum($ratedUser, $aiCriterion, $point));
-        $this->createPendingDatum($ratedUser, $pendingCriterion, 'received');
-        $this->createPendingDatum($ratedUser, $pendingCriterion, 'checking');
-        $this->createPendingDatum($ratedUser, $manualCriterion, 'checking');
+        $receivedPendingDatum = $this->createPendingDatum($ratedUser, $pendingCriterion, 'received');
+        $checkingPendingDatum = $this->createPendingDatum($ratedUser, $pendingCriterion, 'checking');
+        $manualPendingDatum = $this->createPendingDatum($ratedUser, $manualCriterion, 'checking');
         $this->createPendingDatum($ratedUser, $oldPendingCriterion, 'checking');
         $cancelledDatum = $this->createPendingDatum($ratedUser, $cancelledCriterion, 'cancelled');
 
@@ -636,6 +637,11 @@ class RatingPageTest extends TestCase
             ->assertSee('Baholash kutilmoqda')
             ->assertSee('2 ta baholanmagan yuklama')
             ->assertSee('1 ta baholanmagan yuklama')
+            ->assertSee('data-target="#pending-submissions-'.$pendingCriterion->getKey().'"', false)
+            ->assertSee('2 ta baholanmagan')
+            ->assertSee(route('upload.details', $receivedPendingDatum))
+            ->assertSee(route('upload.details', $checkingPendingDatum))
+            ->assertSee(route('upload.details', $manualPendingDatum))
             ->assertSee('Qaytarilgan kriteriya')
             ->assertSee('Qaytarilgan')
             ->assertSee('Ikkinchi bo‘lim')
@@ -745,7 +751,12 @@ class RatingPageTest extends TestCase
             ->assertOk()
             ->assertDownload('Qaytarilgan ilmiy maqola.pdf');
 
-        $this->actingAs($viewer)->get(route('upload.details', $pendingDatum))->assertForbidden();
+        $this->actingAs($viewer)
+            ->get(route('upload.details', $pendingDatum))
+            ->assertOk()
+            ->assertSee('Yopiq tekshiruv resursi')
+            ->assertDontSee('Resursni baholash')
+            ->assertDontSee(route('upload.file.download', $pendingDatum));
         $this->actingAs($viewer)->get(route('upload.file.download', $pendingDatum))->assertForbidden();
         $this->actingAs($viewer)->get(route('upload.details', $oldDatum))->assertOk();
 
@@ -754,6 +765,41 @@ class RatingPageTest extends TestCase
         $this->actingAs($unknownRole)->get(route('upload.file.download', $acceptedDatum))->assertForbidden();
         $this->actingAs($unknownRole)->get(route('upload.details', $cancelledDatum))->assertForbidden();
         $this->actingAs($unknownRole)->get(route('upload.file.download', $cancelledDatum))->assertForbidden();
+        $this->actingAs($unknownRole)->get(route('upload.details', $pendingDatum))->assertForbidden();
+    }
+
+    public function test_assigned_reviewer_can_start_assessment_from_pending_rating_resource_details(): void
+    {
+        $viewer = User::factory()->create();
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create();
+        $report = $this->createReport('Faol hisobot', '1');
+        $criterion = $this->createCriterion($report, 'Baholanadigan mezon', [
+            'checking' => 'manual',
+        ]);
+        CriterionReviewerAssignment::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'hemis_id' => $reviewer->hemis_id,
+            'criterion_code' => 'test/'.$criterion->getKey(),
+        ]);
+        $datum = $this->createPendingDatum($owner, $criterion, 'received');
+
+        $this->actingAs($viewer)
+            ->get(route('upload.details', $datum))
+            ->assertOk()
+            ->assertDontSee(route('reviews.show', $datum));
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $datum))
+            ->assertOk()
+            ->assertSee('Resursni baholash')
+            ->assertSee(route('reviews.show', $datum));
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $datum))
+            ->assertOk()
+            ->assertSee('Tasdiqlash')
+            ->assertSee('Rad etish');
     }
 
     public function test_ratings_page_handles_the_absence_of_an_active_report(): void

@@ -8,6 +8,7 @@ use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\User;
 use App\Support\EducationalContentCriterionRule;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 
 class DatumPolicy
@@ -41,7 +42,7 @@ class DatumPolicy
                 || $this->isAssignedReviewer($user, $datum)
                 || $this->overrideAcceptance($user, $datum)
                 || $this->overrideCancellation($user, $datum)
-                || $this->isRatingSubmissionVisible($user, $datum));
+                || $this->isFinalizedRatingSubmissionVisible($user, $datum));
     }
 
     public function delete(User $user, Datum $datum): bool
@@ -132,10 +133,24 @@ class DatumPolicy
 
     private function isRatingSubmissionVisible(User $user, Datum $datum): bool
     {
-        return in_array($datum->status, [
+        if ($this->isFinalizedRatingSubmissionVisible($user, $datum)) {
+            return true;
+        }
+
+        return $user->can('view-ratings') && in_array($datum->status, [
+            DatumStatus::Received->value,
+            DatumStatus::Checking->value,
+        ], true) && $datum->criterion()
+            ->whereHas('report', fn (Builder $query): Builder => $query->where('status', '1'))
+            ->exists();
+    }
+
+    private function isFinalizedRatingSubmissionVisible(User $user, Datum $datum): bool
+    {
+        return $user->can('view-ratings') && in_array($datum->status, [
             DatumStatus::Accepted->value,
             DatumStatus::Cancelled->value,
-        ], true) && $user->can('view-ratings');
+        ], true);
     }
 
     private function isAssignedReviewer(User $user, Datum $datum): bool
