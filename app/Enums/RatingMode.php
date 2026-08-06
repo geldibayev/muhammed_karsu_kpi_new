@@ -4,6 +4,8 @@ namespace App\Enums;
 
 enum RatingMode: string
 {
+    case AllUsers = 'all_users';
+
     case WithDegree = 'with_degree';
     case WithoutDegree = 'without_degree';
     case Faculties = 'faculties';
@@ -33,6 +35,7 @@ enum RatingMode: string
     public function label(): string
     {
         return match ($this) {
+            self::AllUsers => 'Jami foydalanuvchilar',
             self::WithDegree => 'Ilmiy darajaga ega',
             self::WithoutDegree => 'Ilmiy darajaga ega emas',
             self::Faculties => 'Fakultetlar bo‘yicha',

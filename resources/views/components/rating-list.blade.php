@@ -16,6 +16,7 @@
 
     $results = $unitRankings ?? $users;
     $isUnitOverview = $unitRankings !== null;
+    $isAllUsersMode = $mode === RatingMode::AllUsers;
     $isFacultyMode = $mode === RatingMode::Faculties;
     $isDepartmentMode = $mode === RatingMode::Departments;
     $selectedFaculty = $faculties->firstWhere('id', (int) ($filters['faculty'] ?? 0));
@@ -26,6 +27,7 @@
         ARRAY_FILTER_USE_BOTH,
     );
     $title = match (true) {
+        $isAllUsersMode => 'Jami foydalanuvchilar',
         $isFacultyMode && $users !== null => data_get($selectedFaculty?->name, 'uz', 'Fakultet').' ichki reytingi',
         $isDepartmentMode && $users !== null => data_get($selectedDepartment?->name, 'uz', 'Kafedra').' ichki reytingi',
         $isFacultyMode => 'Fakultetlar reytingi',
@@ -48,7 +50,8 @@
                         <h1 class="h5 font-weight-bold mb-1">{{ $title }}</h1>
                         <p class="small text-muted mb-0">
                             @if($report)
-                                {{ data_get($report->name, 'uz', 'Faol hisobot') }} bo‘yicha jami ballar
+                                {{ data_get($report->name, 'uz', 'Faol hisobot') }} bo‘yicha
+                                {{ $isAllUsersMode ? 'resurs yuklash holati' : 'jami ballar' }}
                             @else
                                 Faol hisobot topilmadi
                             @endif
@@ -71,6 +74,7 @@
             <div class="card-header p-0 border-bottom-0">
                 <ul class="nav nav-tabs flex-column flex-md-row" role="tablist">
                     @foreach([
+                        [RatingMode::AllUsers, 'fas fa-user-friends', 'Jami foydalanuvchilar'],
                         [RatingMode::WithDegree, 'fas fa-user-graduate', 'Ilmiy darajaga ega'],
                         [RatingMode::WithoutDegree, 'fas fa-users', 'Ilmiy darajaga ega emas'],
                         [RatingMode::Faculties, 'fas fa-university', 'Fakultet bo‘yicha'],
@@ -102,7 +106,7 @@
                 <form method="GET" action="{{ route($filterRoute) }}">
                     <input type="hidden" name="mode" value="{{ $mode->value }}">
                     <div class="row">
-                        <div class="col-lg-4 col-md-6 mb-3 mb-lg-0">
+                        <div class="{{ $isAllUsersMode ? 'col-lg-3' : 'col-lg-4' }} col-md-6 mb-3 mb-lg-0">
                             <label class="small font-weight-bold" for="rating-search">
                                 {{ $isUnitOverview
                                     ? ($isFacultyMode ? 'Fakultetni izlash' : 'Kafedrani izlash')
@@ -132,7 +136,7 @@
                             </select>
                         </div>
                         @if(!$isFacultyMode || !empty($filters['faculty']))
-                            <div class="col-lg-3 col-md-6 mb-3 mb-lg-0">
+                            <div class="{{ $isAllUsersMode ? 'col-lg-2' : 'col-lg-3' }} col-md-6 mb-3 mb-lg-0">
                                 <label class="small font-weight-bold" for="rating-department">Kafedra</label>
                                 <select id="rating-department" name="department" class="form-control">
                                     <option value="">Barcha kafedralar</option>
@@ -142,6 +146,20 @@
                                             {{ data_get($department->name, 'uz', 'Nomsiz kafedra') }}
                                         </option>
                                     @endforeach
+                                </select>
+                            </div>
+                        @endif
+                        @if($isAllUsersMode)
+                            <div class="col-lg-2 col-md-6 mb-3 mb-lg-0">
+                                <label class="small font-weight-bold" for="rating-resource-status">Holati</label>
+                                <select id="rating-resource-status" name="resource_status" class="form-control">
+                                    <option value="">Barchasi</option>
+                                    <option value="uploaded" @selected(($filters['resource_status'] ?? null) === 'uploaded')>
+                                        Resurs yuklagan
+                                    </option>
+                                    <option value="not_uploaded" @selected(($filters['resource_status'] ?? null) === 'not_uploaded')>
+                                        Resurs yuklamagan
+                                    </option>
                                 </select>
                             </div>
                         @endif
@@ -224,12 +242,17 @@
                         <table class="table table-hover small mb-0">
                             <thead>
                             <tr>
-                                <th class="text-center">O‘rin</th>
+                                <th class="text-center">{{ $isAllUsersMode ? 'T/r' : 'O‘rin' }}</th>
                                 <th>Foydalanuvchi</th>
                                 <th>Fakultet</th>
                                 <th>Kafedra</th>
                                 <th>Reytingdagi lavozimi</th>
-                                <th class="text-center">Jami ball</th>
+                                @if($isAllUsersMode)
+                                    <th class="text-center">Holati</th>
+                                    <th class="text-center">Yuklagan resurslari</th>
+                                @else
+                                    <th class="text-center">Jami ball</th>
+                                @endif
                                 @if($showActions)<th class="text-center">Amal</th>@endif
                             </tr>
                             </thead>
@@ -273,11 +296,23 @@
                                             : '—' }}
                                     </td>
                                     <td class="align-middle">{{ $workplace?->position?->name ?? '—' }}</td>
-                                    <td class="text-center align-middle">
-                                        <span class="badge badge-success px-3 py-2">
-                                            {{ number_format((float) ($user->total_points ?? 0), 2) }}
-                                        </span>
-                                    </td>
+                                    @if($isAllUsersMode)
+                                        @php($resourceCount = (int) ($user->uploaded_resources_count ?? 0))
+                                        <td class="text-center align-middle">
+                                            <span class="badge {{ $resourceCount > 0 ? 'badge-success' : 'badge-secondary' }} px-3 py-2">
+                                                {{ $resourceCount > 0 ? 'Resurs yuklagan' : 'Resurs yuklamagan' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center align-middle font-weight-bold">
+                                            {{ $resourceCount }}
+                                        </td>
+                                    @else
+                                        <td class="text-center align-middle">
+                                            <span class="badge badge-success px-3 py-2">
+                                                {{ number_format((float) ($user->total_points ?? 0), 2) }}
+                                            </span>
+                                        </td>
+                                    @endif
                                     @if($showActions)
                                         <td class="text-center align-middle">
                                             <a href="{{ route('ratings.show', array_merge(['user' => $user], $exportFilters)) }}"
@@ -289,7 +324,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ $showActions ? 7 : 6 }}" class="text-center text-muted py-5">
+                                    <td colspan="{{ ($isAllUsersMode ? 7 : 6) + ($showActions ? 1 : 0) }}" class="text-center text-muted py-5">
                                         <i class="fas fa-users fa-2x d-block mb-2"></i>
                                         Tanlangan shartlar bo‘yicha foydalanuvchilar topilmadi.
                                     </td>

@@ -23,6 +23,7 @@ class RatingFilterRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:100'],
             'mode' => ['nullable', Rule::enum(RatingMode::class)],
             'degree_group' => ['nullable', 'string', Rule::in(['with_degree', 'without_degree'])],
+            'resource_status' => ['nullable', 'string', Rule::in(['uploaded', 'not_uploaded'])],
             'faculty' => [
                 'nullable',
                 'integer',

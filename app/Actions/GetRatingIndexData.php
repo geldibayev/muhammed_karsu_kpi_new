@@ -17,7 +17,7 @@ class GetRatingIndexData
     ) {}
 
     /**
-     * @param  array{search?: string|null, mode?: string, degree_group?: string, faculty?: int|null, department?: int|null}  $filters
+     * @param  array{search?: string|null, mode?: string, degree_group?: string, resource_status?: string|null, faculty?: int|null, department?: int|null}  $filters
      * @return array{departments: Collection<int, Department>, faculties: Collection<int, Department>, filters: array<string, mixed>, mode: RatingMode, report: Report|null, unitRankings: LengthAwarePaginator|null, users: LengthAwarePaginator|null}
      */
     public function handle(array $filters): array

@@ -29,9 +29,13 @@ class ExportRatingsToXlsx
         $unitOverview = ($mode === RatingMode::Faculties && empty($filters['faculty']))
             || ($mode === RatingMode::Departments && empty($filters['department']));
 
-        [$headings, $rows] = $unitOverview
-            ? $this->unitRows($mode, $this->getRatingUnitRankings->all($report, $filters))
-            : $this->userRows($this->paginateRatingUsers->all($report, $filters));
+        [$headings, $rows] = match (true) {
+            $unitOverview => $this->unitRows($mode, $this->getRatingUnitRankings->all($report, $filters)),
+            $mode === RatingMode::AllUsers => $this->allUserRows(
+                $this->paginateRatingUsers->all($report, $filters),
+            ),
+            default => $this->userRows($this->paginateRatingUsers->all($report, $filters)),
+        };
 
         $path = $this->xlsxWriter->write($mode->label(), $headings, $rows);
         $filename = 'karsu-reyting-'.$mode->value.'-'.now()->format('Y-m-d-His').'.xlsx';
@@ -110,6 +114,45 @@ class ExportRatingsToXlsx
                 $workplace?->position?->name ?? '—',
                 $user->degree === 'hold_degrees' ? 'Ilmiy darajaga ega' : 'Ilmiy darajaga ega emas',
                 (float) ($user->total_points ?? 0),
+            ];
+        })->all();
+
+        return [$headings, $rows];
+    }
+
+    /**
+     * @param  Collection<int, User>  $users
+     * @return array{0: array<int, string>, 1: array<int, array<int, int|string>>}
+     */
+    private function allUserRows(Collection $users): array
+    {
+        $headings = [
+            'T/r',
+            'HEMIS ID',
+            'F.I.Sh.',
+            'Fakultet',
+            'Kafedra',
+            'Reytingdagi lavozimi',
+            'Holati',
+            'Yuklagan resurslari soni',
+        ];
+        $rows = $users->values()->map(function (User $user, int $index): array {
+            $workplace = $user->ratingWorkplace;
+            $department = $workplace?->department;
+            $faculty = $department?->parent ?? ($department?->parent_id === null ? $department : null);
+            $resourceCount = (int) ($user->uploaded_resources_count ?? 0);
+
+            return [
+                $index + 1,
+                (string) $user->hemis_id,
+                $user->full ?: ($user->short ?: 'Noma’lum foydalanuvchi'),
+                (string) data_get($faculty?->name, 'uz', '—'),
+                $department?->parent_id !== null
+                    ? (string) data_get($department->name, 'uz', '—')
+                    : '—',
+                $workplace?->position?->name ?? '—',
+                $resourceCount > 0 ? 'Resurs yuklagan' : 'Resurs yuklamagan',
+                $resourceCount,
             ];
         })->all();
 

@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 class PaginateRatingUsers
 {
     /**
-     * @param  array{search?: string|null, degree_group?: string, faculty?: int|null, department?: int|null}  $filters
+     * @param  array{search?: string|null, degree_group?: string, resource_status?: string|null, faculty?: int|null, department?: int|null}  $filters
      * @return LengthAwarePaginator<int, User>
      */
     public function handle(?Report $report, array $filters): LengthAwarePaginator
@@ -31,7 +31,7 @@ class PaginateRatingUsers
     }
 
     /**
-     * @param  array{search?: string|null, mode?: string, degree_group?: string, faculty?: int|null, department?: int|null}  $filters
+     * @param  array{search?: string|null, mode?: string, degree_group?: string, resource_status?: string|null, faculty?: int|null, department?: int|null}  $filters
      * @return Builder<User>
      */
     private function query(?Report $report, array $filters): Builder
@@ -52,6 +52,10 @@ class PaginateRatingUsers
                 'ratingWorkplace.position:id,name',
                 'ratingWorkplace.department:id,name,parent_id',
                 'ratingWorkplace.department.parent:id,name',
+            ])
+            ->withCount([
+                'submissions as uploaded_resources_count' => fn (Builder $query): Builder => $this
+                    ->applySubmissionReportScope($query, $report),
             ])
             ->withSum([
                 'points as total_points' => function (Builder $query) use ($report): void {
@@ -89,8 +93,44 @@ class PaginateRatingUsers
                     ->whereHas('ratingWorkplace', fn (Builder $workplaceQuery): Builder => $workplaceQuery
                         ->where('department_id', $departmentId)),
             )
-            ->orderByDesc('total_points')
-            ->orderBy('id');
+            ->when(
+                $mode === RatingMode::AllUsers && ($filters['resource_status'] ?? null) === 'uploaded',
+                fn (Builder $query): Builder => $query->whereHas(
+                    'submissions',
+                    fn (Builder $query): Builder => $this->applySubmissionReportScope($query, $report),
+                ),
+            )
+            ->when(
+                $mode === RatingMode::AllUsers && ($filters['resource_status'] ?? null) === 'not_uploaded',
+                fn (Builder $query): Builder => $query->whereDoesntHave(
+                    'submissions',
+                    fn (Builder $query): Builder => $this->applySubmissionReportScope($query, $report),
+                ),
+            )
+            ->when(
+                $mode === RatingMode::AllUsers,
+                fn (Builder $query): Builder => $query
+                    ->orderByDesc('uploaded_resources_count')
+                    ->orderBy('name->full')
+                    ->orderBy('id'),
+                fn (Builder $query): Builder => $query
+                    ->orderByDesc('total_points')
+                    ->orderBy('id'),
+            );
+    }
+
+    private function applySubmissionReportScope(Builder $query, ?Report $report): Builder
+    {
+        return $query
+            ->where('status', '!=', 'deleted')
+            ->when(
+                $report !== null,
+                fn (Builder $query): Builder => $query->whereHas(
+                    'criterion',
+                    fn (Builder $query): Builder => $query->whereBelongsTo($report),
+                ),
+                fn (Builder $query): Builder => $query->whereRaw('1 = 0'),
+            );
     }
 
     private function applyNameSearch(Builder $query, string $search): Builder

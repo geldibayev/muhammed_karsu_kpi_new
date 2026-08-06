@@ -239,6 +239,110 @@ class RatingPageTest extends TestCase
         $this->actingAs($viewer)
             ->get(route('ratings.index', ['degree_group' => 'invalid']))
             ->assertSessionHasErrors('degree_group');
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'all_users',
+                'resource_status' => 'invalid',
+            ]))
+            ->assertSessionHasErrors('resource_status');
+    }
+
+    public function test_all_users_tab_lists_and_filters_users_by_current_report_resource_status(): void
+    {
+        $viewer = User::factory()->create();
+        $faculty = $this->createDepartment('Jami foydalanuvchilar fakulteti');
+        $department = $this->createDepartment('Jami foydalanuvchilar kafedrasi', $faculty);
+        $uploadedUser = User::factory()->create([
+            'name' => $this->userName('Resurs Yuklagan Ustoz'),
+            'degree' => 'hold_degrees',
+        ]);
+        $notUploadedUser = User::factory()->create([
+            'name' => $this->userName('Resurs Yuklamagan Ustoz'),
+            'degree' => 'no_degrees',
+        ]);
+        $this->createWorkplace($uploadedUser, $department, 'Professor');
+        $this->createWorkplace($notUploadedUser, $department, 'Assistent');
+        $activeReport = $this->createReport('Joriy jami foydalanuvchilar hisoboti', '1');
+        $oldReport = $this->createReport('Eski jami foydalanuvchilar hisoboti', '0');
+        $criterion = $this->createCriterion($activeReport, 'Joriy resurs mezoni');
+        $oldCriterion = $this->createCriterion($oldReport, 'Eski resurs mezoni');
+        $this->createAcceptedDatum($uploadedUser, $criterion, 1, 'Birinchi joriy resurs');
+        $this->createPendingDatum($uploadedUser, $criterion, 'checking');
+        $this->createAcceptedDatum($notUploadedUser, $oldCriterion, 1, 'Faqat eski resurs');
+
+        $response = $this->actingAs($viewer)->get(route('ratings.index', [
+            'mode' => 'all_users',
+            'faculty' => $faculty->id,
+            'department' => $department->id,
+        ]));
+
+        $response
+            ->assertOk()
+            ->assertSee('Jami foydalanuvchilar')
+            ->assertSee('Resurs Yuklagan Ustoz')
+            ->assertSee('Resurs Yuklamagan Ustoz')
+            ->assertSee('Resurs yuklagan')
+            ->assertSee('Resurs yuklamagan')
+            ->assertSee('Yuklagan resurslari')
+            ->assertSee('name="resource_status"', false)
+            ->assertViewHas('users', function (LengthAwarePaginator $users) use ($uploadedUser, $notUploadedUser): bool {
+                $usersById = $users->getCollection()->keyBy('id');
+
+                return $users->total() === 2
+                    && (int) $usersById->get($uploadedUser->id)?->uploaded_resources_count === 2
+                    && (int) $usersById->get($notUploadedUser->id)?->uploaded_resources_count === 0;
+            });
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'all_users',
+                'resource_status' => 'not_uploaded',
+                'faculty' => $faculty->id,
+            ]))
+            ->assertOk()
+            ->assertSee('Resurs Yuklamagan Ustoz')
+            ->assertDontSee('Resurs Yuklagan Ustoz')
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 1);
+    }
+
+    public function test_all_users_excel_contains_resource_status_and_autofilter(): void
+    {
+        $viewer = User::factory()->create();
+        $faculty = $this->createDepartment('Excel jami fakulteti');
+        $department = $this->createDepartment('Excel jami kafedrasi', $faculty);
+        $uploadedUser = User::factory()->create(['name' => $this->userName('Excel Yuklagan')]);
+        $notUploadedUser = User::factory()->create(['name' => $this->userName('Excel Yuklamagan')]);
+        $this->createWorkplace($uploadedUser, $department, 'Professor');
+        $this->createWorkplace($notUploadedUser, $department, 'Assistent');
+        $report = $this->createReport('Excel faol hisoboti', '1');
+        $criterion = $this->createCriterion($report, 'Excel resurs mezoni');
+        $this->createAcceptedDatum($uploadedUser, $criterion, 1);
+
+        $response = $this->actingAs($viewer)->get(route('ratings.export', [
+            'mode' => 'all_users',
+            'faculty' => $faculty->id,
+            'department' => $department->id,
+        ]));
+
+        $response->assertOk()->assertDownload();
+        $path = $response->baseResponse->getFile()->getPathname();
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open($path) === true);
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        @unlink($path);
+
+        $this->assertIsString($sheet);
+        $this->assertStringContainsString('F.I.Sh.', $sheet);
+        $this->assertStringContainsString('Fakultet', $sheet);
+        $this->assertStringContainsString('Kafedra', $sheet);
+        $this->assertStringContainsString('Yuklagan resurslari soni', $sheet);
+        $this->assertStringContainsString('Resurs yuklagan', $sheet);
+        $this->assertStringContainsString('Resurs yuklamagan', $sheet);
+        $this->assertStringContainsString('Excel Yuklagan', $sheet);
+        $this->assertStringContainsString('Excel Yuklamagan', $sheet);
+        $this->assertStringContainsString('<autoFilter ref="A1:H3"/>', $sheet);
     }
 
     public function test_faculty_rankings_and_filters_exclude_non_faculty_root_units(): void
