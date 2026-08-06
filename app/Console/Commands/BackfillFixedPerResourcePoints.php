@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 class BackfillFixedPerResourcePoints extends Command
 {
     protected $signature = 'kpi:criteria:backfill-fixed-resource-points
+                            {--criterion= : Faqat ko\'rsatilgan kriteriya kodini qayta hisoblash}
                             {--dry-run : Bazaga yozmasdan tuzatiladigan resurslar sonini ko‘rsatish}';
 
     protected $description = 'Qat’iy resurs balli mezonlaridagi accepted resurslarni kategoriya bo‘yicha qayta hisoblaydi';
@@ -20,10 +21,18 @@ class BackfillFixedPerResourcePoints extends Command
     public function handle(RecalculateReportPoints $recalculateReportPoints): int
     {
         $dryRun = (bool) $this->option('dry-run');
+        $criterionCode = trim((string) $this->option('criterion'));
+
+        if ($criterionCode !== '' && ! FixedPerResourceHumanReviewCriterionRule::supports($criterionCode)) {
+            $this->error("Qat'iy resurs balli qoidasi topilmadi: {$criterionCode}.");
+
+            return self::FAILURE;
+        }
+
         $changedCount = 0;
         $reportIds = collect();
 
-        $this->acceptedDataQuery()
+        $this->acceptedDataQuery($criterionCode !== '' ? $criterionCode : null)
             ->lazyById(200)
             ->each(function (Datum $datum) use (&$changedCount, $dryRun, $reportIds): void {
                 $targetPoint = FixedPerResourceHumanReviewCriterionRule::pointFor(
@@ -62,14 +71,16 @@ class BackfillFixedPerResourcePoints extends Command
         return self::SUCCESS;
     }
 
-    private function acceptedDataQuery(): Builder
+    private function acceptedDataQuery(?string $criterionCode): Builder
     {
         return Datum::query()
             ->where('status', 'accepted')
             ->whereHas(
                 'criterion',
                 fn (Builder $query): Builder => $query
-                    ->whereIn('code', FixedPerResourceHumanReviewCriterionRule::criterionCodes()),
+                    ->whereIn('code', $criterionCode === null
+                        ? FixedPerResourceHumanReviewCriterionRule::criterionCodes()
+                        : [$criterionCode]),
             )
             ->with(['criterion:id,code,report_id', 'user:id,degree'])
             ->orderBy('id');

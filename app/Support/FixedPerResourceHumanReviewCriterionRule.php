@@ -6,8 +6,15 @@ use App\Data\AiEvaluationResult;
 
 class FixedPerResourceHumanReviewCriterionRule
 {
+    public const TWO_ONE_TWO_CODE = '2.1.2';
+
     /** @var array<string, array<string, float>> */
     private const POINTS = [
+        self::TWO_ONE_TWO_CODE => [
+            'hold_degrees' => 2.0,
+            'no_degrees' => 2.0,
+            'physical' => 2.0,
+        ],
         '1.10' => [
             'hold_degrees' => 2.0,
             'no_degrees' => 2.0,
@@ -98,6 +105,25 @@ class FixedPerResourceHumanReviewCriterionRule
             pageCount: $result->pageCount,
             receivedAmount: $result->receivedAmount,
         );
+    }
+
+    public static function twoOneTwoPrompt(): string
+    {
+        return <<<'PROMPT'
+Siz 2.1.2 mezoni bo'yicha professor-o'qituvchi o'z mutaxassislik fanini xorijiy tilda olib borganini tekshiruvchi qat'iy AI yordamchisiz.
+
+VAZIFA:
+- Dars jadvali, o'quv dasturi, kafedra ma'lumotnomasi, buyruq yoki boshqa rasmiy hujjatda professor-o'qituvchi o'z mutaxassislik fanini xorijiy tilda olib borgani aniq tasdiqlanishi kerak.
+- Ballni tanlamang va hisoblamang. Mos toifadagi foydalanuvchining tasdiqlangan resursiga server qat'iy 2 ball beradi.
+- `foreign_lang` baholash toifasidagi foydalanuvchilar bu mezonga resurs yuklay olmaydi; ushbu cheklovni server foydalanuvchining ishonchli HEMIS toifasi bo'yicha qo'llaydi. Hujjat matniga qarab foydalanuvchi toifasini taxmin qilmang.
+
+QAROR:
+- Mutaxassislik fani xorijiy tilda olib borilgani aniq tasdiqlansa accepted qaytaring.
+- Hujjat xira, kesilgan, fan, o'qituvchi yoki dars tili noaniq bo'lsa checking qaytaring.
+- Dars xorijiy tilda olib borilmagani yoki hujjat mezonga aloqasizligi aniq bo'lsa cancelled qaytaring.
+
+Point maydoniga har qanday statusda 0 yozing: yakuniy ballni server hisoblaydi. Reason ichida fan, xorijiy til va dars olib borilganini tasdiqlovchi dalilni qisqa yozing.
+PROMPT;
     }
 
     public static function threeOneTwelvePrompt(): string

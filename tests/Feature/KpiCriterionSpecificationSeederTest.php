@@ -174,6 +174,18 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             $criterionTwoOneFive->ai_prompt,
         );
 
+        $criterionTwoOneTwo = Criterion::query()
+            ->with('criterionEvaluations')
+            ->where('code', FixedPerResourceHumanReviewCriterionRule::TWO_ONE_TWO_CODE)
+            ->firstOrFail();
+        $this->assertSame(
+            FixedPerResourceHumanReviewCriterionRule::twoOneTwoPrompt(),
+            $criterionTwoOneTwo->ai_prompt,
+        );
+        $this->assertSame(2.0, $criterionTwoOneTwo->ai_submission_max_point);
+        $this->assertSame('0', $criterionTwoOneTwo->criterionEvaluations
+            ->firstWhere('evaluation', 'foreign_lang')?->has);
+
         $criterionThreeOneSeven = Criterion::query()->where('code', '3.1.7')->firstOrFail();
         $this->assertSame(
             FixedPerResourceHumanReviewCriterionRule::threeOneSevenPrompt(),

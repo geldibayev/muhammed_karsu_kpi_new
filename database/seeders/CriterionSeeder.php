@@ -455,20 +455,11 @@ class CriterionSeeder extends Seeder
                             'physical' => 2,
                         ],
                         'year' => 2025,
-                        'formula_id' => 1,
+                        'formula_id' => 2,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (dars jadvali, o'quv dasturi, kafedra ma'lumotnomasi yoki buyruqlar) tahlil qilib, professor-o'qituvchi o'z mutaxassislik darslarini xorijiy tilda olib borishini tekshiring.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Hujjatda dars mashg'ulotlari xorijiy tilda (masalan, ingliz, rus, nemis va h.k.) o'tilishi aniq ko'rsatilgan bo'lishi shart.
-                        2. ISTISNO: Ushbu o'qituvchi \"Chet tillari\" fakulteti yoki bevosita chet tillarini o'qitishga ixtisoslashgan kafedra (masalan, Ingliz tili, Nemis tili, Roman-german filologiyasi) o'qituvchisi BO'LMASLIGI shart. Agar o'qituvchi shunday kafedrada ishlasa, ushbu mezon unga qo'llanilmaydi.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar o'qituvchi nofilologik (chet tili bo'lmagan) kafedrada ishlasa va o'z darslarini xorijiy tilda olib borishi hujjatlarda aniq tasdiqlansa: \"accepted\" statusini bering va \"point\" qismiga 1 yozing.
-                        - Agar hujjatlar xira bo'lsa, o'qituvchining qaysi kafedrada ishlashi noaniq bo'lsa, yoki dars xorijiy tilda o'tilishiga shubha tug'ilib, administrator tekshiruvi zarur bo'lsa: \"checking\" statusini bering (\"point\" ga 0 yozing).
-                        - Agar o'qituvchi Chet tillari fakulteti/kafedrasida ishlasa, yoki darslari xorijiy tilda o'tilishi umuman tasdiqlanmasa: \"cancelled\" statusini bering (\"point\" ga 0 yozing).
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <faqat raqam, masalan 1 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, istisno holatiga tushgan-tushmaganligi yoki nima sababdan rad/tekshiruvga yuborilganligi>\"}",
+                        'ai_submission_max_point' => 2,
+                        'divide_ai_point_by_authors' => false,
+                        'ai_prompt' => FixedPerResourceHumanReviewCriterionRule::twoOneTwoPrompt(),
                     ],
                     [
                         'name' => [
@@ -1475,6 +1466,16 @@ class CriterionSeeder extends Seeder
                     ], [
                         'has' => '1',
                         'score' => $eva,
+                    ]);
+                }
+
+                if ($childCode === FixedPerResourceHumanReviewCriterionRule::TWO_ONE_TWO_CODE) {
+                    CriterionEvaluation::query()->updateOrCreate([
+                        'criterion_id' => $ch->id,
+                        'evaluation' => 'foreign_lang',
+                    ], [
+                        'has' => '0',
+                        'score' => 0,
                     ]);
                 }
             }
