@@ -89,6 +89,48 @@ class HomeCriteriaVisibilityTest extends TestCase
         $this->assertFalse((new Criterion(['code' => '2.1.1']))->isPrimaryIndicator());
     }
 
+    public function test_home_displays_four_criterion_sections_as_tabs(): void
+    {
+        $user = User::factory()->withRole('user')->create(['degree' => 'hold_degrees']);
+        Evaluation::query()->create([
+            'code' => 'hold_degrees',
+            'name' => ['uz' => 'Ilmiy darajali'],
+        ]);
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Faol hisobot'],
+            'status' => '1',
+        ]);
+
+        for ($sectionNumber = 1; $sectionNumber <= 4; $sectionNumber++) {
+            $parent = $this->createCriterion($report, [
+                'name' => ['uz' => $sectionNumber.'-bo‘lim'],
+                'sort_order' => $sectionNumber,
+            ]);
+            $criterion = $this->createCriterion($report, [
+                'code' => $sectionNumber.'.1',
+                'name' => ['uz' => $sectionNumber.'-bo‘lim mezoni'],
+                'parent_id' => $parent->getKey(),
+            ]);
+            CriterionEvaluation::query()->create([
+                'criterion_id' => $criterion->getKey(),
+                'evaluation' => 'hold_degrees',
+                'has' => '1',
+                'score' => 5,
+            ]);
+        }
+
+        $response = $this->actingAs($user)
+            ->get(route('home'))
+            ->assertOk();
+
+        $this->assertSame(4, substr_count($response->getContent(), 'data-testid="criterion-section-tab"'));
+        $this->assertSame(4, substr_count($response->getContent(), 'data-testid="criterion-section-pane"'));
+        $this->assertSame(4, substr_count($response->getContent(), 'data-toggle="tab"'));
+        $this->assertSame(1, substr_count($response->getContent(), 'aria-selected="true"'));
+        $this->assertSame(3, substr_count($response->getContent(), 'aria-selected="false"'));
+        $this->assertSame(1, substr_count($response->getContent(), 'tab-pane fade show active'));
+    }
+
     public function test_international_project_criterion_is_uploadable_for_every_category(): void
     {
         Storage::fake('local');
