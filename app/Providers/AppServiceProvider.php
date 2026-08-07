@@ -10,6 +10,7 @@ use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\User;
 use App\View\Composers\AiStatusMenuComposer;
+use App\View\Composers\AuthenticatedUserSummaryComposer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Queue\Events\JobExceptionOccurred;
@@ -178,6 +179,7 @@ class AppServiceProvider extends ServiceProvider
                     )
                     ->exists(),
         );
+        View::composer('layouts.app', AuthenticatedUserSummaryComposer::class);
         View::composer('layouts.app', AiStatusMenuComposer::class);
     }
 }

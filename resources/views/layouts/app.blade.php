@@ -21,23 +21,33 @@
         </ul>
         <ul class="navbar-nav ml-auto">
             @php
-                $user = auth()->user();
-                $workplace = $user->ratingWorkplace()
-                    ->with(['academic_degree', 'academic_rank'])
-                    ->first();
-                $degreeName = optional(optional($workplace)->academic_degree)->name;
-                $rankName = optional(optional($workplace)->academic_rank)->name;
+                $user = $layoutUser;
+                $degreeName = $layoutWorkplace?->academic_degree?->name;
+                $avatarUrl = $user->image_url;
             @endphp
             <li class="nav-item dropdown">
                 <a class="nav-link d-flex align-items-center text-right py-1" data-toggle="dropdown" href="#"
                    role="button" aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-user-circle fa-2x text-secondary mr-2" aria-hidden="true"></i>
+                    @if($avatarUrl)
+                        <img src="{{ $avatarUrl }}"
+                             alt="{{ $user->full ?: ($user->short ?: 'Foydalanuvchi') }}"
+                             class="img-circle elevation-1 img-size-32 mr-2 flex-shrink-0"
+                             style="object-fit: cover"
+                             data-rating-avatar-image>
+                    @endif
+                    <span data-rating-avatar-fallback
+                          role="img"
+                          aria-label="{{ $user->full ?: ($user->short ?: 'Foydalanuvchi') }}"
+                          class="{{ $avatarUrl ? 'd-none' : 'd-inline-flex' }} img-size-32 img-circle bg-light border text-secondary
+                              align-items-center justify-content-center flex-shrink-0 mr-2">
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                    </span>
                     <span class="d-flex flex-column align-items-end lh-sm">
                         <span class="font-weight-bold">
                             {{ trim(($degreeName ?? '') . '., ' . $user->short) ?: 'Foydalanuvchi' }}
                         </span>
-                        <span class="small text-muted">
-                            {{ $rankName ?? 'Ilmiy unvon kiritilmagan' }}
+                        <span class="small text-muted font-weight-bold">
+                            {{ number_format((float) $layoutTotalPoints, 2) }} / 100 ball
                         </span>
                     </span>
                 </a>
