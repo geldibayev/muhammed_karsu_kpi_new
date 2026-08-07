@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Actions\DescribeAiFailure;
+use App\Actions\FindOlderQueuedAiDatum;
 use App\Actions\RecalculateReportPoints;
 use App\Models\AiHumanReviewAssignment;
 use App\Models\Datum;
@@ -44,6 +45,7 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
     public function handle(
         AiSubmissionEvaluator $evaluator,
         RecalculateReportPoints $recalculateReportPoints,
+        ?FindOlderQueuedAiDatum $findOlderQueuedAiDatum = null,
     ): void {
         $datum = Datum::query()
             ->with([
@@ -65,6 +67,16 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 && $datum->histories()->where('message_type', 'ai_evaluation')->exists()) {
                 $recalculateReportPoints->handle($datum->criterion->report);
             }
+
+            return;
+        }
+
+        $findOlderQueuedAiDatum ??= new FindOlderQueuedAiDatum;
+        $olderDatum = $findOlderQueuedAiDatum->handle($datum);
+
+        if ($olderDatum !== null) {
+            self::dispatch($olderDatum->getKey(), $olderDatum->criterion_id);
+            $this->release(1);
 
             return;
         }

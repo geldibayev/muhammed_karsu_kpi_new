@@ -416,10 +416,11 @@ class ProcessAiDatumEvaluationTest extends TestCase
         ]);
     }
 
-    public function test_job_processes_its_own_eligible_resource_without_dispatching_another_job(): void
+    public function test_newer_job_waits_until_the_oldest_queued_resource_is_processed(): void
     {
         $oldestDatum = $this->createDatum();
         $newerDatum = $this->createDatum();
+        $oldestDatum->update(['created_at' => now()->subMinute()]);
         $this->markAsSubmitted($oldestDatum);
         $this->markAsSubmitted($newerDatum);
         Queue::fake();
@@ -427,9 +428,9 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $evaluator->shouldReceive('evaluate')
             ->once()
             ->with(Mockery::on(
-                fn (Datum $datum): bool => $datum->is($newerDatum),
+                fn (Datum $datum): bool => $datum->is($oldestDatum),
             ))
-            ->andReturn(new AiEvaluationResult('accepted', 5, 'Jobga tegishli resurs tekshirildi.'));
+            ->andReturn(new AiEvaluationResult('accepted', 5, 'Eng eski resurs tekshirildi.'));
         $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
         $recalculateReportPoints->shouldReceive('handle')
             ->once()
@@ -439,9 +440,85 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->withFakeQueueInteractions();
         $newerJob->handle($evaluator, $recalculateReportPoints);
 
+        $newerJob->assertReleased(1);
+        Queue::assertPushed(
+            ProcessAiDatumEvaluation::class,
+            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $oldestDatum->getKey(),
+        );
+        $this->assertSame('checking', $newerDatum->fresh()->status);
+
+        (new ProcessAiDatumEvaluation($oldestDatum->id, $oldestDatum->criterion_id))
+            ->handle($evaluator, $recalculateReportPoints);
+
+        $this->assertSame('accepted', $oldestDatum->fresh()->status);
+        $this->assertSame('checking', $newerDatum->fresh()->status);
+    }
+
+    public function test_queue_order_uses_id_when_resources_have_the_same_created_at(): void
+    {
+        $createdAt = now()->subMinute();
+        $oldestDatum = $this->createDatum();
+        $newerDatum = $this->createDatum();
+        $oldestDatum->update(['created_at' => $createdAt]);
+        $newerDatum->update(['created_at' => $createdAt]);
+        $this->markAsSubmitted($oldestDatum);
+        $this->markAsSubmitted($newerDatum);
+        Queue::fake();
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldNotReceive('evaluate');
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+        $newerJob = (new ProcessAiDatumEvaluation($newerDatum->id, $newerDatum->criterion_id))
+            ->withFakeQueueInteractions();
+
+        $newerJob->handle($evaluator, $recalculateReportPoints);
+
+        $newerJob->assertReleased(1);
+        Queue::assertPushed(
+            ProcessAiDatumEvaluation::class,
+            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $oldestDatum->getKey(),
+        );
+    }
+
+    public function test_completed_older_ai_attempt_does_not_block_the_next_resource(): void
+    {
+        $failedDatum = $this->createDatum();
+        $olderDatum = $this->createDatum();
+        $newerDatum = $this->createDatum();
+        $failedDatum->update(['created_at' => now()->subMinutes(2)]);
+        $olderDatum->update(['created_at' => now()->subMinute()]);
+        $this->markAsSubmitted($failedDatum);
+        $this->markAsSubmitted($olderDatum);
+        $this->markAsSubmitted($newerDatum);
+        $failedDatum->histories()->create([
+            'user_id' => $failedDatum->user_id,
+            'type' => 'warning',
+            'message' => 'AI tekshiruvi yakuniy xatoga uchradi.',
+            'message_type' => 'ai_failed',
+        ]);
+        $olderDatum->histories()->create([
+            'user_id' => $olderDatum->user_id,
+            'type' => 'warning',
+            'message' => 'AI inson tekshiruviga qoldirdi.',
+            'message_type' => 'ai_evaluation',
+        ]);
+        Queue::fake();
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->with(Mockery::on(fn (Datum $datum): bool => $datum->is($newerDatum)))
+            ->andReturn(new AiEvaluationResult('accepted', 5, 'Keyingi resurs tekshirildi.'));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(Report::class));
+        $newerJob = (new ProcessAiDatumEvaluation($newerDatum->id, $newerDatum->criterion_id))
+            ->withFakeQueueInteractions();
+
+        $newerJob->handle($evaluator, $recalculateReportPoints);
+
         $newerJob->assertNotReleased();
         Queue::assertNothingPushed();
-        $this->assertSame('checking', $oldestDatum->fresh()->status);
         $this->assertSame('accepted', $newerDatum->fresh()->status);
     }
 
