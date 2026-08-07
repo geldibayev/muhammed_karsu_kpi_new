@@ -9,6 +9,22 @@
             </div>
         @endunless
 
+        <div class="callout callout-warning bg-light">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-star fa-2x text-warning mr-3" aria-hidden="true"></i>
+                <div>
+                    <h5 class="font-weight-bold mb-1">Asosiy indikatorlar</h5>
+                    <p class="mb-0">
+                        Mezonlarning belgilangan ballari bo‘yicha jami 100 ballgacha to‘plash mumkin.
+                        Yulduzcha bilan ajratilgan asosiy indikatorlarda ko‘rsatilgan qiymat
+                        <span class="badge badge-warning">minimal ball</span>
+                        bo‘lib, maksimal ball chegaralanmagan. Yuqori natija uchun ushbu indikatorlardan
+                        ko‘proq ball to‘plashga intiling.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <div class="card">
             <div class="card-body p-0 table-responsive">
                 <table class="table table-hover">
@@ -33,9 +49,17 @@
                         </tr>
                         @foreach($item->children as $value)
                             @php($evaluation = $value->criterionEvaluations->first())
-                            <tr class="small">
+                            @php($isPrimaryIndicator = $value->isPrimaryIndicator())
+                            <tr @class(['small', 'table-warning' => $isPrimaryIndicator])
+                                @if($isPrimaryIndicator) data-testid="primary-indicator-row" @endif>
                                 <td class="align-middle text-center">{{ $value->code ?: $main.'/'.$value->id }}</td>
                                 <td class="align-middle">
+                                    @if($isPrimaryIndicator)
+                                        <span class="badge badge-warning mb-2 px-2 py-1">
+                                            <i class="fas fa-star mr-1" aria-hidden="true"></i>
+                                            Asosiy indikator
+                                        </span>
+                                    @endif
                                     <div class="font-weight-bold" style="text-align: justify">
                                         {{ data_get($value->name, 'uz', 'Nomsiz mezon') }}
                                     </div>
@@ -65,13 +89,18 @@
                                     />
                                 </td>
                                 <td class="align-middle text-center">
-                                    <span class="font-weight-bold text-success">
-                                        {{ number_format($points->get($value->id, 0), 2) }}
-                                    </span>
-                                    /
-                                    <span class="font-weight-bold text-primary">
-                                        {{ number_format($evaluation?->score ?? 0, 2) }}
-                                    </span>
+                                    <div class="text-nowrap">
+                                        <span class="font-weight-bold text-success">
+                                            {{ number_format($points->get($value->id, 0), 2) }}
+                                        </span>
+                                        /
+                                        <span class="font-weight-bold text-primary">
+                                            {{ number_format($evaluation?->score ?? 0, 2) }}
+                                        </span>
+                                    </div>
+                                    @if($isPrimaryIndicator)
+                                        <span class="badge badge-warning mt-1">Minimal ball</span>
+                                    @endif
                                 </td>
                                 <td class="align-middle text-center">
                                     <div class="d-flex justify-content-center">

@@ -41,6 +41,7 @@ class HomeCriteriaVisibilityTest extends TestCase
         ]);
         $activeParent = $this->createCriterion($activeReport, ['name' => ['uz' => 'Faol bo‘lim']]);
         $activeCriterion = $this->createCriterion($activeReport, [
+            'code' => '1.2',
             'name' => ['uz' => 'Faol hisobot mezoni'],
             'formula_id' => $maximumFormula->getKey(),
             'parent_id' => $activeParent->getKey(),
@@ -55,10 +56,15 @@ class HomeCriteriaVisibilityTest extends TestCase
             ]);
         }
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->get(route('home'))
             ->assertOk()
             ->assertSee('Faol hisobot mezoni')
+            ->assertSee('Asosiy indikatorlar')
+            ->assertSee('Asosiy indikator')
+            ->assertSee('Minimal ball')
+            ->assertSee('maksimal ball chegaralanmagan')
+            ->assertSee('data-testid="primary-indicator-row"', false)
             ->assertSee('Baholash usuli')
             ->assertSee('Maksimal ballgacha')
             ->assertSee('data-testid="rating-method-button"', false)
@@ -67,9 +73,20 @@ class HomeCriteriaVisibilityTest extends TestCase
             ->assertSee('To‘plangan ball 4.00 va maksimal ball 2.00 bo‘lsa')
             ->assertDontSee('Eski hisobot mezoni');
 
+        $this->assertSame(1, substr_count($response->getContent(), 'data-testid="primary-indicator-row"'));
+
         $this->actingAs($user)
             ->get(route('upload.show', $inactiveCriterion))
             ->assertForbidden();
+    }
+
+    public function test_primary_indicator_codes_are_recognized_without_using_database_ids(): void
+    {
+        foreach (Criterion::PRIMARY_INDICATOR_CODES as $code) {
+            $this->assertTrue((new Criterion(['code' => $code]))->isPrimaryIndicator());
+        }
+
+        $this->assertFalse((new Criterion(['code' => '2.1.1']))->isPrimaryIndicator());
     }
 
     public function test_international_project_criterion_is_uploadable_for_every_category(): void

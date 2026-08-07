@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Criterion extends Model
 {
+    public const PRIMARY_INDICATOR_CODES = ['1.2', '1.3', '1.4', '3.1.3', '3.1.4', '3.1.8'];
+
     public const H_INDEX_CODE = '3.1.4';
 
     public const AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES = ['1.10', '2.1.1', '3.1.15'];
@@ -108,6 +110,11 @@ class Criterion extends Model
         return $this->reviewerAssignment()
             ->whereIn('criterion_code', [self::H_INDEX_CODE, '3/23'])
             ->exists();
+    }
+
+    public function isPrimaryIndicator(): bool
+    {
+        return in_array($this->code, self::PRIMARY_INDICATOR_CODES, true);
     }
 
     public function isOakArticleCriterion(): bool
