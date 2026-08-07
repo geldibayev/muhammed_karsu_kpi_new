@@ -28,6 +28,7 @@ return [
     'report_period_start' => '2025-09-01',
     'report_period_end' => '2026-08-31',
     'ai_status_viewer_hemis_id' => env('KPI_AI_STATUS_VIEWER_HEMIS_ID', '3172011004'),
+    'ai_operations_manager_hemis_id' => env('KPI_AI_OPERATIONS_MANAGER_HEMIS_ID', '3172011004'),
     'resource_statistics_viewer_hemis_ids' => $resourceStatisticsViewerHemisIds,
     'settings_manager_hemis_id' => env('KPI_SETTINGS_MANAGER_HEMIS_ID', '3172011004'),
     'accepted_ai_reviewer_hemis_id' => env('KPI_ACCEPTED_AI_REVIEWER_HEMIS_ID', '3172011004'),

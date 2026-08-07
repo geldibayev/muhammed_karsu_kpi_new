@@ -52,6 +52,13 @@
                 </div>
             @endif
 
+            @if($isAcceptedScoreCorrection ?? false)
+                <div class="alert alert-warning">
+                    Bu resurs tasdiqlangan. Kiritilgan tekshiruv ma’lumotlari asosida ball serverdagi joriy qoida
+                    bo‘yicha qayta hisoblanadi va o‘zgarish tarixga yoziladi.
+                </div>
+            @endif
+
             <div class="row">
                 <div class="col-lg-8">
                     <div class="card card-outline card-primary">
@@ -81,7 +88,7 @@
                             </dl>
                         </div>
                         <div class="card-footer d-flex flex-wrap align-items-center">
-                            <a href="{{ route($reviewIndexRoute ?? 'reviews.index') }}" class="btn btn-default btn-sm mr-2">
+                            <a href="{{ $reviewReturnUrl ?? route($reviewIndexRoute ?? 'reviews.index') }}" class="btn btn-default btn-sm mr-2">
                                 <i class="fas fa-arrow-left mr-1"></i> Ro‘yxatga qaytish
                             </a>
                             @if($isHIndexCriterion)
@@ -117,7 +124,7 @@
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="fas fa-check mr-1"></i> Tasdiqlash
+                                        <i class="fas fa-check mr-1"></i> {{ ($isAcceptedScoreCorrection ?? false) ? 'Ballni qayta hisoblash' : 'Tasdiqlash' }}
                                     </button>
                                 </form>
                             @elseif($isAiCriterion && $usesAutomaticAiHumanReviewScore)
@@ -125,7 +132,7 @@
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="fas fa-check mr-1"></i> Tasdiqlash
+                                        <i class="fas fa-check mr-1"></i> {{ ($isAcceptedScoreCorrection ?? false) ? 'Ballni qayta hisoblash' : 'Tasdiqlash' }}
                                     </button>
                                 </form>
                             @elseif($isAiCriterion)
@@ -171,9 +178,11 @@
                                     </button>
                                 </form>
                             @endif
-                            <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#reject-modal">
-                                <i class="fas fa-times mr-1"></i> Rad etish
-                            </button>
+                            @unless($isAcceptedScoreCorrection ?? false)
+                                <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#reject-modal">
+                                    <i class="fas fa-times mr-1"></i> Rad etish
+                                </button>
+                            @endunless
                         </div>
                     </div>
 
@@ -511,6 +520,7 @@
     @endif
     @endcan
 
+    @unless($isAcceptedScoreCorrection ?? false)
     <div class="modal fade" id="reject-modal" tabindex="-1" role="dialog" aria-labelledby="reject-modal-title" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <form method="POST" action="{{ route('reviews.reject', $datum) }}" class="modal-content">
@@ -533,6 +543,7 @@
             </form>
         </div>
     </div>
+    @endunless
 @endsection
 
 @section('script')

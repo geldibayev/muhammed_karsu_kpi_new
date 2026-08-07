@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Models\Datum;
 use App\Models\DatumHistory;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\Builder;
 
 class GetAiReviewerDashboard
@@ -13,6 +14,8 @@ class GetAiReviewerDashboard
      * @return array{
      *     status: array<string, mixed>,
      *     recentChecks: list<array{datum_id: int, message: string, checked_at: CarbonInterface}>,
+     *     pendingResources: Collection<int, Datum>,
+     *     acceptedResources: Collection<int, Datum>,
      *     resourceStatistics: array{
      *         total: int,
      *         evaluated: int,
@@ -88,9 +91,27 @@ class GetAiReviewerDashboard
             ])
             ->all();
 
+        $pendingResources = Datum::query()
+            ->whereIn('status', ['received', 'checking'])
+            ->whereHas('criterion', fn ($query) => $query->where('checking', 'ai'))
+            ->with(['user:id,name,hemis_id', 'criterion:id,code,name'])
+            ->oldest()
+            ->limit(20)
+            ->get();
+
+        $acceptedResources = Datum::query()
+            ->where('status', 'accepted')
+            ->whereHas('criterion', fn ($query) => $query->where('checking', 'ai'))
+            ->with(['user:id,name,hemis_id', 'criterion:id,code,name'])
+            ->latest('updated_at')
+            ->limit(20)
+            ->get();
+
         return [
             'status' => $this->getAiReviewerHealth->handle(),
             'recentChecks' => $recentChecks,
+            'pendingResources' => $pendingResources,
+            'acceptedResources' => $acceptedResources,
             'resourceStatistics' => [
                 'total' => $totalResources,
                 'evaluated' => $evaluatedResources,

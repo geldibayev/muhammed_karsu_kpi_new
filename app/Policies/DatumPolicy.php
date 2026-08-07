@@ -42,6 +42,8 @@ class DatumPolicy
                 || $this->isAssignedReviewer($user, $datum)
                 || $this->overrideAcceptance($user, $datum)
                 || $this->overrideCancellation($user, $datum)
+                || $this->review($user, $datum)
+                || $this->correctAcceptedScore($user, $datum)
                 || $this->isFinalizedRatingSubmissionVisible($user, $datum));
     }
 
@@ -53,7 +55,15 @@ class DatumPolicy
     public function review(User $user, Datum $datum): bool
     {
         return in_array($datum->status, ['received', 'checking'], true)
-            && $this->isAssignedReviewer($user, $datum);
+            && ($this->isAssignedReviewer($user, $datum)
+                || ($datum->usesAiChecking() && $user->can('manage-ai-operations')));
+    }
+
+    public function correctAcceptedScore(User $user, Datum $datum): bool
+    {
+        return $datum->status === DatumStatus::Accepted->value
+            && $datum->usesAiChecking()
+            && $user->can('manage-ai-operations');
     }
 
     public function overrideAcceptance(User $user, Datum $datum): bool

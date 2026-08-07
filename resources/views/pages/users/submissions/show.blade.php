@@ -114,6 +114,14 @@
                                 </a>
                             @endcan
 
+                            @can('correctAcceptedScore', $datum)
+                                <a href="{{ route('reviews.show', $datum) }}"
+                                   class="btn btn-warning btn-sm ml-2">
+                                    <i class="fas fa-calculator mr-1" aria-hidden="true"></i>
+                                    Ballni to‘g‘rilash
+                                </a>
+                            @endcan
+
                             @can('overrideAcceptance', $datum)
                                 <button type="button" class="btn btn-danger btn-sm ml-2"
                                         data-toggle="modal" data-target="#reject-accepted-ai-modal">

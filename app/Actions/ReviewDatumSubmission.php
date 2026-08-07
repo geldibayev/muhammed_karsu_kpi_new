@@ -60,7 +60,12 @@ class ReviewDatumSubmission
                 ->lockForUpdate()
                 ->findOrFail($datum->getKey());
 
-            Gate::forUser($reviewer)->authorize('review', $lockedDatum);
+            $isScoreCorrection = Gate::forUser($reviewer)->allows('correctAcceptedScore', $lockedDatum);
+            Gate::forUser($reviewer)->authorize(
+                $isScoreCorrection ? 'correctAcceptedScore' : 'review',
+                $lockedDatum,
+            );
+            $previousPoint = (float) $lockedDatum->point;
 
             User::query()
                 ->whereKey($lockedDatum->user_id)
@@ -84,7 +89,10 @@ class ReviewDatumSubmission
                     $lockedDatum->material['profiles'] ?? [],
                     max(0, (float) $evaluation->score),
                 );
-                $message = 'Mas’ul tomonidan tasdiqlandi. '.$calculation['summary'];
+                $message = $isScoreCorrection
+                    ? 'Tasdiqlangan resurs balli qayta hisoblandi. Oldingi ball: '
+                        .number_format($previousPoint, 2, '.', '').'. '.$calculation['summary']
+                    : 'Mas’ul tomonidan tasdiqlandi. '.$calculation['summary'];
 
                 $lockedDatum->update([
                     'status' => 'accepted',
@@ -96,7 +104,9 @@ class ReviewDatumSubmission
                     'user_id' => $reviewer->getKey(),
                     'type' => 'success',
                     'message' => $message,
-                    'message_type' => 'h_index_review_approved',
+                    'message_type' => $isScoreCorrection
+                        ? 'accepted_score_corrected'
+                        : 'h_index_review_approved',
                 ]);
 
                 return $lockedDatum;
@@ -114,7 +124,11 @@ class ReviewDatumSubmission
                 $universityTier,
                 $receivedAmount,
             );
-            $message = 'Mas’ul tomonidan tasdiqlandi. Qoida: '.$rule
+            $message = ($isScoreCorrection
+                ? 'Tasdiqlangan resurs balli qayta hisoblandi. Oldingi ball: '
+                    .number_format($previousPoint, 4, '.', '').'. '
+                : 'Mas’ul tomonidan tasdiqlandi. ')
+                .'Qoida: '.$rule
                 .'. Hisoblangan ball: '.number_format(
                     $point,
                     ($lockedDatum->criterion->isOakArticleCriterion()
@@ -155,7 +169,9 @@ class ReviewDatumSubmission
                 'user_id' => $reviewer->getKey(),
                 'type' => 'success',
                 'message' => $message,
-                'message_type' => 'manual_review_approved',
+                'message_type' => $isScoreCorrection
+                    ? 'accepted_score_corrected'
+                    : 'manual_review_approved',
             ]);
 
             return $lockedDatum;

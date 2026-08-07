@@ -54,13 +54,22 @@ class ManualReviewController extends Controller
     }
 
     public function show(
+        Request $request,
         Datum $datum,
         TransferDatumCriterion $transferDatumCriterion,
         OakArticleScoreCalculator $oakArticleScoreCalculator,
     ): View {
-        $this->authorize('review', $datum);
+        $isAcceptedScoreCorrection = $request->user()?->can('correctAcceptedScore', $datum) === true;
+        abort_unless(
+            $isAcceptedScoreCorrection || $request->user()?->can('review', $datum) === true,
+            403,
+        );
 
         $reviewIndexRoute = $this->reviewIndexRoute($datum);
+        $reviewReturnUrl = $datum->usesAiChecking()
+            && $request->user()?->can('manage-ai-operations') === true
+            ? route('ai-status.index')
+            : route($reviewIndexRoute);
         $reviewQueue = $datum->usesAiChecking() ? 'ai' : 'manual';
         $datum->load([
             'user:id,name,hemis_id,degree',
@@ -105,11 +114,13 @@ class ManualReviewController extends Controller
         $oakArticleBasePoint = $datum->criterion?->isOakArticleCriterion() === true
             ? $oakArticleScoreCalculator->basePoint($datum->user?->degree ?? '')
             : null;
-        $transferCriteria = $transferDatumCriterion->destinations($datum);
+        $transferCriteria = $isAcceptedScoreCorrection
+            ? collect()
+            : $transferDatumCriterion->destinations($datum);
         $breadcrumbs = [
             ['url' => route('home'), 'name' => 'Asosiy sahifa'],
             [
-                'url' => route($reviewIndexRoute),
+                'url' => $reviewReturnUrl,
                 'name' => $reviewQueue === 'ai' ? 'AI inson tekshiruvi' : 'Baholash',
             ],
             ['url' => '#', 'name' => 'Resurs #'.$datum->id],
@@ -125,6 +136,8 @@ class ManualReviewController extends Controller
             'reviewQueue',
             'oakArticleBasePoint',
             'educationalContentScoring',
+            'isAcceptedScoreCorrection',
+            'reviewReturnUrl',
         ));
     }
 
@@ -133,6 +146,7 @@ class ManualReviewController extends Controller
         Datum $datum,
         ReviewDatumSubmission $action,
     ): RedirectResponse {
+        $isAcceptedScoreCorrection = $request->user()?->can('correctAcceptedScore', $datum) === true;
         $reviewIndexRoute = $this->reviewIndexRoute($datum);
 
         $action->approve(
@@ -148,7 +162,18 @@ class ManualReviewController extends Controller
             $request->filled('received_amount') ? $request->float('received_amount') : null,
         );
 
-        return redirect()->route($reviewIndexRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
+        if ($isAcceptedScoreCorrection) {
+            return redirect()
+                ->route('upload.details', $datum)
+                ->with('success', 'Tasdiqlangan resurs balli server qoidasi bo‘yicha qayta hisoblandi.');
+        }
+
+        $redirectRoute = $datum->usesAiChecking()
+            && $request->user()?->can('manage-ai-operations') === true
+            ? 'ai-status.index'
+            : $reviewIndexRoute;
+
+        return redirect()->route($redirectRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
     }
 
     public function reject(

@@ -21,7 +21,9 @@ class ApproveDatumRequest extends FormRequest
     {
         $datum = $this->route('datum');
 
-        return $datum instanceof Datum && $this->user()?->can('review', $datum) === true;
+        return $datum instanceof Datum
+            && ($this->user()?->can('review', $datum) === true
+                || $this->user()?->can('correctAcceptedScore', $datum) === true);
     }
 
     /**

@@ -283,7 +283,7 @@ class ManualReviewWorkflowTest extends TestCase
 
     public function test_assigned_ai_criterion_only_exposes_ai_human_review_results(): void
     {
-        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $reviewer = User::factory()->create();
         $otherReviewer = User::factory()->create();
         $unassignedUser = User::factory()->create();
         $owner = User::factory()->create();
@@ -354,7 +354,7 @@ class ManualReviewWorkflowTest extends TestCase
 
     public function test_database_assigned_ai_reviewer_only_receives_ai_human_review_assignments(): void
     {
-        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $reviewer = User::factory()->create();
         $otherUser = User::factory()->create();
         $owner = User::factory()->create();
         $criterion = $this->createCriterion();
@@ -364,7 +364,7 @@ class ManualReviewWorkflowTest extends TestCase
         $humanReview = $this->createDatum($owner, $criterion, [
             'name' => 'AI inson tekshiruvi',
             'status' => 'checking',
-            'reviewer_hemis_id' => 3172011004,
+            'reviewer_hemis_id' => $reviewer->hemis_id,
         ]);
         $processing = $this->createDatum($owner, $criterion, [
             'name' => 'AI hali ishlayapti',
