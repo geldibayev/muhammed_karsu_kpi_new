@@ -12,6 +12,7 @@ use App\Services\IndustryFundingScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
+use App\Support\ForeignLanguageCertificateCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\OakArticleCriterionRule;
@@ -37,6 +38,7 @@ class RecalculateReportPoints
                     Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
 
                     $this->refreshEducationalContentDatumPoints($report);
+                    $this->refreshForeignLanguageCertificateDatumPoints($report);
                     $this->refreshOakArticleDatumPoints($report);
                     $this->refreshPrintedLiteratureDatumPoints($report);
                     $this->refreshIndustryFundingDatumPoints($report);
@@ -123,6 +125,50 @@ class RecalculateReportPoints
                         .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
                         .'Yangi ball: '.number_format($point, 4, '.', '').'.',
                     'message_type' => 'criterion_1_1_point_recalculated',
+                ]);
+            });
+    }
+
+    private function refreshForeignLanguageCertificateDatumPoints(Report $report): void
+    {
+        Datum::query()
+            ->where('status', 'accepted')
+            ->whereNotNull('manual_score_option_id')
+            ->whereHas('user', fn ($query) => $query->active())
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->where('code', ForeignLanguageCertificateCriterionRule::CODE))
+            ->with([
+                'user:id,degree',
+                'user.ratingWorkplace.department:id,parent_id',
+                'manualScoreOption:id,criterion_id,code',
+            ])
+            ->lockForUpdate()
+            ->get()
+            ->each(function (Datum $datum): void {
+                $department = $datum->user?->ratingWorkplace?->department;
+                $point = $datum->manualScoreOption === null
+                    ? null
+                    : ForeignLanguageCertificateCriterionRule::pointFor(
+                        $datum->manualScoreOption->code,
+                        (string) $datum->user?->degree,
+                        $department?->getKey(),
+                        $department?->parent_id,
+                    );
+
+                if ($point === null || abs($datum->point - $point) < 0.00005) {
+                    return;
+                }
+
+                $oldPoint = $datum->point;
+                $datum->update(['point' => $point]);
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => 'info',
+                    'message' => '2.1.3 balli saqlangan sertifikat darajasi, kafedra va ilmiy toifa bo‘yicha qayta hisoblandi. '
+                        .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
+                        .'Yangi ball: '.number_format($point, 4, '.', '').'.',
+                    'message_type' => 'foreign_language_point_recalculated',
                 ]);
             });
     }

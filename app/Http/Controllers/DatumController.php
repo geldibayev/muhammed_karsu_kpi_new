@@ -10,6 +10,7 @@ use App\Models\Criterion;
 use App\Models\Datum;
 use App\Models\Language;
 use App\Support\EducationalContentCriterionRule;
+use App\Support\ForeignLanguageCertificateCriterionRule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -96,6 +97,7 @@ class DatumController extends Controller
             'duplicateOf:id,name,status',
             'manualScoreOption:id,criterion_id,code,label',
             'user:id,name,degree',
+            'user.ratingWorkplace.department:id,parent_id',
             'year:id,name',
             'histories' => fn ($query) => $query->latest(),
         ]);
@@ -109,6 +111,8 @@ class DatumController extends Controller
         $educationalContentTypeOptions = collect();
         $educationalContentTypeDuplicate = false;
         $educationalContentMaximum = null;
+        $foreignLanguageCertificateOptions = collect();
+        $foreignLanguageCertificatePoints = [];
 
         $canChooseEducationalContentType = $datum->criterion?->code === EducationalContentCriterionRule::CODE
             && (auth()->user()?->can('changeEducationalContentType', $datum) === true
@@ -130,6 +134,23 @@ class DatumController extends Controller
                 && $usedOptionIds->contains($datum->manual_score_option_id);
             $educationalContentMaximum = (float) $datum->criterion->criterionEvaluations
                 ->firstWhere('evaluation', $datum->user->degree)?->score;
+        }
+
+        if ($datum->criterion?->code === ForeignLanguageCertificateCriterionRule::CODE
+            && auth()->user()?->can('overrideCancellation', $datum) === true) {
+            $department = $datum->user?->ratingWorkplace?->department;
+            $foreignLanguageCertificateOptions = $datum->criterion->manualScoreOptions
+                ->whereIn('code', array_keys(ForeignLanguageCertificateCriterionRule::LEVEL_LABELS))
+                ->values();
+            $foreignLanguageCertificatePoints = $foreignLanguageCertificateOptions
+                ->mapWithKeys(fn ($option): array => [
+                    $option->getKey() => ForeignLanguageCertificateCriterionRule::pointFor(
+                        $option->code,
+                        (string) $datum->user?->degree,
+                        $department?->getKey(),
+                        $department?->parent_id,
+                    ),
+                ])->all();
         }
         $breadcrumbs = [
             [
@@ -154,6 +175,8 @@ class DatumController extends Controller
             'educationalContentTypeOptions',
             'educationalContentTypeDuplicate',
             'educationalContentMaximum',
+            'foreignLanguageCertificateOptions',
+            'foreignLanguageCertificatePoints',
         ));
     }
 

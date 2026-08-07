@@ -6,6 +6,7 @@ use App\Actions\ResolveAiManualPointMaximum;
 use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Support\EducationalContentCriterionRule;
+use App\Support\ForeignLanguageCertificateCriterionRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -37,19 +38,22 @@ class ApproveCancelledAiDatumRequest extends FormRequest
             : null;
         $isEducationalContentCriterion = $datum instanceof Datum
             && $datum->criterion()->where('code', EducationalContentCriterionRule::CODE)->exists();
+        $isForeignLanguageCertificateCriterion = $datum instanceof Datum
+            && $datum->criterion()->where('code', ForeignLanguageCertificateCriterionRule::CODE)->exists();
+        $usesScoreOption = $isEducationalContentCriterion || $isForeignLanguageCertificateCriterion;
 
         return [
             'point' => [
-                Rule::requiredIf(! $isEducationalContentCriterion),
-                Rule::prohibitedIf($isEducationalContentCriterion),
+                Rule::requiredIf(! $usesScoreOption),
+                Rule::prohibitedIf($usesScoreOption),
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:'.($maximumPoint ?? 0),
             ],
             'score_option_id' => [
-                Rule::requiredIf($isEducationalContentCriterion),
-                Rule::prohibitedIf(! $isEducationalContentCriterion),
+                Rule::requiredIf($usesScoreOption),
+                Rule::prohibitedIf(! $usesScoreOption),
                 'nullable',
                 'integer',
                 Rule::exists(CriterionManualScoreOption::class, 'id')

@@ -13,6 +13,7 @@ use App\Services\PrintedEducationalLiteratureScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\ForeignLanguageCertificateCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
@@ -142,7 +143,10 @@ class ReviewDatumSubmission
             $lockedDatum->update([
                 'status' => 'accepted',
                 'point' => $point,
-                'manual_score_option_id' => $lockedDatum->criterion->code === EducationalContentCriterionRule::CODE
+                'manual_score_option_id' => in_array($lockedDatum->criterion->code, [
+                    EducationalContentCriterionRule::CODE,
+                    ForeignLanguageCertificateCriterionRule::CODE,
+                ], true)
                     ? $scoreOptionId
                     : null,
                 'author_count' => ($lockedDatum->criterion->isOakArticleCriterion()
@@ -407,6 +411,35 @@ class ReviewDatumSubmission
             throw ValidationException::withMessages([
                 'score_option_id' => 'Ushbu mezon uchun baholash variantini tanlang.',
             ]);
+        }
+
+        if ($datum->criterion->isForeignLanguageCertificateCriterion()) {
+            $datum->user?->loadMissing('ratingWorkplace.department');
+            $department = $datum->user?->ratingWorkplace?->department;
+            $point = ForeignLanguageCertificateCriterionRule::pointFor(
+                $option->code,
+                (string) $datum->user?->degree,
+                $department?->getKey(),
+                $department?->parent_id,
+            );
+
+            if ($point === null) {
+                throw ValidationException::withMessages([
+                    'score_option_id' => 'Tanlangan xorijiy til sertifikati darajasi qo‘llab-quvvatlanmaydi.',
+                ]);
+            }
+
+            $group = ForeignLanguageCertificateCriterionRule::isSpecialForeignLanguageDepartment(
+                $department?->getKey(),
+                $department?->parent_id,
+            )
+                ? 'Chet tillari fakultetining maxsus kafedra qoidasi'
+                : 'kafedra va ilmiy daraja qoidasi';
+
+            return [
+                'point' => $point,
+                'rule' => mb_strtoupper($option->code).' sertifikat — '.$group,
+            ];
         }
 
         $point = max(0, (float) $option->point);

@@ -273,6 +273,15 @@
                                 </div>
                             </div>
                         @endif
+                        @if($foreignLanguageCertificateScoring !== null)
+                            <div class="alert alert-info py-2">
+                                Tekshiruvchi faqat sertifikat darajasini tasdiqlaydi. Ball
+                                {{ $foreignLanguageCertificateScoring['special_department']
+                                    ? 'Chet tillari fakulteti kafedralari uchun maxsus qoida'
+                                    : 'ilmiy daraja va kafedra qoidasi' }}
+                                bo‘yicha serverda avtomatik hisoblanadi.
+                            </div>
+                        @endif
                         <label for="score-option">Tavsifga mos variant</label>
                         <select id="score-option" name="score_option_id" required
                                 class="form-control @error('score_option_id') is-invalid @enderror">
@@ -288,6 +297,8 @@
                                     {{ data_get($scoreOption->label, 'uz', $scoreOption->code) }}
                                     @if($scorePresentation !== null)
                                         — {{ $scorePresentation['percentage'] }}% = {{ number_format($scorePresentation['point'], 2) }} ball
+                                    @elseif($foreignLanguageCertificateScoring !== null)
+                                        — {{ number_format((float) $foreignLanguageCertificateScoring['options'][$scoreOption->id], 2) }} ball
                                     @else
                                         — {{ number_format($scoreOption->point, 2) }} ball
                                     @endif

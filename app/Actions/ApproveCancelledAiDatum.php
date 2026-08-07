@@ -7,6 +7,7 @@ use App\Models\Datum;
 use App\Models\User;
 use App\Services\DatumResourceFingerprintGenerator;
 use App\Support\EducationalContentCriterionRule;
+use App\Support\ForeignLanguageCertificateCriterionRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -32,7 +33,7 @@ class ApproveCancelledAiDatum
                     'criterion.report',
                     'criterion.criterionEvaluations',
                     'criterion.formula',
-                    'user',
+                    'user.ratingWorkplace.department',
                 ])
                 ->lockForUpdate()
                 ->findOrFail($datum->getKey());
@@ -47,30 +48,46 @@ class ApproveCancelledAiDatum
             $maximumPoint = $this->maximumResolver->handle($lockedDatum);
 
             $scoreOption = null;
-            if ($lockedDatum->criterion->code === EducationalContentCriterionRule::CODE) {
+            if (in_array($lockedDatum->criterion->code, [
+                EducationalContentCriterionRule::CODE,
+                ForeignLanguageCertificateCriterionRule::CODE,
+            ], true)) {
                 $scoreOption = CriterionManualScoreOption::query()
                     ->whereKey($scoreOptionId)
                     ->where('criterion_id', $lockedDatum->criterion_id)
                     ->where('active', true)
                     ->lockForUpdate()
                     ->first();
-                $point = $scoreOption === null || $maximumPoint === null
-                    ? null
-                    : EducationalContentCriterionRule::pointFor($maximumPoint, $scoreOption->code);
+                if ($lockedDatum->criterion->code === ForeignLanguageCertificateCriterionRule::CODE) {
+                    $department = $lockedDatum->user?->ratingWorkplace?->department;
+                    $point = $scoreOption === null
+                        ? null
+                        : ForeignLanguageCertificateCriterionRule::pointFor(
+                            $scoreOption->code,
+                            (string) $lockedDatum->user?->degree,
+                            $department?->getKey(),
+                            $department?->parent_id,
+                        );
+                } else {
+                    $point = $scoreOption === null || $maximumPoint === null
+                        ? null
+                        : EducationalContentCriterionRule::pointFor($maximumPoint, $scoreOption->code);
+                }
 
-                $alreadyUsed = $scoreOption !== null && Datum::query()
-                    ->where('user_id', $lockedDatum->user_id)
-                    ->where('criterion_id', $lockedDatum->criterion_id)
-                    ->where('status', 'accepted')
-                    ->where('manual_score_option_id', $scoreOption->getKey())
-                    ->where('id', '!=', $lockedDatum->getKey())
-                    ->exists();
+                $alreadyUsed = $lockedDatum->criterion->code === EducationalContentCriterionRule::CODE
+                    && $scoreOption !== null && Datum::query()
+                        ->where('user_id', $lockedDatum->user_id)
+                        ->where('criterion_id', $lockedDatum->criterion_id)
+                        ->where('status', 'accepted')
+                        ->where('manual_score_option_id', $scoreOption->getKey())
+                        ->where('id', '!=', $lockedDatum->getKey())
+                        ->exists();
 
                 if ($point === null || $alreadyUsed) {
                     throw ValidationException::withMessages([
                         'score_option_id' => $alreadyUsed
                             ? 'Bu foydalanuvchining 1.1 mezonida ushbu resurs turi allaqachon tasdiqlangan.'
-                            : '1.1 mezoni uchun bo‘sh va qo‘llab-quvvatlanadigan resurs turini tanlang.',
+                            : 'Ushbu mezon uchun qo‘llab-quvvatlanadigan daraja yoki resurs turini tanlang.',
                     ]);
                 }
             }
@@ -93,7 +110,7 @@ class ApproveCancelledAiDatum
                 .' inson tekshiruvida tasdiqlandi. '
                 .($scoreOption === null
                     ? 'Qo‘lda kiritilgan ball: '
-                    : 'Tanlangan resurs turi: '.data_get($scoreOption->label, 'uz', $scoreOption->code).'. Hisoblangan ball: ')
+                    : 'Tanlangan daraja yoki resurs turi: '.data_get($scoreOption->label, 'uz', $scoreOption->code).'. Hisoblangan ball: ')
                 .number_format($point, 4, '.', '').'. '
                 .'Maksimal ruxsat etilgan ball: '.number_format($maximumPoint, 4, '.', '').'.';
 

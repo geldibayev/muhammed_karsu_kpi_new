@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\ForeignLanguageCertificateCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\LaboratoryWorkCriterionRule;
@@ -112,6 +113,12 @@ class Criterion extends Model
     public function isOakArticleCriterion(): bool
     {
         return $this->code === OakArticleCriterionRule::CODE;
+    }
+
+    public function isForeignLanguageCertificateCriterion(): bool
+    {
+        return $this->checking === 'manual'
+            && $this->code === ForeignLanguageCertificateCriterionRule::CODE;
     }
 
     public function isInternationalCooperationCriterion(): bool

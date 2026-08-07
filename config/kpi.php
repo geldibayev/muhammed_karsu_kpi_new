@@ -32,6 +32,8 @@ return [
     'resource_statistics_viewer_hemis_ids' => $resourceStatisticsViewerHemisIds,
     'settings_manager_hemis_id' => env('KPI_SETTINGS_MANAGER_HEMIS_ID', '3172011004'),
     'accepted_ai_reviewer_hemis_id' => env('KPI_ACCEPTED_AI_REVIEWER_HEMIS_ID', '3172011004'),
+    'foreign_language_faculty_department_id' => (int) env('KPI_FOREIGN_LANGUAGE_FACULTY_DEPARTMENT_ID', 1),
+    'russian_language_department_id' => (int) env('KPI_RUSSIAN_LANGUAGE_DEPARTMENT_ID', 23),
     'ai_human_review_criterion_reviewers' => [
         '1.2' => $educationalLiteratureReviewerHemisId,
         '1.3' => $educationalLiteratureReviewerHemisId,

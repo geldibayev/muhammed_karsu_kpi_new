@@ -12,6 +12,7 @@ use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Services\OakArticleScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
+use App\Support\ForeignLanguageCertificateCriterionRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -73,6 +74,7 @@ class ManualReviewController extends Controller
         $reviewQueue = $datum->usesAiChecking() ? 'ai' : 'manual';
         $datum->load([
             'user:id,name,hemis_id,degree',
+            'user.ratingWorkplace.department:id,parent_id',
             'criterion:id,code,name,desc,checking,formula_id,report_id',
             'criterion.criterionEvaluations:id,criterion_id,evaluation,has,score',
             'criterion.manualScoreOptions',
@@ -111,6 +113,22 @@ class ManualReviewController extends Controller
                 })->all(),
             ]
             : null;
+        $foreignLanguageCertificateScoring = $datum->criterion?->isForeignLanguageCertificateCriterion() === true
+            ? [
+                'special_department' => ForeignLanguageCertificateCriterionRule::isSpecialForeignLanguageDepartment(
+                    $datum->user?->ratingWorkplace?->department?->getKey(),
+                    $datum->user?->ratingWorkplace?->department?->parent_id,
+                ),
+                'options' => $scoreOptions->mapWithKeys(fn ($option): array => [
+                    $option->getKey() => ForeignLanguageCertificateCriterionRule::pointFor(
+                        $option->code,
+                        (string) $datum->user?->degree,
+                        $datum->user?->ratingWorkplace?->department?->getKey(),
+                        $datum->user?->ratingWorkplace?->department?->parent_id,
+                    ),
+                ])->all(),
+            ]
+            : null;
         $oakArticleBasePoint = $datum->criterion?->isOakArticleCriterion() === true
             ? $oakArticleScoreCalculator->basePoint($datum->user?->degree ?? '')
             : null;
@@ -138,6 +156,7 @@ class ManualReviewController extends Controller
             'educationalContentScoring',
             'isAcceptedScoreCorrection',
             'reviewReturnUrl',
+            'foreignLanguageCertificateScoring',
         ));
     }
 

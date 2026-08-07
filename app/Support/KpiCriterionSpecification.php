@@ -78,7 +78,13 @@ class KpiCriterionSpecification
                 false,
                 aiPrompt: FixedPerResourceHumanReviewCriterionRule::twoOneTwoPrompt(),
             ),
-            '2.1.3' => self::rule(self::Maximum, 1, 'certificate_expire', [2, 3, 6, 3]),
+            '2.1.3' => self::rule(
+                self::Maximum,
+                1,
+                'certificate_expire',
+                [10, 10, 10, 10],
+                descriptionUz: ForeignLanguageCertificateCriterionRule::DESCRIPTION_UZ,
+            ),
             '2.1.4' => self::rule(self::Competition, 0, 'current', [4, 4, 4, 4]),
             '2.1.5' => self::rule(
                 self::Maximum,

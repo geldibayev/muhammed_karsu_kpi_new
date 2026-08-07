@@ -140,9 +140,11 @@
                             @endcan
 
                             @can('overrideCancellation', $datum)
-                                @if($decisionOverridePointMaximum !== null
-                                    && ($datum->criterion?->code !== \App\Support\EducationalContentCriterionRule::CODE
-                                        || $educationalContentTypeOptions->isNotEmpty()))
+                              @if($decisionOverridePointMaximum !== null
+                                  && ($datum->criterion?->code !== \App\Support\EducationalContentCriterionRule::CODE
+                                      || $educationalContentTypeOptions->isNotEmpty())
+                                  && ($datum->criterion?->code !== \App\Support\ForeignLanguageCertificateCriterionRule::CODE
+                                      || $foreignLanguageCertificateOptions->isNotEmpty()))
                                     <button type="button" class="btn btn-success btn-sm ml-2"
                                             data-toggle="modal" data-target="#approve-cancelled-ai-modal">
                                         <i class="fas fa-user-check mr-1"></i>
@@ -338,6 +340,25 @@
                                             <option value="{{ $scoreOption->id }}" @selected(old('score_option_id') == $scoreOption->id)>
                                                 {{ data_get($scoreOption->label, 'uz', $scoreOption->code) }}
                                                 — {{ \App\Support\EducationalContentCriterionRule::percentageFor($scoreOption->code) }}%
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('score_option_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                @elseif($datum->criterion?->code === \App\Support\ForeignLanguageCertificateCriterionRule::CODE)
+                                    <div class="alert alert-info py-2">
+                                        Faqat sertifikat darajasini tanlang. Ball kafedra va ilmiy daraja bo‘yicha
+                                        serverda avtomatik hisoblanadi.
+                                    </div>
+                                    <label for="cancelled-foreign-language-level">Sertifikat darajasi</label>
+                                    <select id="cancelled-foreign-language-level" name="score_option_id" required
+                                            class="form-control @error('score_option_id') is-invalid @enderror">
+                                        <option value="">Tanlang</option>
+                                        @foreach($foreignLanguageCertificateOptions as $scoreOption)
+                                            <option value="{{ $scoreOption->id }}" @selected(old('score_option_id') == $scoreOption->id)>
+                                                {{ data_get($scoreOption->label, 'uz', $scoreOption->code) }}
+                                                — {{ number_format((float) ($foreignLanguageCertificatePoints[$scoreOption->id] ?? 0), 2) }} ball
                                             </option>
                                         @endforeach
                                     </select>

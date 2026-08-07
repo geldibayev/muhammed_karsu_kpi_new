@@ -9,6 +9,7 @@ use App\Models\Formula;
 use App\Models\Report;
 use App\Models\Year;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\ForeignLanguageCertificateCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\LaboratoryWorkCriterionRule;
@@ -470,7 +471,7 @@ class CriterionSeeder extends Seeder
                             'en' => 'Proficiency in foreign languages',
                         ],
                         'desc' => [
-                            'uz' => 'Sertifikatlar(A1 - A2 - 0, 5 ball, B1 - 0,75 ball, B2 - 1 ball, C1 - 1,5 ball, C2 - 2 ball)',
+                            'uz' => ForeignLanguageCertificateCriterionRule::DESCRIPTION_UZ,
                             'kaa' => 'Sertifikatlar(A1 - A2 - 0, 5 ball, B1 - 0,75 ball, B2 - 1 ball, C1 - 1,5 ball, C2 - 2 ball)',
                             'ru' => 'Сертификаты(A1 - A2 - 0, 5 балла, B1 - 0,75 балла, B2 - 1 балл, C1 - 1,5 балла, C2 - 2 балла)',
                             'en' => 'Certificates(A1 - A2 - 0.5 points, B1 - 0.75 points, B2 - 1 point, C1 - 1.5 points, C2 - 2 points)',
@@ -478,14 +479,15 @@ class CriterionSeeder extends Seeder
                         'observation' => 'current',
                         'report_id' => 1,
                         'checking' => 'manual',
+                        'file_limit' => 1,
                         'template' => '0',
                         'res_type' => 'file',
                         'upload' => '1', 'status' => '1',
                         'evaluation' => [
-                            'hold_degrees' => 2,
-                            'no_degrees' => 3,
-                            'foreign_lang' => 6,
-                            'physical' => 3,
+                            'hold_degrees' => 10,
+                            'no_degrees' => 10,
+                            'foreign_lang' => 10,
+                            'physical' => 10,
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
