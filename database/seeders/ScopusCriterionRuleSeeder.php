@@ -30,14 +30,24 @@ class ScopusCriterionRuleSeeder extends Seeder
         $criterion->update([
             'desc' => [
                 ...$description,
-                'uz' => 'Scopus va Web of Science bazasi orqali baholanadi. Q1, Q2 — 100 %, Q3, Q4 — 80 %, konferensiya maqolalari — 50 %. Ball mualliflar soniga bo‘linmaydi.',
-                'kaa' => 'Scopus hám Web of Science bazası arqalı bahalanadı. Q1, Q2 — 100 %, Q3, Q4 — 80 %, konferenciya maqalaları — 50 %. Ball avtorlar sanına bólinbeydi.',
-                'ru' => 'Оценивается по базам Scopus и Web of Science. Q1, Q2 — 100 %, Q3, Q4 — 80 %, статьи конференций — 50 %. Баллы не делятся на количество авторов.',
-                'en' => 'Evaluated using Scopus and Web of Science. Q1 and Q2 — 100%, Q3 and Q4 — 80%, conference papers — 50%. Points are not divided by the number of authors.',
+                'uz' => ScopusCriterionRule::DESCRIPTION_UZ,
+                'kaa' => 'Scopus hám Web of Science bazalarında indekslengen basılımlar server tárepinen bahalanadı: Q1 — 20 ball, Q2 — 15 ball, Q3 — 10 ball, Q4 — 5 ball, Scopus yamasa Web of Science konferenciya materialı — 5 ball. Ball avtorlar sanına bólinbeydi.',
+                'ru' => 'Индексируемые в Scopus и Web of Science публикации оцениваются сервером: Q1 — 20 баллов, Q2 — 15, Q3 — 10, Q4 — 5, материал конференции Scopus или Web of Science — 5 баллов. Баллы не делятся на количество авторов.',
+                'en' => 'Scopus and Web of Science indexed publications are scored by the server: Q1 — 20 points, Q2 — 15, Q3 — 10, Q4 — 5, and a Scopus or Web of Science conference paper — 5 points. Points are not divided by the number of authors.',
             ],
             'ai_prompt' => ScopusCriterionRule::PROMPT,
             'ai_submission_max_point' => ScopusCriterionRule::MAXIMUM_POINT,
             'divide_ai_point_by_authors' => false,
         ]);
+
+        foreach (['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'] as $evaluation) {
+            $criterion->criterionEvaluations()->updateOrCreate(
+                ['evaluation' => $evaluation],
+                [
+                    'has' => '1',
+                    'score' => ScopusCriterionRule::MAXIMUM_POINT,
+                ],
+            );
+        }
     }
 }

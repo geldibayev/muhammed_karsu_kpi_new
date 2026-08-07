@@ -17,6 +17,7 @@ class AiEvaluationResult
         public readonly ?int $pageCount = null,
         public readonly ?float $receivedAmount = null,
         public readonly ?string $universityTier = null,
+        public readonly ?string $publicationTier = null,
     ) {}
 
     /** @param array<string, mixed> $payload */
@@ -25,6 +26,7 @@ class AiEvaluationResult
         float $maximumPoint,
         bool $requiresTranslationEvidence = false,
         bool $requiresUniversityTier = false,
+        bool $requiresPublicationTier = false,
     ): self {
         $payloadKeys = array_keys($payload);
         sort($payloadKeys);
@@ -54,6 +56,16 @@ class AiEvaluationResult
             ]];
         }
 
+        if ($requiresPublicationTier) {
+            $allowedPayloadKeys = [[
+                'point',
+                'publication_tier',
+                'reason',
+                'resource_date',
+                'status',
+            ]];
+        }
+
         if (! in_array($payloadKeys, $allowedPayloadKeys, true)) {
             throw new UnexpectedValueException('AI javobida kutilmagan yoki yetishmayotgan maydon bor.');
         }
@@ -70,6 +82,7 @@ class AiEvaluationResult
         $pageCount = $payload['page_count'] ?? null;
         $receivedAmount = $payload['received_amount'] ?? null;
         $universityTier = $payload['university_tier'] ?? null;
+        $publicationTier = $payload['publication_tier'] ?? null;
         $usesReceivedAmount = array_key_exists('received_amount', $payload);
         $isTranslation = $payload['is_translation'] ?? null;
         $sourceLanguage = $payload['source_language'] ?? null;
@@ -90,6 +103,10 @@ class AiEvaluationResult
 
         if (! $usesReceivedAmount && $point > $maximumPoint) {
             throw new UnexpectedValueException('AI balli mezon chegarasidan oshib ketdi.');
+        }
+
+        if ($requiresPublicationTier && (float) $point !== 0.0) {
+            throw new UnexpectedValueException('AI 3.1.3 mezoni uchun ball hisoblamasligi kerak.');
         }
 
         if ($usesReceivedAmount
@@ -125,6 +142,22 @@ class AiEvaluationResult
             && $status === 'accepted'
             && ! in_array($universityTier, ['top_100', 'top_300', 'top_500', 'top_1000'], true)) {
             throw new UnexpectedValueException('Qabul qilingan resurs uchun universitet Top-1000 oralig‘i tasdiqlanmadi.');
+        }
+
+        if ($publicationTier !== null
+            && (! is_string($publicationTier)
+                || ! in_array($publicationTier, ['q1', 'q2', 'q3', 'q4', 'conference', 'unknown'], true))) {
+            throw new UnexpectedValueException('AI jurnal kvartili yoki konferensiya turini noto‘g‘ri formatda qaytardi.');
+        }
+
+        if ($requiresPublicationTier && $publicationTier === null) {
+            throw new UnexpectedValueException('AI jurnal kvartili yoki konferensiya turini qaytarmadi.');
+        }
+
+        if ($requiresPublicationTier
+            && $status === 'accepted'
+            && ! in_array($publicationTier, ['q1', 'q2', 'q3', 'q4', 'conference'], true)) {
+            throw new UnexpectedValueException('Qabul qilingan resurs uchun kvartil yoki konferensiya turi aniq tasdiqlanmadi.');
         }
 
         if ($authorCount !== null
@@ -193,6 +226,7 @@ class AiEvaluationResult
             pageCount: $status === 'accepted' ? $pageCount : null,
             receivedAmount: $status === 'accepted' && $usesReceivedAmount ? (float) $receivedAmount : null,
             universityTier: $universityTier,
+            publicationTier: $publicationTier,
         );
     }
 
@@ -202,6 +236,7 @@ class AiEvaluationResult
         float $maximumPoint,
         bool $requiresTranslationEvidence = false,
         bool $requiresUniversityTier = false,
+        bool $requiresPublicationTier = false,
     ): self {
         $payload = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
@@ -214,6 +249,7 @@ class AiEvaluationResult
             $maximumPoint,
             $requiresTranslationEvidence,
             $requiresUniversityTier,
+            $requiresPublicationTier,
         );
     }
 

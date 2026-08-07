@@ -194,6 +194,31 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertSame('top_300', $datum->university_tier);
     }
 
+    public function test_job_persists_scopus_publication_tier_and_server_point(): void
+    {
+        $datum = $this->createDatum();
+        $datum->criterion->update(['code' => '3.1.3']);
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturn(new AiEvaluationResult(
+                'accepted',
+                1,
+                'Scopus Q2 kvartili aniq tasdiqlandi.',
+                publicationTier: 'q2',
+            ));
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldReceive('handle')
+            ->once()
+            ->with(Mockery::type(Report::class));
+
+        (new ProcessAiDatumEvaluation($datum->id))->handle($evaluator, $recalculateReportPoints);
+
+        $this->assertSame('accepted', $datum->fresh()->status);
+        $this->assertSame(15.0, $datum->fresh()->point);
+        $this->assertSame('q2', $datum->fresh()->publication_tier);
+    }
+
     public function test_job_assigns_criterion_one_ten_point_from_user_category(): void
     {
         $datum = $this->createDatum();

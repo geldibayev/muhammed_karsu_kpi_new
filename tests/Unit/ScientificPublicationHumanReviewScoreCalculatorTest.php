@@ -34,11 +34,11 @@ class ScientificPublicationHumanReviewScoreCalculatorTest extends TestCase
     public static function publicationTierCases(): array
     {
         return [
-            'Q1' => ['q1', 5],
-            'Q2' => ['q2', 5],
-            'Q3' => ['q3', 4],
-            'Q4' => ['q4', 4],
-            'conference' => ['conference', 2.5],
+            'Q1' => ['q1', 20],
+            'Q2' => ['q2', 15],
+            'Q3' => ['q3', 10],
+            'Q4' => ['q4', 5],
+            'conference' => ['conference', 5],
         ];
     }
 

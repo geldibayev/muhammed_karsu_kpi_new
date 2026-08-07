@@ -396,11 +396,11 @@
                             <select id="publication-tier" name="publication_tier" required
                                     class="form-control @error('publication_tier') is-invalid @enderror">
                                 <option value="">Tanlang</option>
-                                <option value="q1" @selected(old('publication_tier', $datum->publication_tier) === 'q1')>Q1 — 5 ball</option>
-                                <option value="q2" @selected(old('publication_tier', $datum->publication_tier) === 'q2')>Q2 — 5 ball</option>
-                                <option value="q3" @selected(old('publication_tier', $datum->publication_tier) === 'q3')>Q3 — 4 ball</option>
-                                <option value="q4" @selected(old('publication_tier', $datum->publication_tier) === 'q4')>Q4 — 4 ball</option>
-                                <option value="conference" @selected(old('publication_tier', $datum->publication_tier) === 'conference')>Konferensiya — 2,5 ball</option>
+                                <option value="q1" @selected(old('publication_tier', $datum->publication_tier) === 'q1')>Q1 — 20 ball</option>
+                                <option value="q2" @selected(old('publication_tier', $datum->publication_tier) === 'q2')>Q2 — 15 ball</option>
+                                <option value="q3" @selected(old('publication_tier', $datum->publication_tier) === 'q3')>Q3 — 10 ball</option>
+                                <option value="q4" @selected(old('publication_tier', $datum->publication_tier) === 'q4')>Q4 — 5 ball</option>
+                                <option value="conference" @selected(old('publication_tier', $datum->publication_tier) === 'conference')>Scopus/WoS konferensiya materiali — 5 ball</option>
                             </select>
                             @error('publication_tier')
                                 <div class="invalid-feedback">{{ $message }}</div>

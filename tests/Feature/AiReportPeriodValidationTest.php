@@ -57,8 +57,8 @@ class AiReportPeriodValidationTest extends TestCase
         $result = $this->evaluateResource('2026-08-31');
 
         $this->assertSame('accepted', $result->status);
-        $this->assertSame(5.0, $result->point);
-        $this->assertSame(4, $result->authorCount);
+        $this->assertSame(20.0, $result->point);
+        $this->assertSame('q1', $result->publicationTier);
     }
 
     public function test_printed_literature_point_is_calculated_on_server_from_pages_and_authors(): void
@@ -92,7 +92,7 @@ class AiReportPeriodValidationTest extends TestCase
         $result = $this->evaluateResource('2025-09-15', 'current', ScopusCriterionRule::CODE, '2025-10-01', '2026-06-30');
 
         $this->assertSame('accepted', $result->status);
-        $this->assertSame(5.0, $result->point);
+        $this->assertSame(20.0, $result->point);
     }
 
     public function test_strict_period_is_enforced_for_every_observation_mode(): void
@@ -154,8 +154,8 @@ class AiReportPeriodValidationTest extends TestCase
     public static function publicationDates(): iterable
     {
         yield 'one day before period' => ['2025-08-31', 'cancelled', 0.0, '01.09.2025–31.08.2026'];
-        yield 'first day' => ['2025-09-01', 'accepted', 5.0, null];
-        yield 'last day' => ['2026-08-31', 'accepted', 5.0, null];
+        yield 'first day' => ['2025-09-01', 'accepted', 20.0, null];
+        yield 'last day' => ['2026-08-31', 'accepted', 20.0, null];
         yield 'one day after period' => ['2026-09-01', 'cancelled', 0.0, '01.09.2025–31.08.2026'];
         yield 'year alone is insufficient' => ['2025', 'checking', 0.0, 'to‘liq sana zarur'];
         yield 'date cannot be determined' => ['', 'checking', 0.0, 'Resurs sanasi aniq topilmadi'];
@@ -213,7 +213,7 @@ class AiReportPeriodValidationTest extends TestCase
             'checking' => 'ai',
             'ai_prompt' => ScopusCriterionRule::PROMPT,
             'ai_model' => 'gemini-test',
-            'ai_submission_max_point' => 5,
+            'ai_submission_max_point' => $criterionCode === ScopusCriterionRule::CODE ? 20 : 5,
             'divide_ai_point_by_authors' => false,
             'upload' => '1',
             'status' => '1',
@@ -238,8 +238,11 @@ class AiReportPeriodValidationTest extends TestCase
                         'parts' => [[
                             'text' => json_encode(array_filter([
                                 'status' => $aiStatus,
-                                'point' => 5,
-                                'author_count' => 4,
+                                'point' => $criterionCode === ScopusCriterionRule::CODE ? 0 : 5,
+                                'publication_tier' => $criterionCode === ScopusCriterionRule::CODE
+                                    ? ($aiStatus === 'accepted' ? 'q1' : 'unknown')
+                                    : null,
+                                'author_count' => $criterionCode === ScopusCriterionRule::CODE ? null : 4,
                                 'page_count' => in_array($criterionCode, ['1.2', '1.3'], true) ? 160 : null,
                                 'resource_date' => $resourceDate,
                                 'reason' => $aiReason,

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Criterion;
+use App\Models\Evaluation;
 use App\Models\Report;
 use App\Support\ScopusCriterionRule;
 use Database\Seeders\ScopusCriterionRuleSeeder;
@@ -15,6 +16,14 @@ class ScopusCriterionRuleSeederTest extends TestCase
 
     public function test_seeder_updates_scopus_rule_idempotently_without_using_a_fixed_criterion_id(): void
     {
+        foreach (['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'] as $evaluation) {
+            Evaluation::query()->create([
+                'code' => $evaluation,
+                'name' => ['uz' => $evaluation],
+                'status' => '1',
+            ]);
+        }
+
         $report = Report::query()->create([
             'name' => ['uz' => 'Test hisoboti'],
             'status' => '1',
@@ -44,8 +53,12 @@ class ScopusCriterionRuleSeederTest extends TestCase
         $criterion->refresh();
 
         $this->assertSame(ScopusCriterionRule::PROMPT, $criterion->ai_prompt);
-        $this->assertSame(5.0, $criterion->ai_submission_max_point);
+        $this->assertSame(20.0, $criterion->ai_submission_max_point);
         $this->assertFalse($criterion->divide_ai_point_by_authors);
         $this->assertStringContainsString('bo‘linmaydi', $criterion->desc['uz']);
+        $this->assertSame([20, 20, 20, 20], $criterion->criterionEvaluations()
+            ->orderBy('evaluation')
+            ->pluck('score')
+            ->all());
     }
 }

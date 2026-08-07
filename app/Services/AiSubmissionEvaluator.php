@@ -9,6 +9,7 @@ use App\Models\Formula;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
+use App\Support\ScopusCriterionRule;
 use App\Support\TranslatedEducationalLiteratureCriterionRule;
 use Gemini\Data\Blob;
 use Gemini\Data\Content;
@@ -63,6 +64,7 @@ class AiSubmissionEvaluator
         $requiresResourceDate = true;
         $requiresReceivedAmount = $criterion->isIndustryFundingCriterion();
         $requiresUniversityTier = $criterion->isProfessionalDevelopmentCriterion();
+        $requiresPublicationTier = $criterion->usesPublicationTierAiHumanReviewScore();
 
         if ($maximumPoint === null) {
             return AiEvaluationResult::checking('Foydalanuvchi uchun mezon ball chegarasi topilmadi.');
@@ -92,6 +94,7 @@ class AiSubmissionEvaluator
                 $requiresReceivedAmount,
                 $requiresTranslationEvidence,
                 $requiresUniversityTier,
+                $requiresPublicationTier,
             ));
 
         $contentParts = [$this->buildPrompt(
@@ -102,6 +105,7 @@ class AiSubmissionEvaluator
             $requiresReceivedAmount,
             $requiresTranslationEvidence,
             $requiresUniversityTier,
+            $requiresPublicationTier,
         )];
 
         if ($resourceUrl !== null) {
@@ -162,6 +166,7 @@ PROMPT;
                         $requiresReceivedAmount,
                         $requiresTranslationEvidence,
                         $requiresUniversityTier,
+                        $requiresPublicationTier,
                     ),
                     prompt: $contentParts[0],
                 );
@@ -210,6 +215,7 @@ PROMPT;
                 $maximumPoint,
                 $requiresTranslationEvidence,
                 $requiresUniversityTier,
+                $requiresPublicationTier,
             );
 
             $result = $this->aiResourceDatePolicy->enforce($datum, $result);
@@ -219,6 +225,10 @@ PROMPT;
                     $result,
                     (string) $criterion->code,
                 );
+            }
+
+            if ($criterion->usesPublicationTierAiHumanReviewScore()) {
+                return ScopusCriterionRule::apply($result);
             }
 
             if ($criterion->isOakArticleCriterion()) {
@@ -305,6 +315,7 @@ PROMPT;
         bool $requiresReceivedAmount = false,
         bool $requiresTranslationEvidence = false,
         bool $requiresUniversityTier = false,
+        bool $requiresPublicationTier = false,
     ): GenerationConfig {
         return new GenerationConfig(
             temperature: 0.1,
@@ -317,6 +328,7 @@ PROMPT;
                 $requiresReceivedAmount,
                 $requiresTranslationEvidence,
                 $requiresUniversityTier,
+                $requiresPublicationTier,
             ),
         );
     }
@@ -380,6 +392,7 @@ PROMPT;
         bool $requiresReceivedAmount,
         bool $requiresTranslationEvidence,
         bool $requiresUniversityTier,
+        bool $requiresPublicationTier,
     ): string {
         $criterionPrompt = trim((string) preg_replace('/[ \t]+/', ' ', (string) $datum->criterion?->ai_prompt));
         $criterionPrompt = str_replace('%pointing%', (string) $maximumPoint, $criterionPrompt);
@@ -423,6 +436,7 @@ PROMPT;
             ? 'YYYY-MM-DD yoki faqat YYYY'
             : 'YYYY-MM-DD';
         $responseExample = match (true) {
+            $requiresPublicationTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"publication_tier\":\"q1|q2|q3|q4|conference|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresTranslationEvidence => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"is_translation\":true,\"source_language\":\"manba tili\",\"target_language\":\"uz|kaa|ru\",\"reason\":\"qisqa asos\"}",
             $requiresUniversityTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"university_tier\":\"top_100|top_300|top_500|top_1000|outside_top_1000|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresPageCount => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
@@ -440,6 +454,9 @@ PROMPT;
             : '';
         $receivedAmountInstruction = $requiresReceivedAmount
             ? 'MABLAG‘ HISOBI: received_amount maydoniga faqat universitet hisobiga tushgani tasdiqlangan summani so‘mda yozing. Ballni hisoblamang va point maydonini qaytarmang. Server received_amount / 1 000 000 / author_count formulasini qo‘llaydi.'
+            : '';
+        $publicationTierInstruction = $requiresPublicationTier
+            ? '3.1.3 TASNIFI: publication_tier maydoniga faqat q1, q2, q3, q4, conference yoki unknown yozing. Ballni hisoblamang va point uchun qat’iy 0 qaytaring. Accepted faqat bitta aniq kvartil yoki Scopus/WoS conference paper tasdiqlanganda mumkin.'
             : '';
         $pointInstruction = $requiresReceivedAmount
             ? 'Accepted bo‘lmasa received_amount va author_count 0 bo‘lishi shart.'
@@ -475,6 +492,7 @@ Faqat quyidagi kalitlarga ega JSON obyekt qaytaring:
 {$authorInstruction}
 {$printedLiteratureInstruction}
 {$receivedAmountInstruction}
+{$publicationTierInstruction}
 PROMPT;
     }
 
@@ -509,6 +527,7 @@ PROMPT;
         bool $requiresReceivedAmount = false,
         bool $requiresTranslationEvidence = false,
         bool $requiresUniversityTier = false,
+        bool $requiresPublicationTier = false,
     ): Schema {
         $properties = [
             'status' => new Schema(
@@ -581,6 +600,13 @@ PROMPT;
             );
         }
 
+        if ($requiresPublicationTier) {
+            $properties['publication_tier'] = new Schema(
+                type: DataType::STRING,
+                enum: ['q1', 'q2', 'q3', 'q4', 'conference', 'unknown'],
+            );
+        }
+
         $required = $requiresReceivedAmount ? ['status', 'received_amount'] : ['status', 'point'];
 
         if ($requiresAuthorCount) {
@@ -603,6 +629,10 @@ PROMPT;
 
         if ($requiresUniversityTier) {
             $required[] = 'university_tier';
+        }
+
+        if ($requiresPublicationTier) {
+            $required[] = 'publication_tier';
         }
 
         $required[] = 'reason';

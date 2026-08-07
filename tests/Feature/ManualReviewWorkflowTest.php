@@ -1765,7 +1765,7 @@ class ManualReviewWorkflowTest extends TestCase
 
         $this->assertSame(0.6, $impactDatum->point);
         $this->assertSame(2, $impactDatum->impact_factor);
-        $this->assertSame(2.5, $tierDatum->point);
+        $this->assertSame(5.0, $tierDatum->point);
         $this->assertSame('conference', $tierDatum->publication_tier);
         $this->assertSame(3.0, $patentWithDegreeDatum->point);
         $this->assertSame(4.0, $patentWithoutDegreeDatum->point);

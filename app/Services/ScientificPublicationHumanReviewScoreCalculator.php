@@ -2,17 +2,12 @@
 
 namespace App\Services;
 
+use App\Support\ScopusCriterionRule;
 use InvalidArgumentException;
 
 class ScientificPublicationHumanReviewScoreCalculator
 {
-    public const PUBLICATION_TIER_POINTS = [
-        'q1' => 5.0,
-        'q2' => 5.0,
-        'q3' => 4.0,
-        'q4' => 4.0,
-        'conference' => 2.5,
-    ];
+    public const PUBLICATION_TIER_POINTS = ScopusCriterionRule::PUBLICATION_TIER_POINTS;
 
     public function impactFactorPoint(float $maximumPoint, int $impactFactor): float
     {

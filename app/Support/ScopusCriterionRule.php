@@ -2,28 +2,70 @@
 
 namespace App\Support;
 
+use App\Data\AiEvaluationResult;
+
 class ScopusCriterionRule
 {
     public const CODE = '3.1.3';
 
     public const NAME_UZ = '“SCOPUS” xalqaro ilmiy - texnik ma’lumotlar bazalaridagi Q1 - Q4 kvartildagi jurnallarda nashr etilgan maqolalar';
 
-    public const MAXIMUM_POINT = 5.0;
+    public const MAXIMUM_POINT = 20.0;
+
+    public const PUBLICATION_TIER_POINTS = [
+        'q1' => 20.0,
+        'q2' => 15.0,
+        'q3' => 10.0,
+        'q4' => 5.0,
+        'conference' => 5.0,
+    ];
+
+    public const DESCRIPTION_UZ = 'Scopus va Web of Science bazalarida indekslangan nashrlar server tomonidan qat’iy baholanadi: Q1 — 20 ball, Q2 — 15 ball, Q3 — 10 ball, Q4 — 5 ball, Scopus yoki Web of Science konferensiya materiali — 5 ball. Ball mualliflar soniga bo‘linmaydi.';
 
     public const PROMPT = <<<'PROMPT'
-Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (ilmiy maqola matni, Scopus/WoS bazasidan skrinshot, sertifikat yoki jurnal muqovasi) tahlil qilib, maqola holatini baholang.
-Baholash qoidalari jami %pointing% ballgacha:
-1. Maqola aynan «Scopus» yoki «Web of Science» xalqaro bazalarida indekslangan bo'lishi shart.
-2. Jurnalning kvartilini (Q1, Q2, Q3, Q4) yoki maqola konferensiya materiali ekanligini aniqlang va shunga mos ball bering:
-   - Q1 yoki Q2 kvartil jurnallar uchun: 5 ball (100%)
-   - Q3 yoki Q4 kvartil jurnallar uchun: 4 ball (80%)
-   - Konferensiyalarda nashr etilgan maqolalar uchun: 2.5 ball (50%)
-3. Ball mualliflar soniga bo'linmaydi. Mualliflar sonini faqat audit ma'lumoti sifatida aniqlang.
+Siz qat'iy ilmiy nashr tasniflovchi AI yordamchisiz. Ballni hisoblamang. Faqat hujjatdagi ishonchli dalil asosida nashr turini aniqlang.
+1. Nashr aynan Scopus yoki Web of Science bazasida indekslangan bo'lishi shart.
+2. Jurnal maqolasi bo'lsa, maqola nashr qilingan yilga tegishli aniq kvartilni faqat Q1, Q2, Q3 yoki Q4 sifatida qaytaring.
+3. Konferensiya materiali bo'lsa, u Scopus yoki Web of Science bazasida indekslangan conference paper/proceedings ekanligi aniq ko'rsatilishi shart va publication_tier qiymati "conference" bo'ladi.
+4. Jurnal nomi obro'si, eski ball, taxmin yoki kvartili boshqa yilga tegishli ma'lumot asosida xulosa qilmang.
+5. Bir-biriga zid kvartillar, kvartil ko'rsatilmagan hujjat yoki jurnal/konferensiya turi noaniq bo'lsa "checking" va publication_tier uchun "unknown" qaytaring.
 Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-- Agar maqola Scopus/WoS bazasida ekanligi va uning kvartili/turi tasdiqlansa: "accepted" statusini bering. "point" qismiga mos ballni (5, 4 yoki 2.5) yozing. "author_count" qismiga mualliflar sonini kiriting.
-- Agar hujjat xira bo'lsa, nashr sanasi, jurnalning Scopus/WoS dagi holati yoki kvartili aniq ko'rsatilmagan bo'lib, inson tekshiruvi talab etilsa: "checking" statusini bering ("point": 0).
-- Agar hujjatning maqolaga aloqasi bo'lmasa yoki jurnal Scopus/WoS bazalariga umuman kirmasligi aniq bo'lsa: "cancelled" statusini bering ("point": 0).
+- Scopus/WoS indeksatsiyasi va bitta aniq kvartil yoki konferensiya turi tasdiqlansa: "accepted".
+- Dalil yetarli bo'lmasa yoki ziddiyatli bo'lsa: "checking".
+- Nashr Scopus/WoS bazasida emasligi yoki mezonga aloqasi yo'qligi aniq bo'lsa: "cancelled".
 Javobni hech qanday markdown belgilarisiz va qo'shimcha so'zlarsiz, faqat qat'iy JSON formatida qaytaring:
-{"status":"accepted|checking|cancelled","point":<5, 4, 2.5 yoki 0>,"author_count":<mualliflar soni>,"resource_date":"YYYY-MM-DD yoki bo'sh satr","reason":"<qaror sababi, nashr sanasi, kvartil va mualliflar soni>"}
+{"status":"accepted|checking|cancelled","point":0,"publication_tier":"q1|q2|q3|q4|conference|unknown","resource_date":"YYYY-MM-DD yoki bo'sh satr","reason":"<Scopus/WoS dalili, nashr turi, aniq kvartil va nashr sanasi>"}
 PROMPT;
+
+    public static function pointFor(string $publicationTier): ?float
+    {
+        return self::PUBLICATION_TIER_POINTS[$publicationTier] ?? null;
+    }
+
+    public static function apply(AiEvaluationResult $result): AiEvaluationResult
+    {
+        if ($result->status !== 'accepted') {
+            return new AiEvaluationResult(
+                status: $result->status,
+                point: 0,
+                reason: $result->reason,
+                resourceDate: $result->resourceDate,
+                publicationTier: $result->publicationTier,
+            );
+        }
+
+        $point = $result->publicationTier === null ? null : self::pointFor($result->publicationTier);
+
+        if ($point === null) {
+            return AiEvaluationResult::checking('Kvartil yoki konferensiya turi aniq tasdiqlanmadi. Inson tekshiruvi zarur.');
+        }
+
+        return new AiEvaluationResult(
+            status: 'accepted',
+            point: $point,
+            reason: $result->reason,
+            resourceDate: $result->resourceDate,
+            publicationTier: $result->publicationTier,
+        );
+    }
 }

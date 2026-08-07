@@ -10,6 +10,7 @@ use App\Models\Datum;
 use App\Models\Option;
 use App\Services\AiSubmissionEvaluator;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\ScopusCriterionRule;
 use DateTimeInterface;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -105,6 +106,10 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 (string) $datum->criterion->code,
                 (string) $datum->user->degree,
             );
+
+            if ($datum->criterion->code === ScopusCriterionRule::CODE) {
+                $result = ScopusCriterionRule::apply($result);
+            }
         } catch (Throwable $exception) {
             Cache::put(
                 'kpi:ai-worker:last-failure-datum-id',
@@ -144,7 +149,7 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 'author_count' => $result->status === 'accepted' ? $result->authorCount : null,
                 'page_count' => $result->status === 'accepted' ? $result->pageCount : null,
                 'impact_factor' => null,
-                'publication_tier' => null,
+                'publication_tier' => $result->status === 'accepted' ? $result->publicationTier : null,
                 'university_tier' => $result->status === 'accepted' ? $result->universityTier : null,
                 'received_amount' => $result->status === 'accepted' ? $result->receivedAmount : null,
                 'reason' => $result->status === 'checking'
