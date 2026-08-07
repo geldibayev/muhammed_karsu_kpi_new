@@ -8,6 +8,8 @@ class FixedPerResourceHumanReviewCriterionRule
 {
     public const TWO_ONE_TWO_CODE = '2.1.2';
 
+    public const THREE_ONE_TEN_CODE = '3.1.10';
+
     public const FOUR_ONE_TWO_CODE = '4.1.2';
 
     /** @var array<string, array<string, float>> */
@@ -21,6 +23,12 @@ class FixedPerResourceHumanReviewCriterionRule
             'hold_degrees' => 1.0,
             'no_degrees' => 1.0,
             'foreign_lang' => 1.0,
+            'physical' => 2.0,
+        ],
+        self::THREE_ONE_TEN_CODE => [
+            'hold_degrees' => 2.0,
+            'no_degrees' => 4.0,
+            'foreign_lang' => 2.0,
             'physical' => 2.0,
         ],
         '1.10' => [
@@ -169,6 +177,26 @@ QAROR:
 - Murojaat xususiy tashkilotdan bo'lsa, ilmiy-amaliy taklif yoki professor-o'qituvchining ishtiroki mavjud emasligi aniq bo'lsa yoxud hujjat mezonga aloqasiz bo'lsa cancelled qaytaring.
 
 Point maydoniga har qanday statusda 0 yozing: yakuniy ballni server hisoblaydi. Reason ichida murojaat qilgan davlat organi, taklif mazmuni va professor-o'qituvchining ishtirokiga oid dalilni qisqa yozing.
+PROMPT;
+    }
+
+    public static function threeOneTenPrompt(): string
+    {
+        return <<<'PROMPT'
+Siz 3.1.10 mezoni bo'yicha professor-o'qituvchining universitet nomidan ilmiy tadbirda ma'ruza bilan qatnashgani yoki sovrinli o'rin olganini tekshiruvchi qat'iy AI yordamchisiz.
+
+VAZIFA:
+- Sertifikat, diplom, tashakkurnoma, konferensiya dasturi yoki boshqa rasmiy hujjatni tekshiring.
+- Professor-o'qituvchi universitet nomidan ma'ruza, ko'rgazma, yarmarka, seminar, tanlov yoki konferensiyada ma'ruza bilan qatnashgani yoxud shu ilmiy tadbirda sovrinli o'rin olgani aniq tasdiqlanishi kerak.
+- Oddiy tinglovchi yoki ma'ruzasiz qatnashuvchi sertifikati yetarli emas.
+- Ballni tanlamang va hisoblamang. Tasdiqlangan resursga server foydalanuvchining ishonchli HEMIS toifasi bo'yicha ilmiy darajaga ega bo'lmaganlarga 4 ball, qolgan barcha toifalarga 2 ball beradi.
+
+QAROR:
+- Universitet nomidan ma'ruza bilan qatnashish yoki ilmiy tadbirda sovrinli o'rin olish aniq tasdiqlansa accepted qaytaring.
+- Hujjat xira, kesilgan, tadbirning ilmiy ekani, universitet nomidan ishtirok, ma'ruza yoki sovrinli o'rin noaniq bo'lsa checking qaytaring.
+- Hujjat ilmiy tadbirga aloqasiz bo'lsa yoki faqat ma'ruzasiz oddiy qatnashuvni tasdiqlasa cancelled qaytaring.
+
+Point maydoniga har qanday statusda 0 yozing: yakuniy ballni server hisoblaydi. Reason ichida tadbir nomi, universitet nomidan ishtirok va ma'ruza yoki sovrinli o'ringa oid dalilni qisqa yozing.
 PROMPT;
     }
 

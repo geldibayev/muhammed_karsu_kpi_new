@@ -119,7 +119,15 @@ class KpiCriterionSpecification
             ),
             '3.1.8' => self::rule(self::Unlimited, 4, 'current', [3, 4, 4, 4], 4),
             '3.1.9' => self::rule(self::Competition, 2, 'current', [1, 2, 2, 2]),
-            '3.1.10' => self::rule(self::Maximum, 1, 'current', [2, 4, 2, 2]),
+            '3.1.10' => self::rule(
+                self::Maximum,
+                1,
+                'current',
+                [2, 4, 2, 2],
+                4,
+                false,
+                aiPrompt: FixedPerResourceHumanReviewCriterionRule::threeOneTenPrompt(),
+            ),
             '3.1.11' => self::rule(
                 self::Unlimited,
                 1,

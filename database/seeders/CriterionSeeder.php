@@ -963,22 +963,13 @@ class CriterionSeeder extends Seeder
                             'foreign_lang' => 2,
                             'physical' => 2,
                         ],
+                        'file_limit' => 1,
                         'year' => 2025,
-                        'formula_id' => 1,
+                        'formula_id' => 2,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (sertifikat, diplom, tashakkurnoma yoki konferensiya dasturi) tahlil qilib, professor-o'qituvchining universitet nomidan ilmiy tadbirlardagi ishtirokini baholang.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Xalqaro konferensiya/seminarlarda ma'ruza bilan qatnashganlik: 1.0 ball.
-                        2. Respublika miqyosidagi ilmiy tadbirlarda ishtirok: 0.5 ball.
-                        3. Tanlov va ko'rgazmalarda sovrinli o'rinlar (1, 2, 3-o'rinlar): 1.5 ball.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar hujjatda universitet nomidan qatnashganligi va tadbir turi aniq bo'lsa: \"accepted\" statusini bering. \"point\" qismiga mos ballni yozing.
-                        - Agar hujjat xira bo'lsa, tadbirning darajasini (xalqaro/respublika) yoki erishilgan o'rinni aniq o'qib bo'lmasa, yoxud hujjat shubhali bo'lib administrator tekshiruvi zarur bo'lsa: \"checking\" statusini bering (\"point\": 0).
-                        - Agar hujjatning ilmiy tadbirga aloqasi bo'lmasa (masalan, shunchaki qatnashchi sertifikati yoki notekshiriladigan tadbir): \"cancelled\" statusini bering (\"point\": 0).
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, 1.0, 0.5, 1.5 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, tadbir turi va nima uchun aynan shu ball berilganligi haqida qisqacha izoh>\"}",
+                        'ai_submission_max_point' => 4,
+                        'divide_ai_point_by_authors' => false,
+                        'ai_prompt' => FixedPerResourceHumanReviewCriterionRule::threeOneTenPrompt(),
                     ],
                     [
                         'name' => [

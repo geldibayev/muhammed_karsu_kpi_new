@@ -42,6 +42,7 @@ return [
         '3.1.2' => $scientificPublicationsReviewerHemisId,
         '3.1.3' => $scientificPublicationsReviewerHemisId,
         '3.1.8' => $scientificPublicationsReviewerHemisId,
+        '3.1.10' => $fixedPerResourceReviewerHemisId,
         '3.1.12' => $fixedPerResourceReviewerHemisId,
         '3.1.13' => $industryFundingAndUniversityProjectReviewerHemisId,
         '3.1.14' => $industryFundingAndUniversityProjectReviewerHemisId,
