@@ -24,8 +24,6 @@ class Criterion extends Model
 
     public const PUBLICATION_TIER_AI_HUMAN_REVIEW_CODE = '3.1.3';
 
-    public const AUTHOR_DIVIDED_AI_HUMAN_REVIEW_CODE = '3.1.8';
-
     public const PRINTED_EDUCATIONAL_LITERATURE_CODES = ['1.2', '1.3', '1.4'];
 
     protected $fillable = [
@@ -155,9 +153,7 @@ class Criterion extends Model
 
     public function usesAuthorDividedAiHumanReviewScore(): bool
     {
-        return $this->checking === 'ai'
-            && ($this->code === self::AUTHOR_DIVIDED_AI_HUMAN_REVIEW_CODE
-                || $this->isLaboratoryWorkCriterion());
+        return $this->checking === 'ai' && $this->isLaboratoryWorkCriterion();
     }
 
     /** @return array<int, 'file'|'url'> */

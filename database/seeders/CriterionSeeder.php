@@ -14,6 +14,7 @@ use App\Support\InternationalCooperationCriterionRule;
 use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\MasterClassCriterionRule;
 use App\Support\OakArticleCriterionRule;
+use App\Support\PatentCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
 use App\Support\ScopusCriterionRule;
 use App\Support\TranslatedEducationalLiteratureCriterionRule;
@@ -864,10 +865,7 @@ class CriterionSeeder extends Seeder
                             'en' => 'Effectiveness of research work: PATENT',
                         ],
                         'desc' => [
-                            'uz' => 'Ixtiro, foydali model, sanoat namunalari va seleksiya yutuqlari uchun olingan patentlar asosida aniqlanadi. Huquq egasi universitet yoki universitet o‘qituvchisi bo‘lishi kerak. Huquq egasi (lari) o‘rtasida teng taqsimlanadi.',
-                            'kaa' => 'Oylap tabıw, paydalı model, sanaat úlgileri hám selekciya jetiskenlikleri ushın alınǵan patentler tiykarında anıqlanadı. Huqıq iesi universitet yamasa universitet oqıtıwshısı bolıwı kerek. Huqiq iyesi (leri) arasında teń bólistiriledi.',
-                            'ru' => 'На основании полученных патентов на изобретения, полезные модели, промышленные образцы и селекционные достижения. Правообладателем должен быть университет или преподаватель университета. Распределяется поровну между правообладателем (правообладателями).',
-                            'en' => 'On the basis of patents for inventions, utility models, industrial designs, and selection achievements. The rights holder must be a university or university lecturer. Shared equally among the rights holder (s).',
+                            ...PatentCriterionRule::descriptions(),
                         ],
                         'observation' => 'current',
                         'report_id' => 1,
@@ -884,17 +882,9 @@ class CriterionSeeder extends Seeder
                         'year' => 2025,
                         'formula_id' => 3,
                         'ai_model' => self::ADVANCED_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan patent hujjatini (ixtiro, foydali model, sanoat namunasi yoki seleksiya yutug'i) tahlil qiling va quyidagi qoidalar asosida baholang:
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Huquq egasi (patent egasi) sifatida universitet yoki o'qituvchining o'zi ko'rsatilganligini tekshiring. Boshqa tashkilot bo'lsa, rad eting.
-                        2. Patentning haqiqiyligi va mavzuni (ixtiro, foydali model va h.k.) aniqlang.
-                        3. Asosiy ball = 1. Ballni teng taqsimlash uchun patentda ko'rsatilgan barcha mualliflar sonini aniq hisoblang.
-                        Qaror qabul qilish:
-                        - \"accepted\": Patent egasi mos bo'lsa va hujjat rasmiy bo'lsa. point = 1, author_count = <mualliflar soni>.
-                        - \"checking\": Hujjat xira bo'lsa, huquq egasini aniqlash qiyin bo'lsa yoki shubhali bo'lsa. point = 0, author_count = 0.
-                        - \"cancelled\": Patent egasi noto'g'ri bo'lsa yoki hujjat patentga aloqador bo'lmasa. point = 0, author_count = 0.
-                        Javobni hech qanday markdown belgilarisiz (```json kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam, 1 yoki 0>, \"author_count\": <mualliflar soni raqamda>, \"reason\": \"<Sabab va patent egasi haqida qisqacha izoh>\"}",
+                        'ai_submission_max_point' => 4,
+                        'divide_ai_point_by_authors' => false,
+                        'ai_prompt' => PatentCriterionRule::PROMPT,
                     ],
                     [
                         'name' => [

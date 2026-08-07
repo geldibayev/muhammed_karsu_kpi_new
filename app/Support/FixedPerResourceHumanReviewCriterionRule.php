@@ -14,6 +14,12 @@ class FixedPerResourceHumanReviewCriterionRule
 
     /** @var array<string, array<string, float>> */
     private const POINTS = [
+        PatentCriterionRule::CODE => [
+            'hold_degrees' => 3.0,
+            'no_degrees' => 4.0,
+            'foreign_lang' => 4.0,
+            'physical' => 4.0,
+        ],
         self::TWO_ONE_TWO_CODE => [
             'hold_degrees' => 2.0,
             'no_degrees' => 2.0,
@@ -116,7 +122,7 @@ class FixedPerResourceHumanReviewCriterionRule
             status: $result->status,
             point: $result->status === 'accepted' ? $fixedPoint : 0,
             reason: $result->reason,
-            authorCount: $result->authorCount,
+            authorCount: $criterionCode === PatentCriterionRule::CODE ? null : $result->authorCount,
             resourceDate: $result->resourceDate,
             pageCount: $result->pageCount,
             receivedAmount: $result->receivedAmount,

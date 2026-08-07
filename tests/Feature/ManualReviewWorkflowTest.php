@@ -1742,14 +1742,14 @@ class ManualReviewWorkflowTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $patentWithDegreeDatum))
             ->assertOk()
-            ->assertSee('Mualliflar soni bilan tasdiqlash')
-            ->assertSee('name="author_count"', false)
+            ->assertSee('Tasdiqlash')
+            ->assertDontSee('name="author_count"', false)
             ->assertDontSee('name="point"', false);
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $patentWithDegreeDatum), ['author_count' => 2])
+            ->patch(route('reviews.approve', $patentWithDegreeDatum))
             ->assertRedirect(route('ai-human-reviews.index'));
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $patentWithoutDegreeDatum), ['author_count' => 4])
+            ->patch(route('reviews.approve', $patentWithoutDegreeDatum))
             ->assertRedirect(route('ai-human-reviews.index'));
 
         $impactDatum->refresh();
@@ -1761,10 +1761,10 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertSame(2, $impactDatum->impact_factor);
         $this->assertSame(2.5, $tierDatum->point);
         $this->assertSame('conference', $tierDatum->publication_tier);
-        $this->assertSame(1.5, $patentWithDegreeDatum->point);
-        $this->assertSame(1.0, $patentWithoutDegreeDatum->point);
-        $this->assertSame(2, $patentWithDegreeDatum->author_count);
-        $this->assertSame(4, $patentWithoutDegreeDatum->author_count);
+        $this->assertSame(3.0, $patentWithDegreeDatum->point);
+        $this->assertSame(4.0, $patentWithoutDegreeDatum->point);
+        $this->assertNull($patentWithDegreeDatum->author_count);
+        $this->assertNull($patentWithoutDegreeDatum->author_count);
         $this->assertSame(0.6, (float) Point::query()
             ->where('user_id', $withoutDegreeOwner->id)
             ->where('criterion_id', $criteria->get('3.1.2')->id)
