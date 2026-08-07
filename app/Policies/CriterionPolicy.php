@@ -5,14 +5,18 @@ namespace App\Policies;
 use App\Models\Criterion;
 use App\Models\Option;
 use App\Models\User;
+use App\Support\ResourceUploadWindow;
 
 class CriterionPolicy
 {
+    public function __construct(private ResourceUploadWindow $resourceUploadWindow) {}
+
     public function submit(User $user, Criterion $criterion): bool
     {
         $hasTeacherRole = $user->hasRole('teacher') || $user->hasRole('user');
 
         return Option::resourceUploadsEnabled()
+            && $this->resourceUploadWindow->isOpen()
             && ($hasTeacherRole || $user->isSuperAdmin())
             && ($criterion->upload === '1' || $criterion->isHIndexCriterion())
             && $criterion->status === '1'

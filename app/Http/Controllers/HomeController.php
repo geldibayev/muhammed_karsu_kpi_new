@@ -7,6 +7,7 @@ use App\Models\Option;
 use App\Models\Point;
 use App\Models\Report;
 use App\Support\RatingMethodPresenter;
+use App\Support\ResourceUploadWindow;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -21,6 +22,7 @@ class HomeController extends Controller
     public function index(
         Request $request,
         RatingMethodPresenter $ratingMethodPresenter,
+        ResourceUploadWindow $resourceUploadWindow,
     ): View {
         $degree = $request->user()->degree;
         $report = Report::query()->where('status', '1')->latest('id')->first();
@@ -60,13 +62,15 @@ class HomeController extends Controller
                 'name' => 'Asosiy sahifa',
             ],
         ];
-        $resourceUploadsEnabled = Option::resourceUploadsEnabled();
+        $resourceUploadWindowOpen = $resourceUploadWindow->isOpen();
+        $resourceUploadsEnabled = Option::resourceUploadsEnabled() && $resourceUploadWindowOpen;
 
         return view('home', compact([
             'criteria',
             'points',
             'breadcrumbs',
             'resourceUploadsEnabled',
+            'resourceUploadWindowOpen',
             'ratingMethods',
         ]));
     }

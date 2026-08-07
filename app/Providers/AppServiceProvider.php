@@ -11,6 +11,7 @@ use App\Models\Datum;
 use App\Models\User;
 use App\View\Composers\AiStatusMenuComposer;
 use App\View\Composers\AuthenticatedUserSummaryComposer;
+use App\View\Composers\ResourceUploadDeadlineComposer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Queue\Events\JobExceptionOccurred;
@@ -181,5 +182,6 @@ class AppServiceProvider extends ServiceProvider
         );
         View::composer('layouts.app', AuthenticatedUserSummaryComposer::class);
         View::composer('layouts.app', AiStatusMenuComposer::class);
+        View::composer(['layouts.app', 'auth.login'], ResourceUploadDeadlineComposer::class);
     }
 }

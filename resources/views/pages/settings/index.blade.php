@@ -5,7 +5,7 @@
         <div class="container-fluid">
             <div class="row">
                 <div class="col-lg-8">
-                    <div class="card card-outline {{ $resourceUploadsEnabled ? 'card-success' : 'card-warning' }} shadow-sm">
+                    <div class="card card-outline {{ $resourceUploadsAvailable ? 'card-success' : 'card-warning' }} shadow-sm">
                         <div class="card-header">
                             <h3 class="card-title font-weight-bold">
                                 <i class="fas fa-upload mr-1" aria-hidden="true"></i>
@@ -16,13 +16,24 @@
                             @csrf
                             @method('PUT')
                             <div class="card-body">
-                                <div class="alert {{ $resourceUploadsEnabled ? 'alert-success' : 'alert-warning' }}">
+                                <div class="alert {{ $resourceUploadsAvailable ? 'alert-success' : 'alert-warning' }}">
                                     <div class="font-weight-bold">
                                         Joriy holat:
-                                        {{ $resourceUploadsEnabled ? 'Yuklashga ruxsat berilgan' : 'Yuklash vaqtincha o‘chirilgan' }}
+                                        @if(! $resourceUploadWindowOpen)
+                                            Yuklash muddati yakunlangan
+                                        @elseif($resourceUploadsEnabled)
+                                            Yuklashga ruxsat berilgan
+                                        @else
+                                            Yuklash vaqtincha o‘chirilgan
+                                        @endif
                                     </div>
                                     <div class="small mt-1">
-                                        O‘chirilganda foydalanuvchilar fayl, URL va H-index ma’lumotlarini tizimga yubora olmaydi.
+                                        Oxirgi muddat: {{ $resourceUploadDeadlineLabel }}.
+                                        @if($resourceUploadWindowOpen)
+                                            O‘chirilganda foydalanuvchilar fayl, URL va H-index ma’lumotlarini tizimga yubora olmaydi.
+                                        @else
+                                            Global sozlama yoqilgan bo‘lsa ham yangi resurslar qabul qilinmaydi.
+                                        @endif
                                         Avval yuklangan resurslar saqlanib qoladi.
                                     </div>
                                 </div>

@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateAiSettingsRequest;
 use App\Http\Requests\UpdateUploadSettingsRequest;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Option;
+use App\Support\ResourceUploadWindow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
@@ -16,13 +17,18 @@ use Illuminate\View\View;
 
 class SystemSettingsController extends Controller
 {
-    public function index(): View
+    public function index(ResourceUploadWindow $resourceUploadWindow): View
     {
         Gate::authorize('manage-kpi-settings');
         $connection = (string) config('queue.default');
+        $resourceUploadsEnabled = Option::resourceUploadsEnabled();
+        $resourceUploadWindowOpen = $resourceUploadWindow->isOpen();
 
         return view('pages.settings.index', [
-            'resourceUploadsEnabled' => Option::resourceUploadsEnabled(),
+            'resourceUploadsEnabled' => $resourceUploadsEnabled,
+            'resourceUploadsAvailable' => $resourceUploadsEnabled && $resourceUploadWindowOpen,
+            'resourceUploadWindowOpen' => $resourceUploadWindowOpen,
+            'resourceUploadDeadlineLabel' => $resourceUploadWindow->formattedDeadline(),
             'aiEvaluationsEnabled' => Option::aiEvaluationsEnabled(),
             'aiQueuePaused' => Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE),
             'aiQueuePausedBySetting' => Option::aiQueuePausedBySetting() === true,

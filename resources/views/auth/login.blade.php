@@ -25,17 +25,24 @@
         </div>
     </nav>
 
-    <div class="content-wrapper pt-4">
-        <x-rating-list
-            :$departments
-            :$faculties
-            :$filters
-            :$mode
-            :$report
-            :$unitRankings
-            :$users
-            filter-route="login"
+    <div class="content-wrapper">
+        <x-resource-upload-deadline
+            :deadline="$layoutResourceUploadDeadline"
+            :deadline-label="$layoutResourceUploadDeadlineLabel"
+            :is-open="$layoutResourceUploadWindowOpen"
         />
+        <div class="pt-4">
+            <x-rating-list
+                :$departments
+                :$faculties
+                :$filters
+                :$mode
+                :$report
+                :$unitRankings
+                :$users
+                filter-route="login"
+            />
+        </div>
     </div>
 
     <footer class="main-footer text-center">

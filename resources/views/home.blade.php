@@ -7,7 +7,9 @@
         @unless($resourceUploadsEnabled)
             <div class="alert alert-warning shadow-sm">
                 <i class="fas fa-pause-circle mr-1" aria-hidden="true"></i>
-                Tizimga resurs yuklash administrator tomonidan vaqtincha to‘xtatilgan.
+                {{ $resourceUploadWindowOpen
+                    ? 'Tizimga resurs yuklash administrator tomonidan vaqtincha to‘xtatilgan.'
+                    : 'Resurs yuklash muddati yakunlangan. Yangi resurslar qabul qilinmaydi.' }}
             </div>
         @endunless
 

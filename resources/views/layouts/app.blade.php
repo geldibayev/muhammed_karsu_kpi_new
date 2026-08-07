@@ -331,6 +331,11 @@
         <marquee class="p-0 m-0 bg-danger">
             Sayt hozirda TEST rejimida ishlamoqda!
         </marquee>
+        <x-resource-upload-deadline
+            :deadline="$layoutResourceUploadDeadline"
+            :deadline-label="$layoutResourceUploadDeadlineLabel"
+            :is-open="$layoutResourceUploadWindowOpen"
+        />
         <section class="content-header">
             <div class="container-fluid">
                 <div class="row mb-2">

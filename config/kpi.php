@@ -25,6 +25,7 @@ $resourceStatisticsViewerHemisIds = array_values(array_filter(
 
 return [
     'ai_unlimited_submission_max_point' => (float) env('KPI_AI_UNLIMITED_SUBMISSION_MAX_POINT', 1),
+    'resource_upload_deadline' => env('KPI_RESOURCE_UPLOAD_DEADLINE', '2026-08-15 23:59:59'),
     'report_period_start' => '2025-09-01',
     'report_period_end' => '2026-08-31',
     'ai_status_viewer_hemis_id' => env('KPI_AI_STATUS_VIEWER_HEMIS_ID', '3172011004'),
