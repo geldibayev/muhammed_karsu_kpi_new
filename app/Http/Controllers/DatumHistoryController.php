@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\DatumStatus;
 use App\Models\Datum;
+use App\Models\Point;
+use App\Models\Report;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -24,6 +26,7 @@ class DatumHistoryController extends Controller
             ],
         ];
 
+        $report = Report::query()->where('status', '1')->latest('id')->first();
         $query = Datum::query()->where('status', $status->value);
 
         if (! $request->user()->isSuperAdmin() || $status !== DatumStatus::Cancelled) {
@@ -31,7 +34,12 @@ class DatumHistoryController extends Controller
         }
 
         $totalPoints = $status === DatumStatus::Accepted
-            ? (clone $query)->sum('point')
+            ? ($report === null
+                ? 0.0
+                : (float) Point::query()
+                    ->whereBelongsTo($request->user())
+                    ->forRatingReport($report)
+                    ->sum('point'))
             : null;
 
         $relations = [

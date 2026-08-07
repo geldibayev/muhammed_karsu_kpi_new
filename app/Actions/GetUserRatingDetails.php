@@ -265,7 +265,7 @@ class GetUserRatingDetails
         return Point::query()
             ->select(['id', 'user_id', 'criterion_id', 'report_id', 'point'])
             ->whereBelongsTo($user)
-            ->whereBelongsTo($report)
+            ->forRatingReport($report)
             ->orderBy('criterion_id')
             ->get();
     }

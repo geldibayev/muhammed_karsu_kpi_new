@@ -257,7 +257,10 @@ class RecalculateReportPoints
             ->selectRaw('COUNT(*) as files')
             ->where('status', 'accepted')
             ->whereHas('user', fn ($query) => $query->active())
-            ->whereHas('criterion', fn ($query) => $query->where('report_id', $report->getKey()))
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->whereNotNull('parent_id')
+                ->ratingEnabled())
             ->groupBy('user_id', 'criterion_id')
             ->get();
 
@@ -285,8 +288,9 @@ class RecalculateReportPoints
     private function rebuildFinalPoints(Report $report): void
     {
         $criteria = Criterion::query()
-            ->where('report_id', $report->getKey())
+            ->whereBelongsTo($report)
             ->whereNotNull('parent_id')
+            ->ratingEnabled()
             ->with([
                 'criterionEvaluations:id,criterion_id,evaluation,has,score',
                 'formula:id,code',

@@ -16,7 +16,7 @@
                             </span>
                             @if($status === \App\Enums\DatumStatus::Accepted)
                                 <span class="badge badge-primary px-3 py-2">
-                                    Jami ball: {{ number_format($totalPoints, 2) }}
+                                    Yakuniy jami ball: {{ number_format($totalPoints, 2) }}
                                 </span>
                             @endif
                         </div>

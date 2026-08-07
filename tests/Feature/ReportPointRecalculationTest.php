@@ -47,6 +47,11 @@ class ReportPointRecalculationTest extends TestCase
         $proportionalCriterion = $this->createCriterion($report, $rootCriterion, $formulaOne);
         $cappedCriterion = $this->createCriterion($report, $rootCriterion, $formulaTwo);
         $unlimitedCriterion = $this->createCriterion($report, $rootCriterion, $formulaThree);
+        $inactiveCriterion = $this->createCriterion($report, $rootCriterion, $formulaThree);
+        $inactiveCriterion->update(['status' => '0']);
+        $inactiveRootCriterion = $this->createCriterion($report);
+        $inactiveRootCriterion->update(['status' => '0']);
+        $criterionUnderInactiveRoot = $this->createCriterion($report, $inactiveRootCriterion, $formulaThree);
         $otherCriterion = $this->createCriterion($otherReport, $otherRootCriterion, $formulaThree);
         $firstTeacher = User::factory()->create(['degree' => 'test_degree']);
         $secondTeacher = User::factory()->create(['degree' => 'test_degree']);
@@ -74,6 +79,8 @@ class ReportPointRecalculationTest extends TestCase
         $this->createDatum($firstTeacher, $proportionalCriterion, 100, 'checking');
         $this->createDatum($firstTeacher, $cappedCriterion, 8);
         $this->createDatum($firstTeacher, $unlimitedCriterion, 3.5);
+        $this->createDatum($firstTeacher, $inactiveCriterion, 100);
+        $this->createDatum($firstTeacher, $criterionUnderInactiveRoot, 100);
 
         Point::query()->create([
             'user_id' => $firstTeacher->id,
@@ -100,6 +107,18 @@ class ReportPointRecalculationTest extends TestCase
         $this->assertDatabaseHas('points', [
             'report_id' => $otherReport->id,
             'point' => 77,
+        ]);
+        $this->assertDatabaseMissing('criterion_points', [
+            'criterion_id' => $inactiveCriterion->getKey(),
+        ]);
+        $this->assertDatabaseMissing('criterion_points', [
+            'criterion_id' => $criterionUnderInactiveRoot->getKey(),
+        ]);
+        $this->assertDatabaseMissing('points', [
+            'criterion_id' => $inactiveCriterion->getKey(),
+        ]);
+        $this->assertDatabaseMissing('points', [
+            'criterion_id' => $criterionUnderInactiveRoot->getKey(),
         ]);
 
         $this->actingAs($superAdmin)->post(route('reports.points.rebuild', $report));

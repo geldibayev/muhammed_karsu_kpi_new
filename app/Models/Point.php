@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -27,6 +28,19 @@ class Point extends Model
     public function report(): BelongsTo
     {
         return $this->belongsTo(Report::class);
+    }
+
+    public function scopeForRatingReport(Builder $query, Report $report): Builder
+    {
+        return $query
+            ->whereBelongsTo($report)
+            ->whereHas(
+                'criterion',
+                fn (Builder $query): Builder => $query
+                    ->whereBelongsTo($report)
+                    ->whereNotNull('parent_id')
+                    ->ratingEnabled(),
+            );
     }
 
     protected function casts(): array

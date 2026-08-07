@@ -52,7 +52,7 @@ class HomeController extends Controller
             ? collect()
             : Point::query()
                 ->whereBelongsTo($request->user())
-                ->whereBelongsTo($report)
+                ->forRatingReport($report)
                 ->pluck('point', 'criterion_id');
         $breadcrumbs = [
             [

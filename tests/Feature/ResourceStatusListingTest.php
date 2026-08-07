@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\DatumStatus;
 use App\Models\Criterion;
 use App\Models\Datum;
+use App\Models\Point;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -122,22 +123,108 @@ class ResourceStatusListingTest extends TestCase
             ->assertSee('class="pagination"', false);
     }
 
-    public function test_accepted_listing_shows_the_authenticated_users_total_points(): void
+    public function test_accepted_listing_shows_the_active_report_final_total_points(): void
     {
         $owner = User::factory()->create();
         $otherUser = User::factory()->create();
         $criterion = $this->createCriterion();
+        $report = $criterion->report;
 
         $this->createDatum($owner, $criterion, DatumStatus::Accepted, 'First accepted resource', ['point' => 8.5]);
         $this->createDatum($owner, $criterion, DatumStatus::Accepted, 'Second accepted resource', ['point' => 4.25]);
         $this->createDatum($owner, $criterion, DatumStatus::Received, 'Pending resource', ['point' => 100]);
         $this->createDatum($otherUser, $criterion, DatumStatus::Accepted, 'Foreign accepted resource', ['point' => 50]);
+        Point::query()->create([
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'report_id' => $report->getKey(),
+            'point' => 9,
+        ]);
+        Point::query()->create([
+            'user_id' => $otherUser->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'report_id' => $report->getKey(),
+            'point' => 50,
+        ]);
+
+        $inactiveCriterion = Criterion::query()->create([
+            'name' => ['uz' => 'Faol bo‘lmagan mezon'],
+            'report_id' => $report->getKey(),
+            'upload' => '1',
+            'status' => '0',
+        ]);
+        $this->createDatum(
+            $owner,
+            $inactiveCriterion,
+            DatumStatus::Accepted,
+            'Faol bo‘lmagan resurs',
+            ['point' => 100],
+        );
+        Point::query()->create([
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $inactiveCriterion->getKey(),
+            'report_id' => $report->getKey(),
+            'point' => 100,
+        ]);
+
+        $oldReport = Report::query()->create([
+            'name' => ['uz' => 'Eski hisobot'],
+            'status' => '0',
+        ]);
+        $oldCriterion = Criterion::query()->create([
+            'name' => ['uz' => 'Eski mezon'],
+            'report_id' => $oldReport->getKey(),
+            'upload' => '1',
+            'status' => '1',
+        ]);
+        $this->createDatum(
+            $owner,
+            $oldCriterion,
+            DatumStatus::Accepted,
+            'Eski hisobot resursi',
+            ['point' => 75],
+        );
+        Point::query()->create([
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $oldCriterion->getKey(),
+            'report_id' => $oldReport->getKey(),
+            'point' => 75,
+        ]);
 
         $this->actingAs($owner)
             ->get(route('files.show', DatumStatus::Accepted))
             ->assertOk()
-            ->assertViewHas('totalPoints', fn (mixed $totalPoints): bool => (float) $totalPoints === 12.75)
-            ->assertSee('Jami ball: 12.75');
+            ->assertViewHas('totalPoints', fn (mixed $totalPoints): bool => (float) $totalPoints === 9.0)
+            ->assertSee('Yakuniy jami ball: 9.00')
+            ->assertSee('Faol bo‘lmagan resurs')
+            ->assertSee('Eski hisobot resursi');
+    }
+
+    public function test_accepted_listing_keeps_history_and_shows_zero_without_an_active_report(): void
+    {
+        $owner = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $criterion->report->update(['status' => '0']);
+        $this->createDatum(
+            $owner,
+            $criterion,
+            DatumStatus::Accepted,
+            'Arxivdagi tasdiqlangan resurs',
+            ['point' => 25],
+        );
+        Point::query()->create([
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'report_id' => $criterion->report_id,
+            'point' => 25,
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('files.show', DatumStatus::Accepted))
+            ->assertOk()
+            ->assertViewHas('totalPoints', fn (mixed $totalPoints): bool => (float) $totalPoints === 0.0)
+            ->assertSee('Yakuniy jami ball: 0.00')
+            ->assertSee('Arxivdagi tasdiqlangan resurs');
     }
 
     public function test_owner_and_another_authenticated_rating_user_can_view_accepted_resource_details(): void
@@ -242,9 +329,17 @@ class ResourceStatusListingTest extends TestCase
             'status' => '1',
         ]);
 
+        $parent = Criterion::query()->create([
+            'name' => ['uz' => 'Status bo‘limi'],
+            'report_id' => $report->id,
+            'upload' => '0',
+            'status' => '1',
+        ]);
+
         return Criterion::query()->create([
             'name' => ['uz' => 'Status mezoni'],
             'report_id' => $report->id,
+            'parent_id' => $parent->getKey(),
             'upload' => '1',
             'status' => '1',
         ]);

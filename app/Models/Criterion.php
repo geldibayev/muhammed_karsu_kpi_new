@@ -8,6 +8,7 @@ use App\Support\InternationalCooperationCriterionRule;
 use App\Support\LaboratoryWorkCriterionRule;
 use App\Support\OakArticleCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -36,6 +37,16 @@ class Criterion extends Model
     public function children(): HasMany
     {
         return $this->hasMany(Criterion::class, 'parent_id');
+    }
+
+    public function scopeRatingEnabled(Builder $query): Builder
+    {
+        return $query
+            ->where('status', '1')
+            ->where(function (Builder $query): void {
+                $query->whereNull('parent_id')
+                    ->orWhereHas('parent', fn (Builder $query): Builder => $query->where('status', '1'));
+            });
     }
 
     public function parent(): BelongsTo

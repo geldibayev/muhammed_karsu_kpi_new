@@ -61,8 +61,8 @@ class PaginateRatingUsers
                 'points as total_points' => function (Builder $query) use ($report): void {
                     $query->when(
                         $report !== null,
-                        fn (Builder $query): Builder => $query->where('report_id', $report->getKey()),
-                        fn (Builder $query): Builder => $query->whereNull('report_id'),
+                        fn (Builder $query): Builder => $query->forRatingReport($report),
+                        fn (Builder $query): Builder => $query->whereRaw('1 = 0'),
                     );
                 },
             ], 'point')

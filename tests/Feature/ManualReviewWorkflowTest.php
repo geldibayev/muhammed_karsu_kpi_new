@@ -135,6 +135,7 @@ class ManualReviewWorkflowTest extends TestCase
             'name' => ['uz' => 'Ijtimoiy-ma’naviy faoliyat'],
             'report_id' => $report->id,
             'formula_id' => 1,
+            'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
             'code' => '4.1.1',
@@ -1827,6 +1828,7 @@ class ManualReviewWorkflowTest extends TestCase
             'name' => ['uz' => 'Asosiy bo‘lim'],
             'report_id' => $report->id,
             'formula_id' => $formula->id,
+            'status' => '1',
         ]);
 
         return Criterion::query()->create([

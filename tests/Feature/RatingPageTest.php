@@ -127,6 +127,7 @@ class RatingPageTest extends TestCase
         $oldReport = $this->createReport('Eski hisobot', '2');
         $firstCriterion = $this->createCriterion($activeReport, 'Birinchi mezon');
         $secondCriterion = $this->createCriterion($activeReport, 'Ikkinchi mezon');
+        $inactiveCriterion = $this->createCriterion($activeReport, 'Faol bo‘lmagan mezon', ['status' => '0']);
         $oldCriterion = $this->createCriterion($oldReport, 'Eski mezon');
 
         $this->createPoint($firstUser, $firstCriterion, $activeReport, 7.5);
@@ -134,6 +135,7 @@ class RatingPageTest extends TestCase
         $this->createPoint($secondUser, $firstCriterion, $activeReport, 5);
         $this->createPoint($secondUser, $oldCriterion, $oldReport, 100);
         $this->createPoint($withoutDegreeUser, $firstCriterion, $activeReport, 50);
+        $this->createPoint($firstUser, $inactiveCriterion, $activeReport, 100);
 
         $response = $this->actingAs($viewer)->get(route('ratings.index'));
 
@@ -164,6 +166,22 @@ class RatingPageTest extends TestCase
                     && (float) $users->items()[1]->total_points === 5.0
                     && $users->getCollection()->contains(fn (User $user): bool => $user->is($zeroPointUser));
             });
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.show', $firstUser))
+            ->assertOk()
+            ->assertViewHas('totalPoints', fn (mixed $totalPoints): bool => (float) $totalPoints === 12.0);
+
+        $this->actingAs($firstUser)
+            ->get(route('files.show', 'accepted'))
+            ->assertOk()
+            ->assertViewHas('totalPoints', fn (mixed $totalPoints): bool => (float) $totalPoints === 12.0)
+            ->assertSee('Yakuniy jami ball: 12.00');
+
+        $this->actingAs($firstUser)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertViewHas('points', fn (Collection $points): bool => (float) $points->sum() === 12.0);
 
         $this->actingAs($viewer)
             ->get(route('ratings.index', ['degree_group' => 'without_degree']))
@@ -649,6 +667,16 @@ class RatingPageTest extends TestCase
         $oldCriterion = $this->createCriterion($oldReport, 'Eski kriteriya', [
             'parent_id' => $oldSection->getKey(),
         ]);
+        $inactiveCriterion = $this->createCriterion($activeReport, 'Faol bo‘lmagan kriteriya', [
+            'parent_id' => $firstSection->getKey(),
+            'status' => '0',
+        ]);
+        $inactiveSection = $this->createCriterion($activeReport, 'Faol bo‘lmagan bo‘lim', [
+            'status' => '0',
+        ]);
+        $criterionUnderInactiveSection = $this->createCriterion($activeReport, 'Yashirin bo‘lim kriteriyasi', [
+            'parent_id' => $inactiveSection->getKey(),
+        ]);
         $oldPendingCriterion = $this->createCriterion($oldReport, 'Eski baholanmagan kriteriya', [
             'parent_id' => $oldSection->getKey(),
         ]);
@@ -664,6 +692,8 @@ class RatingPageTest extends TestCase
         $this->createPoint($ratedUser, $aiCriterion, $activeReport, 3.5);
         $this->createPoint($ratedUser, $systemCriterion, $activeReport, 2);
         $this->createPoint($ratedUser, $aiWithoutAuditCriterion, $activeReport, 1.25);
+        $this->createPoint($ratedUser, $inactiveCriterion, $activeReport, 100);
+        $this->createPoint($ratedUser, $criterionUnderInactiveSection, $activeReport, 100);
         $this->createPoint($ratedUser, $oldCriterion, $oldReport, 99);
 
         $manualDatum = $this->createAcceptedDatum($ratedUser, $manualCriterion, 4.25);
@@ -755,6 +785,8 @@ class RatingPageTest extends TestCase
             ->assertSee('Yuklanmagan')
             ->assertSee('Ma’lumot yuklanmagan')
             ->assertSee('Jami: 11.00')
+            ->assertDontSee('Faol bo‘lmagan kriteriya')
+            ->assertDontSee('Yashirin bo‘lim kriteriyasi')
             ->assertDontSee('Eski kriteriya')
             ->assertDontSee('Eski baholanmagan kriteriya')
             ->assertDontSee('99.00')
@@ -1019,6 +1051,11 @@ class RatingPageTest extends TestCase
 
     private function createPoint(User $user, Criterion $criterion, Report $report, float $point): Point
     {
+        if ($criterion->parent_id === null) {
+            $parent = $this->createCriterion($report, 'Reyting bo‘limi '.$criterion->getKey());
+            $criterion->update(['parent_id' => $parent->getKey()]);
+        }
+
         return Point::query()->create([
             'user_id' => $user->getKey(),
             'criterion_id' => $criterion->getKey(),
