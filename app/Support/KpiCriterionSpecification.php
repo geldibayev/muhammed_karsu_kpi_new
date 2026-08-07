@@ -4,6 +4,8 @@ namespace App\Support;
 
 class KpiCriterionSpecification
 {
+    public const RetiredCodes = ['1.5', '1.6'];
+
     public const Competition = 'competition';
 
     public const Maximum = 'maximum';
@@ -40,7 +42,7 @@ class KpiCriterionSpecification
             '1.4' => self::rule(self::Maximum, 1, 'current', [5, 4, 4, 4], null, true),
             '1.5' => self::rule(self::Competition, 0, 'current', [3, 3, 3, 3]),
             '1.6' => self::rule(self::Competition, 0, 'current', [4, 4, 4, 4]),
-            '1.7' => self::rule(self::Maximum, 0, 'current', [2, 2, 2, 2]),
+            '1.7' => self::rule(self::Maximum, 0, 'current', [10, 10, 10, 10]),
             '1.8' => self::rule(
                 self::Maximum,
                 4,

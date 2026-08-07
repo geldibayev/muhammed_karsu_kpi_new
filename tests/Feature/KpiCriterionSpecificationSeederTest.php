@@ -130,6 +130,14 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $this->seed(KpiCriterionSpecificationSeeder::class);
 
         $this->assertDatabaseCount('criterion_evaluations', 148);
+        foreach (KpiCriterionSpecification::RetiredCodes as $code) {
+            $this->assertDatabaseHas('criteria', [
+                'code' => $code,
+                'report_id' => $report->getKey(),
+                'status' => '0',
+                'upload' => '0',
+            ]);
+        }
         foreach (KpiCriterionSpecification::criteria() as $code => $rule) {
             $this->assertCriterion(
                 $code,

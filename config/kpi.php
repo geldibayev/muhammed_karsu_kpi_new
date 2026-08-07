@@ -54,8 +54,6 @@ return [
     ],
     'criterion_reviewers' => [
         '1.1' => env('KPI_REVIEWER_1_1_HEMIS_ID', '3172011004'),
-        '1.5' => env('KPI_REVIEWER_1_5_HEMIS_ID', '3862011037'),
-        '1.6' => env('KPI_REVIEWER_1_6_HEMIS_ID', '3862311015'),
         '1.7' => env('KPI_REVIEWER_1_7_HEMIS_ID', '3172011004'),
         '2.1.3' => env('KPI_REVIEWER_2_1_3_HEMIS_ID', '3862311015'),
         '2.1.4' => env('KPI_REVIEWER_2_1_4_HEMIS_ID', '3462611061'),

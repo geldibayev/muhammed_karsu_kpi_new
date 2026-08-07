@@ -84,6 +84,17 @@ class KpiCriterionSpecificationSeeder extends Seeder
                 }
             }
 
+            $retiredCriterionIds = $criteria
+                ->whereIn('code', KpiCriterionSpecification::RetiredCodes)
+                ->pluck('id');
+
+            Criterion::query()
+                ->whereIn('id', $retiredCriterionIds)
+                ->update(['status' => '0', 'upload' => '0']);
+            CriterionReviewerAssignment::query()
+                ->whereIn('criterion_id', $retiredCriterionIds)
+                ->delete();
+
             $criteria->get('3.1.4')?->update([
                 'checking' => 'site:profile:index',
                 'upload' => '0',

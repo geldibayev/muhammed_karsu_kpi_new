@@ -202,7 +202,7 @@ class CriterionSeeder extends Seeder
                         'checking' => 'department',
                         'template' => '1',
                         'res_type' => 'all',
-                        'upload' => '0', 'status' => '1',
+                        'upload' => '0', 'status' => '0',
                         'evaluation' => [
                             'hold_degrees' => 3,
                             'no_degrees' => 3,
@@ -232,7 +232,7 @@ class CriterionSeeder extends Seeder
                         'checking' => 'hemis:attendance',
                         'template' => '1',
                         'res_type' => 'all',
-                        'upload' => '0', 'status' => '1',
+                        'upload' => '0', 'status' => '0',
                         'evaluation' => [
                             'hold_degrees' => 8,
                             'no_degrees' => 8,
@@ -264,10 +264,10 @@ class CriterionSeeder extends Seeder
                         'res_type' => 'all',
                         'upload' => '0', 'status' => '1',
                         'evaluation' => [
-                            'hold_degrees' => 2,
-                            'no_degrees' => 2,
-                            'foreign_lang' => 2,
-                            'physical' => 2,
+                            'hold_degrees' => 10,
+                            'no_degrees' => 10,
+                            'foreign_lang' => 10,
+                            'physical' => 10,
                         ],
                         'year' => 2025,
                         'formula_id' => 2,

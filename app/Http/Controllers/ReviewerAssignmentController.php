@@ -12,6 +12,7 @@ class ReviewerAssignmentController extends Controller
     {
         $criteria = Criterion::query()
             ->whereNotNull('parent_id')
+            ->ratingEnabled()
             ->whereHas('report', fn (Builder $query): Builder => $query->where('status', '1'))
             ->where(function (Builder $query): void {
                 $query->where('checking', '!=', 'ai')

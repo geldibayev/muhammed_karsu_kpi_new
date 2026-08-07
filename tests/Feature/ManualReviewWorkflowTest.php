@@ -36,8 +36,6 @@ class ManualReviewWorkflowTest extends TestCase
 
         $criterionCodes = [
             2 => '1.1',
-            6 => '1.5',
-            7 => '1.6',
             8 => '1.7',
             15 => '2.1.3',
             16 => '2.1.4',
@@ -67,7 +65,7 @@ class ManualReviewWorkflowTest extends TestCase
         $this->seed(CriterionManualScoreOptionSeeder::class);
         $this->seed(CriterionManualScoreOptionSeeder::class);
 
-        $this->assertDatabaseCount('criterion_reviewer_assignments', 11);
+        $this->assertDatabaseCount('criterion_reviewer_assignments', 9);
         $this->assertDatabaseHas('criterion_reviewer_assignments', [
             'hemis_id' => 3172011004,
             'criterion_id' => 2,
@@ -250,6 +248,12 @@ class ManualReviewWorkflowTest extends TestCase
             'name' => ['uz' => 'Biriktirilmagan AI mezon'],
             'checking' => 'ai',
         ]);
+        $inactiveCriterion = $this->createCriterion();
+        $inactiveCriterion->update([
+            'name' => ['uz' => 'Faol bo‘lmagan mezon'],
+            'checking' => 'department',
+            'status' => '0',
+        ]);
         $superAdmin = User::factory()->superAdmin()->create();
         $teacher = User::factory()->create();
         $this->assign($superAdmin, $criterion, '1/'.$criterion->id);
@@ -273,6 +277,7 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertSee($superAdmin->full)
             ->assertSee('Biriktirilmagan')
             ->assertDontSee('Biriktirilmagan AI mezon')
+            ->assertDontSee('Faol bo‘lmagan mezon')
             ->assertDontSee((string) $superAdmin->hemis_id);
     }
 
