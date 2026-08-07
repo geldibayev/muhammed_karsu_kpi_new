@@ -36,7 +36,7 @@ return [
         '1.3' => $educationalLiteratureReviewerHemisId,
         '1.4' => $educationalLiteratureReviewerHemisId,
         '1.10' => $educationalLiteratureReviewerHemisId,
-        '2.1.1' => env('KPI_AI_HUMAN_REVIEWER_2_1_1_HEMIS_ID', '3462611061'),
+        '2.1.1' => env('KPI_AI_HUMAN_REVIEWER_2_1_1_HEMIS_ID', '3462011207'),
         '2.1.6' => env('KPI_AI_HUMAN_REVIEWER_2_1_6_HEMIS_ID', '3462611061'),
         '3.1.1' => $scientificPublicationsReviewerHemisId,
         '3.1.2' => $scientificPublicationsReviewerHemisId,

@@ -89,6 +89,14 @@ class AssignPendingAiHumanReviews extends Command
                 'histories as last_criterion_transfer_id' => fn (Builder $query): Builder => $query
                     ->where('message_type', 'criterion_transferred'),
             ], 'id')
+            ->withMax([
+                'histories as last_ai_queue_id' => fn (Builder $query): Builder => $query
+                    ->whereIn('message_type', ['submission_created', 'ai_queued']),
+            ], 'id')
+            ->withMax([
+                'histories as last_ai_failure_id' => fn (Builder $query): Builder => $query
+                    ->where('message_type', 'ai_failed'),
+            ], 'id')
             ->where('status', 'checking')
             ->whereHas(
                 'criterion',
@@ -115,6 +123,10 @@ class AssignPendingAiHumanReviews extends Command
     {
         return (int) ($datum->last_ai_evaluation_id ?? 0)
             > (int) ($datum->last_criterion_transfer_id ?? 0)
+            && (int) ($datum->last_ai_evaluation_id ?? 0)
+                > (int) ($datum->last_ai_queue_id ?? 0)
+            && (int) ($datum->last_ai_evaluation_id ?? 0)
+                > (int) ($datum->last_ai_failure_id ?? 0)
             && ($datum->reviewer_hemis_id === null
                 || ($reassign && (int) $datum->reviewer_hemis_id !== $reviewerHemisId));
     }
@@ -146,9 +158,13 @@ class AssignPendingAiHumanReviews extends Command
             $history = $datum->histories()
                 ->selectRaw("MAX(CASE WHEN message_type = 'ai_evaluation' THEN id ELSE 0 END) AS last_evaluation_id")
                 ->selectRaw("MAX(CASE WHEN message_type = 'criterion_transferred' THEN id ELSE 0 END) AS last_transfer_id")
+                ->selectRaw("MAX(CASE WHEN message_type IN ('submission_created', 'ai_queued') THEN id ELSE 0 END) AS last_queue_id")
+                ->selectRaw("MAX(CASE WHEN message_type = 'ai_failed' THEN id ELSE 0 END) AS last_failure_id")
                 ->first();
 
-            if ((int) $history?->last_evaluation_id <= (int) $history?->last_transfer_id) {
+            if ((int) $history?->last_evaluation_id <= (int) $history?->last_transfer_id
+                || (int) $history?->last_evaluation_id <= (int) $history?->last_queue_id
+                || (int) $history?->last_evaluation_id <= (int) $history?->last_failure_id) {
                 return false;
             }
 
