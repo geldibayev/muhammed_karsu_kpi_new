@@ -357,6 +357,11 @@ class DatumSubmissionTest extends TestCase
         $this->assertCriterionAllowsOnlyOneActiveFile('1.10');
     }
 
+    public function test_criterion_4_1_2_allows_only_one_active_file_per_user(): void
+    {
+        $this->assertCriterionAllowsOnlyOneActiveFile('4.1.2');
+    }
+
     public function test_cancelled_submission_does_not_consume_file_limit(): void
     {
         $teacher = User::factory()->create();

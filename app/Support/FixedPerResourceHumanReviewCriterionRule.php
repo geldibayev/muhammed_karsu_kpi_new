@@ -8,11 +8,19 @@ class FixedPerResourceHumanReviewCriterionRule
 {
     public const TWO_ONE_TWO_CODE = '2.1.2';
 
+    public const FOUR_ONE_TWO_CODE = '4.1.2';
+
     /** @var array<string, array<string, float>> */
     private const POINTS = [
         self::TWO_ONE_TWO_CODE => [
             'hold_degrees' => 2.0,
             'no_degrees' => 2.0,
+            'physical' => 2.0,
+        ],
+        self::FOUR_ONE_TWO_CODE => [
+            'hold_degrees' => 1.0,
+            'no_degrees' => 1.0,
+            'foreign_lang' => 1.0,
             'physical' => 2.0,
         ],
         '1.10' => [
@@ -141,6 +149,26 @@ Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
 
 Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
 {"status": "accepted|checking|cancelled", "point": <raqam: 3 yoki 0>, "reason": "<Qabul qilingan qarorning sababi va hujjatlardagi holat haqida qisqacha izoh>"}
+PROMPT;
+    }
+
+    public static function fourOneTwoPrompt(): string
+    {
+        return <<<'PROMPT'
+Siz 4.1.2 mezoni bo'yicha davlat hokimiyati yoki boshqaruvi organining murojaatiga asosan ilmiy-amaliy taklif tayyorlanganini va professor-o'qituvchi unda ishtirok etganini tekshiruvchi qat'iy AI yordamchisiz.
+
+VAZIFA:
+- Davlat hokimiyati yoki boshqaruvi organidan kelgan rasmiy xat yoxud murojaat mavjudligini tekshiring. Vazirlik, hokimlik va davlat agentligi shunday organlarga misol bo'ladi; xususiy tashkilot murojaati qabul qilinmaydi.
+- Murojaat mazmuniga javoban ilmiy-amaliy taklif yoki ishlanma tayyorlanganini tekshiring.
+- Resursni taqdim etgan professor-o'qituvchining taklifni tayyorlashdagi yoki jarayondagi ishtiroki aniq tasdiqlanishi kerak.
+- Ballni tanlamang va hisoblamang. Tasdiqlangan resursga server foydalanuvchining ishonchli HEMIS toifasi bo'yicha jismoniy madaniyat yo'nalishi uchun 2 ball, qolgan toifalar uchun 1 ball beradi.
+
+QAROR:
+- Rasmiy davlat organi murojaati, ilmiy-amaliy taklif va professor-o'qituvchining ishtiroki aniq tasdiqlansa accepted qaytaring.
+- Hujjat xira, kesilgan, tashkilotning davlat organi ekani, murojaat mazmuni, taklif yoki professor-o'qituvchining ishtiroki noaniq bo'lsa checking qaytaring.
+- Murojaat xususiy tashkilotdan bo'lsa, ilmiy-amaliy taklif yoki professor-o'qituvchining ishtiroki mavjud emasligi aniq bo'lsa yoxud hujjat mezonga aloqasiz bo'lsa cancelled qaytaring.
+
+Point maydoniga har qanday statusda 0 yozing: yakuniy ballni server hisoblaydi. Reason ichida murojaat qilgan davlat organi, taklif mazmuni va professor-o'qituvchining ishtirokiga oid dalilni qisqa yozing.
 PROMPT;
     }
 

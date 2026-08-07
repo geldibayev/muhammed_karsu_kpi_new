@@ -46,6 +46,7 @@ return [
         '3.1.13' => $industryFundingAndUniversityProjectReviewerHemisId,
         '3.1.14' => $industryFundingAndUniversityProjectReviewerHemisId,
         '3.1.15' => $scientificPublicationsReviewerHemisId,
+        '4.1.2' => $fixedPerResourceReviewerHemisId,
         '4.1.3' => $fixedPerResourceReviewerHemisId,
         '4.1.4' => $fixedPerResourceReviewerHemisId,
         '4.1.5' => $fixedPerResourceReviewerHemisId,

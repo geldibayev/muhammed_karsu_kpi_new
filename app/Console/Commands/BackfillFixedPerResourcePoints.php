@@ -40,12 +40,17 @@ class BackfillFixedPerResourcePoints extends Command
                     (string) $datum->user?->degree,
                 );
 
-                if ($targetPoint === null || abs($datum->point - $targetPoint) < 0.00005) {
+                if ($targetPoint === null) {
+                    return;
+                }
+
+                $reportIds->push($datum->criterion?->report_id);
+
+                if (abs($datum->point - $targetPoint) < 0.00005) {
                     return;
                 }
 
                 $changedCount++;
-                $reportIds->push($datum->criterion?->report_id);
 
                 if ($dryRun) {
                     return;
