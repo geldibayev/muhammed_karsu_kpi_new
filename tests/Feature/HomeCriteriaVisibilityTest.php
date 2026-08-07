@@ -121,7 +121,13 @@ class HomeCriteriaVisibilityTest extends TestCase
 
         $response = $this->actingAs($user)
             ->get(route('home'))
-            ->assertOk();
+            ->assertOk()
+            ->assertSeeTextInOrder([
+                'O‘quv-uslubiy ishlar',
+                'Xalqaro faoliyat',
+                'Ilmiy-innovatsion ishlar',
+                'Ma’naviy faoliyat',
+            ]);
 
         $this->assertSame(4, substr_count($response->getContent(), 'data-testid="criterion-section-tab"'));
         $this->assertSame(4, substr_count($response->getContent(), 'data-testid="criterion-section-pane"'));

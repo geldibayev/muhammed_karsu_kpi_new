@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+    @php($criterionSectionTabLabels = ['O‘quv-uslubiy ishlar', 'Xalqaro faoliyat', 'Ilmiy-innovatsion ishlar', 'Ma’naviy faoliyat'])
+
     <section class="content">
         @unless($resourceUploadsEnabled)
             <div class="alert alert-warning shadow-sm">
@@ -39,7 +41,7 @@
                                aria-controls="criterion-section-{{ $item->getKey() }}"
                                aria-selected="{{ $loop->first ? 'true' : 'false' }}">
                                 <span class="badge badge-light mr-1">{{ $loop->iteration }}</span>
-                                {{ data_get($item->name, 'uz', 'Nomsiz bo\'lim') }}
+                                {{ $criterionSectionTabLabels[$loop->index] ?? data_get($item->name, 'uz', 'Nomsiz bo\'lim') }}
                             </a>
                         </li>
                     @endforeach
