@@ -104,6 +104,21 @@ class ForeignLanguageCertificateScoringTest extends TestCase
         $this->assertSame(8.0, $datum->fresh()->point);
     }
 
+    public function test_workplace_attached_directly_to_foreign_language_faculty_uses_special_score_rule(): void
+    {
+        $this->context();
+
+        $this->assertSame(
+            3.0,
+            ForeignLanguageCertificateCriterionRule::pointFor(
+                'c1',
+                'no_degrees',
+                (int) config('kpi.foreign_language_faculty_department_id'),
+                null,
+            ),
+        );
+    }
+
     public function test_cancelled_override_also_accepts_only_level_and_uses_server_score(): void
     {
         $fixture = $this->context();
@@ -182,6 +197,50 @@ class ForeignLanguageCertificateScoringTest extends TestCase
         $this->assertSame(1, $legacyB2->histories()
             ->where('message_type', 'foreign_language_point_recalculated')
             ->count());
+    }
+
+    public function test_foreign_faculty_only_backfill_corrects_other_departments_and_leaves_russian_department_unchanged(): void
+    {
+        $fixture = $this->context();
+        $specialOwner = User::factory()->create(['degree' => 'hold_degrees']);
+        $russianOwner = User::factory()->create(['degree' => 'no_degrees']);
+        $this->workplace($specialOwner, $fixture['specialDepartment']);
+        $this->workplace($russianOwner, $fixture['russianDepartment']);
+
+        $specialDatum = $this->datum($specialOwner, $fixture['criterion'], 'accepted', 7);
+        $specialDatum->update(['manual_score_option_id' => $fixture['options']['c1']->getKey()]);
+        $russianDatum = $this->datum($russianOwner, $fixture['criterion'], 'accepted', 1, 'C1 sertifikat tasdiqlandi.');
+
+        $this->artisan('kpi:criteria:backfill-foreign-language-points', [
+            '--report' => $fixture['report']->getKey(),
+            '--foreign-faculty-only' => true,
+        ])
+            ->expectsOutput('O‘zgartirilgan accepted resurslar: 1')
+            ->assertSuccessful();
+
+        $this->assertSame(3.0, $specialDatum->fresh()->point);
+        $this->assertSame(1.0, $russianDatum->fresh()->point);
+        $this->assertSame($fixture['options']['c1']->getKey(), $specialDatum->fresh()->manual_score_option_id);
+        $this->assertNull($russianDatum->fresh()->manual_score_option_id);
+    }
+
+    public function test_backfill_stops_without_changes_when_department_configuration_is_missing(): void
+    {
+        $fixture = $this->context();
+        $owner = User::factory()->create(['degree' => 'hold_degrees']);
+        $this->workplace($owner, $fixture['specialDepartment']);
+        $datum = $this->datum($owner, $fixture['criterion'], 'accepted', 7, 'C1 sertifikat tasdiqlandi.');
+        config()->set('kpi.foreign_language_faculty_department_id');
+
+        $this->artisan('kpi:criteria:backfill-foreign-language-points', [
+            '--report' => $fixture['report']->getKey(),
+            '--foreign-faculty-only' => true,
+        ])
+            ->expectsOutput('Chet tillari fakulteti konfiguratsiyasi topilmadi. Productionda php artisan config:cache ni qayta ishga tushiring.')
+            ->assertFailed();
+
+        $this->assertSame(7.0, $datum->fresh()->point);
+        $this->assertNull($datum->manual_score_option_id);
     }
 
     /** @return array<string, array{string, string, bool, float}> */

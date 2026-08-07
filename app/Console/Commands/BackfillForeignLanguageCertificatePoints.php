@@ -6,6 +6,7 @@ use App\Actions\RecalculateReportPoints;
 use App\Models\Criterion;
 use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
+use App\Models\Department;
 use App\Models\Report;
 use App\Support\ForeignLanguageCertificateCriterionRule;
 use Illuminate\Console\Command;
@@ -15,12 +16,17 @@ class BackfillForeignLanguageCertificatePoints extends Command
 {
     protected $signature = 'kpi:criteria:backfill-foreign-language-points
                             {--report= : Hisobot ID; ko‘rsatilmasa faol hisobot olinadi}
+                            {--foreign-faculty-only : Faqat Chet tillari fakultetining Rus tili va adabiyoti kafedrasidan tashqari xodimlarini yangilash}
                             {--dry-run : Bazaga yozmasdan o‘zgarishlarni ko‘rsatish}';
 
     protected $description = '2.1.3 dagi tasdiqlangan sertifikat ballarini kafedra, daraja va ilmiy toifa bo‘yicha qayta hisoblaydi';
 
     public function handle(RecalculateReportPoints $recalculateReportPoints): int
     {
+        if (! $this->hasValidDepartmentConfiguration()) {
+            return self::FAILURE;
+        }
+
         $report = $this->report();
 
         if (! $report instanceof Report) {
@@ -53,6 +59,7 @@ class BackfillForeignLanguageCertificatePoints extends Command
         }
 
         $dryRun = (bool) $this->option('dry-run');
+        $foreignFacultyOnly = (bool) $this->option('foreign-faculty-only');
         $changed = 0;
         $unresolved = 0;
         $duplicateUsers = Datum::query()
@@ -75,7 +82,11 @@ class BackfillForeignLanguageCertificatePoints extends Command
             ])
             ->orderBy('id')
             ->lazyById(200)
-            ->each(function (Datum $datum) use ($options, $dryRun, &$changed, &$unresolved): void {
+            ->each(function (Datum $datum) use ($options, $dryRun, $foreignFacultyOnly, &$changed, &$unresolved): void {
+                if ($foreignFacultyOnly && ! $this->usesForeignLanguageFacultyRule($datum)) {
+                    return;
+                }
+
                 $level = $this->certificateLevel($datum);
 
                 if ($level === null || ! $options->has($level)) {
@@ -106,6 +117,7 @@ class BackfillForeignLanguageCertificatePoints extends Command
                         $datum->criterion_id,
                         $level,
                         $targetOptionId,
+                        $foreignFacultyOnly,
                     );
                 }
             });
@@ -167,9 +179,24 @@ class BackfillForeignLanguageCertificatePoints extends Command
         );
     }
 
-    private function updateDatum(int $datumId, int $criterionId, string $level, int $optionId): void
+    private function usesForeignLanguageFacultyRule(Datum $datum): bool
     {
-        DB::transaction(function () use ($datumId, $criterionId, $level, $optionId): void {
+        $department = $datum->user?->ratingWorkplace?->department;
+
+        return ForeignLanguageCertificateCriterionRule::isSpecialForeignLanguageDepartment(
+            $department?->getKey(),
+            $department?->parent_id,
+        );
+    }
+
+    private function updateDatum(
+        int $datumId,
+        int $criterionId,
+        string $level,
+        int $optionId,
+        bool $foreignFacultyOnly,
+    ): void {
+        DB::transaction(function () use ($datumId, $criterionId, $level, $optionId, $foreignFacultyOnly): void {
             $datum = Datum::query()
                 ->with(['user.ratingWorkplace.department'])
                 ->lockForUpdate()
@@ -185,6 +212,7 @@ class BackfillForeignLanguageCertificatePoints extends Command
                 && $datum->status === 'accepted'
                 && $datum->criterion_id === $criterionId
                 && $optionExists
+                && (! $foreignFacultyOnly || $this->usesForeignLanguageFacultyRule($datum))
                 ? $this->targetPoint($datum, $level)
                 : null;
 
@@ -207,5 +235,31 @@ class BackfillForeignLanguageCertificatePoints extends Command
                 'message_type' => 'foreign_language_point_recalculated',
             ]);
         }, 3);
+    }
+
+    private function hasValidDepartmentConfiguration(): bool
+    {
+        $facultyId = config('kpi.foreign_language_faculty_department_id');
+        $russianDepartmentId = config('kpi.russian_language_department_id');
+
+        if (! is_numeric($facultyId) || (int) $facultyId <= 0
+            || ! is_numeric($russianDepartmentId) || (int) $russianDepartmentId <= 0) {
+            $this->error('Chet tillari fakulteti konfiguratsiyasi topilmadi. Productionda php artisan config:cache ni qayta ishga tushiring.');
+
+            return false;
+        }
+
+        $faculty = Department::query()->find((int) $facultyId);
+        $russianDepartment = Department::query()->find((int) $russianDepartmentId);
+
+        if (! $faculty instanceof Department
+            || ! $russianDepartment instanceof Department
+            || (int) $russianDepartment->parent_id !== (int) $faculty->getKey()) {
+            $this->error('Chet tillari fakulteti yoki Rus tili va adabiyoti kafedrasi konfiguratsiyasi HEMIS bo‘limlariga mos emas.');
+
+            return false;
+        }
+
+        return true;
     }
 }

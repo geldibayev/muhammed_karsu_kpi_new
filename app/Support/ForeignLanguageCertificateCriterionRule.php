@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use LogicException;
+
 class ForeignLanguageCertificateCriterionRule
 {
     public const CODE = '2.1.3';
@@ -73,8 +75,26 @@ class ForeignLanguageCertificateCriterionRule
         ?int $departmentId,
         ?int $facultyId,
     ): bool {
-        return $facultyId === (int) config('kpi.foreign_language_faculty_department_id')
-            && $departmentId !== (int) config('kpi.russian_language_department_id');
+        $foreignLanguageFacultyId = self::configuredDepartmentId('foreign_language_faculty_department_id');
+        $russianLanguageDepartmentId = self::configuredDepartmentId('russian_language_department_id');
+
+        if ($departmentId === $russianLanguageDepartmentId) {
+            return false;
+        }
+
+        return $departmentId === $foreignLanguageFacultyId
+            || $facultyId === $foreignLanguageFacultyId;
+    }
+
+    private static function configuredDepartmentId(string $key): int
+    {
+        $value = config("kpi.{$key}");
+
+        if (! is_numeric($value) || (int) $value <= 0) {
+            throw new LogicException("KPI bo‘lim konfiguratsiyasi noto‘g‘ri: kpi.{$key}.");
+        }
+
+        return (int) $value;
     }
 
     public static function levelFromHistory(string $message): ?string
