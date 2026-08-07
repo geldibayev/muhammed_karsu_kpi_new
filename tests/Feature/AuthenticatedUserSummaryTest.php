@@ -34,7 +34,10 @@ class AuthenticatedUserSummaryTest extends TestCase
             ->assertSee('https://hemis.example/profile.jpg')
             ->assertSee('data-rating-avatar-image', false)
             ->assertSee('data-rating-avatar-fallback', false)
+            ->assertSee('text-success', false)
             ->assertSee('12.50 / 100 ball')
+            ->assertSee('Ilmiy unvon kiritilmagan')
+            ->assertSeeInOrder(['12.50 / 100 ball', 'https://hemis.example/profile.jpg'])
             ->assertDontSee('92.50 / 100 ball');
     }
 

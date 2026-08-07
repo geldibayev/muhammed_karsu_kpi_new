@@ -23,11 +23,16 @@
             @php
                 $user = $layoutUser;
                 $degreeName = $layoutWorkplace?->academic_degree?->name;
+                $rankName = $layoutWorkplace?->academic_rank?->name;
                 $avatarUrl = $user->image_url;
             @endphp
             <li class="nav-item dropdown">
                 <a class="nav-link d-flex align-items-center text-right py-1" data-toggle="dropdown" href="#"
                    role="button" aria-haspopup="true" aria-expanded="false">
+                    <span class="d-inline-flex align-items-center justify-content-center h5 mb-0 mr-3
+                                 font-weight-bold text-success text-nowrap">
+                        {{ number_format((float) $layoutTotalPoints, 2) }} / 100 ball
+                    </span>
                     @if($avatarUrl)
                         <img src="{{ $avatarUrl }}"
                              alt="{{ $user->full ?: ($user->short ?: 'Foydalanuvchi') }}"
@@ -46,8 +51,8 @@
                         <span class="font-weight-bold">
                             {{ trim(($degreeName ?? '') . '., ' . $user->short) ?: 'Foydalanuvchi' }}
                         </span>
-                        <span class="small text-muted font-weight-bold">
-                            {{ number_format((float) $layoutTotalPoints, 2) }} / 100 ball
+                        <span class="small text-muted">
+                            {{ $rankName ?? 'Ilmiy unvon kiritilmagan' }}
                         </span>
                     </span>
                 </a>
