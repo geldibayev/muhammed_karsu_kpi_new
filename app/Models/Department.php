@@ -32,6 +32,23 @@ class Department extends Model
             ->whereHas('children');
     }
 
+    public function scopeAcademicRatingUnits(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query): void {
+            $query
+                ->where(function (Builder $facultyQuery): void {
+                    $facultyQuery
+                        ->whereNull('parent_id')
+                        ->whereHas('children');
+                })
+                ->orWhereHas('parent', function (Builder $facultyQuery): void {
+                    $facultyQuery
+                        ->whereNull('parent_id')
+                        ->whereHas('children');
+                });
+        });
+    }
+
     protected function casts(): array
     {
         return [

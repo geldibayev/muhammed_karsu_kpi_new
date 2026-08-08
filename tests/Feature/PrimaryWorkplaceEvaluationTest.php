@@ -37,7 +37,8 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
         Http::preventStrayRequests();
 
         $this->createDepartment(201, 'Rektorat');
-        $this->createDepartment(202, 'Matematika kafedrasi');
+        $faculty = $this->createDepartment(203, 'Matematika fakulteti');
+        $this->createDepartment(202, 'Matematika kafedrasi', $faculty);
     }
 
     public function test_hemis_sync_uses_only_primary_workplace_for_rating_category(): void
@@ -206,7 +207,7 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
     public function test_user_with_multiple_primary_workplaces_remains_visible_in_rating(): void
     {
         $user = User::factory()->create(['degree' => 'hold_degrees']);
-        $this->createStoredWorkplace($user, 201, EmploymentForm::PRIMARY_WORKPLACE_ID, 10, 101);
+        $this->createStoredWorkplace($user, 202, EmploymentForm::PRIMARY_WORKPLACE_ID, 10, 101);
         $this->createStoredWorkplace($user, 202, EmploymentForm::PRIMARY_WORKPLACE_ID, 11, 102);
 
         $users = app(PaginateRatingUsers::class)->handle(null, [
@@ -471,11 +472,12 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
         ];
     }
 
-    private function createDepartment(int $id, string $name): Department
+    private function createDepartment(int $id, string $name, ?Department $parent = null): Department
     {
         return Department::query()->create([
             'id' => $id,
             'name' => ['uz' => $name, 'kaa' => $name, 'ru' => $name, 'en' => $name],
+            'parent_id' => $parent?->getKey(),
         ]);
     }
 

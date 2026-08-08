@@ -42,7 +42,7 @@ class PaginateRatingUsers
         return User::query()
             ->select(['id', 'hemis_id', 'name', 'image', 'degree'])
             ->active()
-            ->whereHas('ratingWorkplace')
+            ->academicRatingParticipants()
             ->with([
                 'ratingWorkplace' => fn (HasOne $query): HasOne => $query->select([
                     'workplaces.id',

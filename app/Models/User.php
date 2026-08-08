@@ -137,6 +137,14 @@ class User extends Authenticatable
         return $query->where('status', '1');
     }
 
+    public function scopeAcademicRatingParticipants(Builder $query): Builder
+    {
+        return $query->whereHas(
+            'ratingWorkplace.department',
+            fn (Builder $departmentQuery): Builder => $departmentQuery->academicRatingUnits(),
+        );
+    }
+
     public function workplaces(): HasMany
     {
         return $this->hasMany(Workplace::class, 'user_id');

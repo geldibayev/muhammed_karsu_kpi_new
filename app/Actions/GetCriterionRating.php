@@ -18,6 +18,10 @@ class GetCriterionRating
             ->select(['id', 'user_id', 'criterion_id', 'report_id', 'point'])
             ->whereBelongsTo($criterion)
             ->where('report_id', $criterion->report_id)
+            ->whereHas(
+                'user',
+                fn (Builder $query): Builder => $query->active()->academicRatingParticipants(),
+            )
             ->with([
                 'user' => function (BelongsTo $query) use ($criterion): void {
                     $query->select(['id', 'hemis_id', 'name', 'image'])

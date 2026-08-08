@@ -68,7 +68,8 @@ class RatingPageTest extends TestCase
             'name' => $this->userName('Boshqa O‘qituvchi'),
             'degree' => 'hold_degrees',
         ]);
-        $department = $this->createDepartment('Ommaviy reyting kafedrasi');
+        $faculty = $this->createDepartment('Ommaviy reyting fakulteti');
+        $department = $this->createDepartment('Ommaviy reyting kafedrasi', $faculty);
         $this->createWorkplace($matchingUser, $department, 'Professor');
         $this->createWorkplace($otherUser, $department, 'Dotsent');
 
@@ -106,7 +107,8 @@ class RatingPageTest extends TestCase
             'name' => $this->userName('Ikkinchi Reyting'),
             'degree' => 'hold_degrees',
         ]);
-        $department = $this->createDepartment('Reyting kafedrasi');
+        $faculty = $this->createDepartment('Reyting fakulteti');
+        $department = $this->createDepartment('Reyting kafedrasi', $faculty);
         $this->createWorkplace($firstUser, $department, 'Professor');
         $this->createWorkplace($secondUser, $department, 'Dotsent');
 
@@ -464,6 +466,55 @@ class RatingPageTest extends TestCase
                 'faculty' => $registrarOffice->getKey(),
             ]))
             ->assertSessionHasErrors('faculty');
+    }
+
+    public function test_user_rankings_include_faculty_staff_and_exclude_leadership_and_administrative_staff(): void
+    {
+        $viewer = User::factory()->create();
+        $faculty = $this->createDepartment('Akademik fakultet');
+        $department = $this->createDepartment('Akademik kafedra', $faculty);
+        $leadership = $this->createDepartment('Rahbariyat');
+        $administrativeDepartment = $this->createDepartment('Kadrlar bo‘limi');
+
+        $dean = User::factory()->withRole('dean')->create([
+            'name' => $this->userName('Reytingdagi Dekan'),
+        ]);
+        $departmentHead = User::factory()->withRole('department')->create([
+            'name' => $this->userName('Reytingdagi Kafedra Mudiri'),
+        ]);
+        $teacher = User::factory()->withRole('teacher')->create([
+            'name' => $this->userName('Reytingdagi O‘qituvchi'),
+        ]);
+        $leadershipEmployee = User::factory()->withRole('teacher')->create([
+            'name' => $this->userName('Reytingdan Tashqari Rahbar'),
+        ]);
+        $administrativeEmployee = User::factory()->withRole('teacher')->create([
+            'name' => $this->userName('Reytingdan Tashqari Xodim'),
+        ]);
+
+        $this->createWorkplace($dean, $faculty, 'Dekan');
+        $this->createWorkplace($departmentHead, $department, 'Kafedra mudiri');
+        $this->createWorkplace($teacher, $department, 'O‘qituvchi');
+        $this->createWorkplace($leadershipEmployee, $leadership, 'Prorektor');
+        $this->createWorkplace($administrativeEmployee, $administrativeDepartment, 'Bo‘lim boshlig‘i');
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', ['mode' => 'all_users']))
+            ->assertOk()
+            ->assertSee('Reytingdagi Dekan')
+            ->assertSee('Reytingdagi Kafedra Mudiri')
+            ->assertSee('Reytingdagi O‘qituvchi')
+            ->assertDontSee('Reytingdan Tashqari Rahbar')
+            ->assertDontSee('Reytingdan Tashqari Xodim')
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 3);
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'all_users',
+                'search' => 'Reytingdan Tashqari',
+            ]))
+            ->assertOk()
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 0);
     }
 
     public function test_faculty_and_department_modes_rank_units_and_show_internal_user_rankings(): void
