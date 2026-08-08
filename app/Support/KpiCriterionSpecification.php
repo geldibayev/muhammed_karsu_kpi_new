@@ -116,7 +116,13 @@ class KpiCriterionSpecification
                 ScopusCriterionRule::DESCRIPTION_UZ,
                 ScopusCriterionRule::PROMPT,
             ),
-            '3.1.4' => self::rule(self::Maximum, 0, 'current_state', [3, 2, 2, 2]),
+            '3.1.4' => self::rule(
+                self::Maximum,
+                0,
+                'current_state',
+                [3, 2, 2, 2],
+                descriptionUz: HIndexCriterionRule::DESCRIPTION_UZ,
+            ),
             '3.1.5' => self::rule(self::Maximum, 1, 'current', [2, 3, 3, 3]),
             '3.1.6' => self::rule(self::Unlimited, 0, 'current', [3, null, null, null]),
             '3.1.7' => self::rule(

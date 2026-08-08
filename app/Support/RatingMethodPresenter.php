@@ -19,9 +19,9 @@ class RatingMethodPresenter
             return [
                 'key' => 'h-index',
                 'label' => 'H-index bo‘yicha',
-                'explanation' => 'Kiritilgan har bir platformadagi H-index alohida hisoblanadi va olingan ballar qo‘shiladi.',
+                'explanation' => 'Web of Science balli alohida olinadi. Scopus va ResearchGate ballari solishtirilib, faqat kattasi Web of Science balliga qo‘shiladi.',
                 'note' => 'Faqat linki va H-index qiymati to‘liq kiritilgan platformalar hisobga olinadi. h=3 uchun ulushning 50%, h=4 uchun 75%, h=5 uchun 100% beriladi; 5 dan yuqori har bir birlik yana 1 ball qo‘shadi.',
-                'example' => "Toifa ulushi {$formattedMaximum} ball va Scopus h-index 4 bo‘lsa: {$formattedMaximum} × 75% = ".number_format($exampleMaximum * 0.75, 2, '.', '').' ball.',
+                'example' => "Masalan, Web of Science {$formattedMaximum} ball, Scopus 2 ball va ResearchGate 1 ball bo‘lsa: {$formattedMaximum} + max(2, 1) = ".number_format($exampleMaximum + 2, 2, '.', '').' ball.',
                 'maximum' => $maximum,
             ];
         }

@@ -10,6 +10,7 @@ use App\Models\Report;
 use App\Models\Year;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\ForeignLanguageCertificateCriterionRule;
+use App\Support\HIndexCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
 use App\Support\LaboratoryWorkCriterionRule;
@@ -725,7 +726,7 @@ class CriterionSeeder extends Seeder
                             'en' => 'Hirsch index in international scientific and technical databases "Scopus," "Web of Science," "Research Gate"',
                         ],
                         'desc' => [
-                            'uz' => '«Scopus» h≥5 bo‘lsa 100 %, h = 4 bo‘lsa 75 %, h = 3 bo‘lsa 50 %, h≤2 bo‘lsa 25 %<br>«Web of Science» h≥5 bo‘lsa 100 %, h = 4 bo‘lsa 75 %, h = 3 bo‘lsa 50 %, h≤2 bo‘lsa 25 %<br>«Research Gate» h≥5 bo‘lsa 100 %, h = 4 bo‘lsa 75 %, h = 3 bo‘lsa 50 %, h≤2 bo‘lsa 25 % ',
+                            'uz' => HIndexCriterionRule::DESCRIPTION_UZ,
                             'kaa' => '"Scopus" h≥5 bolsa 100 %, h = 4 bolsa 75 %, h = 3 bolsa 50 %, h≤2 bolsa 25 %<br>"Web of Science" h≥5 bolsa 100 %, h = 4 bolsa 75 %, h = 3 bolsa 50 %, h≤2 bolsa 25 %<br>"Research Gate" h≥5 bolsa 100 %, h = 4 bolsa 75 %, h = 3 bolsa 50 %, h≤2 bolsa 25 % ',
                             'ru' => '"Scopus" 100 % при h≥5, 75 % при h = 4, 50 % при h = 3, 25 % при h≤2 < br>"Web of Science" 100 % при h≥5, 75 % при h = 4, 50 % при h = 3, 25 % при h≤2 < br>"Research Gate" 100 % при h≥5, 75 % при h = 4, 50 % при h = 3, 25 % при h≤2',
                             'en' => '"Scopus" 100 % if h≥5, 75 % if h = 4, 50 % if h = 3, 25 % if h≤2 < br>"Web of Science" 100 % if h≥5, 75 % if h = 4, 50 % if h = 3, 25 % if h≤2 < br>"Research Gate" 100 % if h≥5, 75 % if h = 4, 50 % if h = 3, 25 % if h≤2',

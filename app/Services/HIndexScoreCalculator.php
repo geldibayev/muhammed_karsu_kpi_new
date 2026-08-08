@@ -27,12 +27,24 @@ class HIndexScoreCalculator
 
             $value = (int) data_get($profiles, $key.'.value', 0);
             $score = round($this->score($value, $maximumShare), 2);
-            $scores[] = $score;
+            $scores[$key] = $score;
             $summary[] = $label." h={$value}: ".number_format($score, 2, '.', '').' ball';
         }
 
+        $webOfScienceScore = $scores['web_of_science'] ?? 0;
+        $scopusScore = $scores['scopus'] ?? 0;
+        $researchGateScore = $scores['research_gate'] ?? 0;
+        $total = round($webOfScienceScore + max($scopusScore, $researchGateScore), 2);
+
+        if ($summary !== []) {
+            $summary[] = 'Hisob: Web of Science '.number_format($webOfScienceScore, 2, '.', '')
+                .' + max(Scopus '.number_format($scopusScore, 2, '.', '')
+                .', ResearchGate '.number_format($researchGateScore, 2, '.', '')
+                .') = '.number_format($total, 2, '.', '').' ball';
+        }
+
         return [
-            'total' => round(array_sum($scores), 2),
+            'total' => $total,
             'summary' => implode('; ', $summary),
         ];
     }

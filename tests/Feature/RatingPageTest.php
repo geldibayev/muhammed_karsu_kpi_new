@@ -792,6 +792,7 @@ class RatingPageTest extends TestCase
             ->assertSee('Cheklanmagan yig‘indi')
             ->assertSee('H-index bo‘yicha')
             ->assertSee('Faqat linki va H-index qiymati to‘liq kiritilgan platformalar hisobga olinadi')
+            ->assertSee('Scopus va ResearchGate ballari solishtirilib, faqat kattasi Web of Science balliga qo‘shiladi')
             ->assertSee('data-target="#rating-method-'.$hIndexCriterion->getKey().'"', false)
             ->assertSee('Qanday hisoblanadi?')
             ->assertSee('Sizning toifangiz uchun maksimal ball')

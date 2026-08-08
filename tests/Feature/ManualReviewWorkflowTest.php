@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\RecalculateReportPoints;
 use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
@@ -997,6 +998,67 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertDatabaseMissing('datum_histories', [
             'datum_id' => $datum->id,
             'message_type' => 'manual_review_approved',
+        ]);
+    }
+
+    public function test_h_index_approval_adds_web_of_science_to_only_the_higher_other_profile_score(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create(['degree' => 'hold_degrees']);
+        $criterion = $this->createCriterion();
+        $criterion->update([
+            'code' => Criterion::H_INDEX_CODE,
+            'name' => ['uz' => 'H-index kriteriyasi'],
+        ]);
+        $this->assign($reviewer, $criterion, Criterion::H_INDEX_CODE);
+        Evaluation::query()->create([
+            'code' => 'hold_degrees',
+            'name' => ['uz' => 'Ilmiy darajali'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'hold_degrees',
+            'has' => '1',
+            'score' => 3,
+        ]);
+        $this->createScoreOption($criterion, 'h_index', 'H-index', 0);
+        $datum = $this->createDatum($owner, $criterion, [
+            'material' => [
+                'type' => 'h_index',
+                'profiles' => [
+                    'scopus' => ['link' => 'https://scopus.example/profile', 'value' => 7],
+                    'web_of_science' => ['link' => 'https://wos.example/profile', 'value' => 4],
+                    'research_gate' => ['link' => 'https://researchgate.example/profile', 'value' => 2],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.approve', $datum))
+            ->assertRedirect(route('reviews.index'));
+
+        $this->assertDatabaseHas('data', [
+            'id' => $datum->getKey(),
+            'status' => 'accepted',
+            'point' => 7.25,
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->getKey(),
+            'message_type' => 'h_index_review_approved',
+        ]);
+        $this->assertSame(7.25, (float) Point::query()
+            ->where('user_id', $owner->getKey())
+            ->where('criterion_id', $criterion->getKey())
+            ->value('point'));
+
+        $datum->update(['point' => 8]);
+        app(RecalculateReportPoints::class)->handle($criterion->report);
+
+        $this->assertSame(7.25, $datum->fresh()->point);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->getKey(),
+            'message_type' => 'h_index_score_recalculated',
         ]);
     }
 

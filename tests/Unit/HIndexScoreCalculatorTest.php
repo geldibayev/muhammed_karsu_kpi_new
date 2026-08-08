@@ -18,7 +18,7 @@ class HIndexScoreCalculatorTest extends TestCase
         $this->assertSame(5.0, $calculator->score(7, 3));
     }
 
-    public function test_it_sums_the_three_database_scores(): void
+    public function test_it_adds_web_of_science_to_the_higher_scopus_or_research_gate_score(): void
     {
         $calculator = new HIndexScoreCalculator;
 
@@ -28,7 +28,11 @@ class HIndexScoreCalculatorTest extends TestCase
             'research_gate' => ['link' => 'https://researchgate.example/profile', 'value' => 2],
         ], 3);
 
-        $this->assertSame(8.0, $result['total']);
+        $this->assertSame(7.25, $result['total']);
+        $this->assertStringContainsString(
+            'Web of Science 2.25 + max(Scopus 5.00, ResearchGate 0.75) = 7.25 ball',
+            $result['summary'],
+        );
     }
 
     public function test_it_scores_only_profiles_that_were_entered(): void
@@ -40,6 +44,19 @@ class HIndexScoreCalculatorTest extends TestCase
         ], 3);
 
         $this->assertSame(2.25, $result['total']);
-        $this->assertSame('Scopus h=4: 2.25 ball', $result['summary']);
+        $this->assertStringContainsString('Scopus h=4: 2.25 ball', $result['summary']);
+    }
+
+    public function test_research_gate_replaces_scopus_only_when_its_score_is_higher(): void
+    {
+        $calculator = new HIndexScoreCalculator;
+
+        $result = $calculator->calculate([
+            'scopus' => ['link' => 'https://scopus.example/profile', 'value' => 3],
+            'web_of_science' => ['link' => 'https://wos.example/profile', 'value' => 5],
+            'research_gate' => ['link' => 'https://researchgate.example/profile', 'value' => 7],
+        ], 3);
+
+        $this->assertSame(8.0, $result['total']);
     }
 }

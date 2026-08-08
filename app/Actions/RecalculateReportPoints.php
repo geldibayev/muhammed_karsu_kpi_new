@@ -8,6 +8,7 @@ use App\Models\Datum;
 use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
+use App\Services\HIndexScoreCalculator;
 use App\Services\IndustryFundingScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
@@ -28,6 +29,7 @@ class RecalculateReportPoints
         private OakArticleScoreCalculator $oakArticleScoreCalculator,
         private PrintedEducationalLiteratureScoreCalculator $printedLiteratureScoreCalculator,
         private IndustryFundingScoreCalculator $industryFundingScoreCalculator,
+        private HIndexScoreCalculator $hIndexScoreCalculator,
     ) {}
 
     public function handle(Report $report): void
@@ -43,9 +45,54 @@ class RecalculateReportPoints
                     $this->refreshPrintedLiteratureDatumPoints($report);
                     $this->refreshIndustryFundingDatumPoints($report);
                     $this->refreshLaboratoryWorkDatumPoints($report);
+                    $this->refreshHIndexDatumPoints($report);
                     $this->rebuildCriterionPoints($report);
                     $this->rebuildFinalPoints($report);
                 }, attempts: 5);
+            });
+    }
+
+    private function refreshHIndexDatumPoints(Report $report): void
+    {
+        Datum::query()
+            ->where('status', 'accepted')
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->where('code', Criterion::H_INDEX_CODE))
+            ->with(['criterion.criterionEvaluations', 'user'])
+            ->lockForUpdate()
+            ->get()
+            ->each(function (Datum $datum): void {
+                $maximumShare = $datum->criterion?->criterionEvaluations
+                    ->firstWhere('evaluation', $datum->user?->degree)?->score;
+
+                if (! is_numeric($maximumShare)) {
+                    return;
+                }
+
+                $calculation = $this->hIndexScoreCalculator->calculate(
+                    $datum->hIndexProfiles(),
+                    max(0, (float) $maximumShare),
+                );
+
+                if (abs($datum->point - $calculation['total']) < 0.00005) {
+                    return;
+                }
+
+                $oldPoint = $datum->point;
+                $message = '3.1.4 H-index balli yangi qoida bo‘yicha qayta hisoblandi. Oldingi ball: '
+                    .number_format($oldPoint, 2, '.', '').'. '.$calculation['summary'];
+
+                $datum->update([
+                    'point' => $calculation['total'],
+                    'reason' => $message,
+                ]);
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => 'info',
+                    'message' => $message,
+                    'message_type' => 'h_index_score_recalculated',
+                ]);
             });
     }
 

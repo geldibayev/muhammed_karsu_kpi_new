@@ -7,6 +7,7 @@ use App\Models\CriterionManualScoreOption;
 use App\Models\Formula;
 use App\Models\Report;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\HIndexCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\KpiCriterionSpecification;
 use App\Support\MasterClassCriterionRule;
@@ -151,6 +152,7 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $hIndexCriterion = Criterion::query()->where('code', '3.1.4')->firstOrFail();
         $this->assertSame('site:profile:index', $hIndexCriterion->checking);
         $this->assertSame('0', $hIndexCriterion->upload);
+        $this->assertSame(HIndexCriterionRule::DESCRIPTION_UZ, $hIndexCriterion->desc['uz']);
 
         $criterionThreeOneFifteen = Criterion::query()->where('code', '3.1.15')->firstOrFail();
         $this->assertSame('ai', $criterionThreeOneFifteen->checking);
