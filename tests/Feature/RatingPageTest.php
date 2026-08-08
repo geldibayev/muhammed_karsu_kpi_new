@@ -95,6 +95,45 @@ class RatingPageTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
+    public function test_login_and_authenticated_rating_pages_show_identical_rankings(): void
+    {
+        $viewer = User::factory()->create();
+        $firstUser = User::factory()->create([
+            'name' => $this->userName('Birinchi Reyting'),
+            'degree' => 'hold_degrees',
+        ]);
+        $secondUser = User::factory()->create([
+            'name' => $this->userName('Ikkinchi Reyting'),
+            'degree' => 'hold_degrees',
+        ]);
+        $department = $this->createDepartment('Reyting kafedrasi');
+        $this->createWorkplace($firstUser, $department, 'Professor');
+        $this->createWorkplace($secondUser, $department, 'Dotsent');
+
+        $report = $this->createReport('Faol hisobot', '1');
+        $criterion = $this->createCriterion($report, 'Reyting mezoni');
+        $this->createPoint($firstUser, $criterion, $report, 12.5);
+        $this->createPoint($secondUser, $criterion, $report, 7.25);
+
+        $loginUsers = $this->get(route('login'))
+            ->assertOk()
+            ->viewData('users');
+        $authenticatedUsers = $this->actingAs($viewer)
+            ->get(route('ratings.index'))
+            ->assertOk()
+            ->viewData('users');
+
+        $ranking = static fn (LengthAwarePaginator $users): array => $users
+            ->getCollection()
+            ->map(fn (User $user): array => [
+                'id' => $user->getKey(),
+                'total_points' => (float) ($user->total_points ?? 0),
+            ])
+            ->all();
+
+        $this->assertSame($ranking($loginUsers), $ranking($authenticatedUsers));
+    }
+
     public function test_users_are_ranked_by_active_report_and_show_hemis_workplace_data(): void
     {
         $viewer = User::factory()->create();

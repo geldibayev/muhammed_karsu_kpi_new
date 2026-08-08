@@ -23,7 +23,7 @@
                         Yulduzcha bilan ajratilgan asosiy indikatorlarda ko‘rsatilgan qiymat
                         <span class="badge badge-warning">minimal ball</span>
                         bo‘lib, maksimal ball chegaralanmagan. Yuqori natija uchun ushbu indikatorlardan
-                        ko‘proq ball to‘plashga intiling.
+                        ko‘proq ball olish mumkin.
                     </p>
                 </div>
             </div>
