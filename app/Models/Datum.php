@@ -15,7 +15,7 @@ class Datum extends Model
     protected $table = 'data';
 
     protected $fillable = [
-        'id', 'name', 'material', 'user_id', 'criterion_id', 'reviewer_hemis_id', 'status', 'year_id', 'language_id',
+        'id', 'name', 'material', 'user_id', 'criterion_id', 'system_key', 'reviewer_hemis_id', 'status', 'year_id', 'language_id',
         'point', 'author_count', 'page_count', 'impact_factor', 'publication_tier', 'university_tier', 'reason',
         'received_amount', 'duplicate_of_id', 'manual_score_option_id',
     ];

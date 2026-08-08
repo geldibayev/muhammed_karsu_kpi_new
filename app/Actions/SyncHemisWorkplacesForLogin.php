@@ -10,6 +10,7 @@ class SyncHemisWorkplacesForLogin
     public function __construct(
         private SyncHemisWorkplaces $syncHemisWorkplaces,
         private RecalculateReportPoints $recalculateReportPoints,
+        private AssignDisciplinaryCriterionScore $assignDisciplinaryCriterionScore,
     ) {}
 
     public function handle(User $user): User
@@ -21,6 +22,8 @@ class SyncHemisWorkplacesForLogin
                 ->where('status', '1')
                 ->each(fn (Report $report) => $this->recalculateReportPoints->handle($report));
         }
+
+        $this->assignDisciplinaryCriterionScore->handle($result->user);
 
         return $result->user;
     }

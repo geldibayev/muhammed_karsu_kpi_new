@@ -49,7 +49,9 @@ class DatumPolicy
 
     public function delete(User $user, Datum $datum): bool
     {
-        return $datum->status !== 'deleted' && $this->ownsDatumOrIsSuperAdmin($user, $datum);
+        return $datum->system_key === null
+            && $datum->status !== 'deleted'
+            && $this->ownsDatumOrIsSuperAdmin($user, $datum);
     }
 
     public function review(User $user, Datum $datum): bool
