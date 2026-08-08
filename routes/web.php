@@ -23,6 +23,7 @@ use App\Http\Controllers\RequeueCancelledAiDatumController;
 use App\Http\Controllers\ResourceStatisticsController;
 use App\Http\Controllers\ReviewerAssignmentController;
 use App\Http\Controllers\SystemSettingsController;
+use App\Http\Controllers\UpdateAcceptedDatumScoreController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
@@ -90,6 +91,8 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
         ->name('ai-human-reviews.reject-accepted');
     Route::patch('/ai-human-reviews/{datum}/approve-cancelled', ApproveCancelledAiDatumController::class)
         ->name('ai-human-reviews.approve-cancelled');
+    Route::patch('/submissions/{datum}/accepted-score', UpdateAcceptedDatumScoreController::class)
+        ->name('submissions.accepted-score.update');
     Route::get('/reviews/{datum}', [ManualReviewController::class, 'show'])->name('reviews.show');
     Route::patch('/reviews/{datum}/approve', [ManualReviewController::class, 'approve'])->name('reviews.approve');
     Route::patch('/reviews/{datum}/reject', [ManualReviewController::class, 'reject'])->name('reviews.reject');

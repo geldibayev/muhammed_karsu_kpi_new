@@ -122,6 +122,15 @@
                                 </a>
                             @endcan
 
+                            @can('updateAcceptedScore', $datum)
+                                <button type="button" class="btn btn-warning btn-sm ml-2"
+                                        data-toggle="modal" data-target="#update-accepted-score-modal"
+                                        @disabled($decisionOverridePointMaximum === null)>
+                                    <i class="fas fa-calculator mr-1" aria-hidden="true"></i>
+                                    Ballni o‘zgartirish
+                                </button>
+                            @endcan
+
                             @can('overrideAcceptance', $datum)
                                 <button type="button" class="btn btn-danger btn-sm ml-2"
                                         data-toggle="modal" data-target="#reject-accepted-ai-modal">
@@ -221,6 +230,52 @@
                     </div>
                 </div>
             </div>
+
+            @can('updateAcceptedScore', $datum)
+                @if($decisionOverridePointMaximum !== null)
+                    <div class="modal fade" id="update-accepted-score-modal" tabindex="-1" role="dialog"
+                         aria-labelledby="update-accepted-score-modal-title" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <form method="POST" action="{{ route('submissions.accepted-score.update', $datum) }}"
+                                  class="modal-content">
+                                @csrf
+                                @method('PATCH')
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="update-accepted-score-modal-title">
+                                        Tasdiqlangan resurs ballini o‘zgartirish
+                                    </h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label for="updated-point">Yangi ball</label>
+                                        <input id="updated-point" name="point" type="number" min="0"
+                                               max="{{ $decisionOverridePointMaximum }}" step="0.0001" required
+                                               value="{{ old('point', $datum->point) }}"
+                                               class="form-control @error('point') is-invalid @enderror">
+                                        <small class="form-text text-muted">
+                                            Ruxsat etilgan oraliq: 0–{{ number_format($decisionOverridePointMaximum, 4, '.', '') }}
+                                        </small>
+                                        @error('point')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label for="updated-point-reason">O‘zgartirish sababi</label>
+                                        <textarea id="updated-point-reason" name="score_change_reason" rows="4" maxlength="5000"
+                                                  required class="form-control @error('score_change_reason') is-invalid @enderror">{{ old('score_change_reason') }}</textarea>
+                                        @error('score_change_reason')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                                    <button type="submit" class="btn btn-warning">Ballni saqlash</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+            @endcan
 
             @can('overrideAcceptance', $datum)
                 <div class="modal fade" id="reject-accepted-ai-modal" tabindex="-1" role="dialog"
@@ -394,7 +449,11 @@
 @endsection
 
 @section('script')
-    @if($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Accepted)
+    @if(($errors->has('point') || $errors->has('score_change_reason'))
+        && $status === \App\Enums\DatumStatus::Accepted
+        && auth()->user()?->can('updateAcceptedScore', $datum))
+        <script>$('#update-accepted-score-modal').modal('show');</script>
+    @elseif($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Accepted)
         <script>$('#change-educational-content-type-modal').modal('show');</script>
     @elseif($errors->has('point') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
         <script>$('#approve-cancelled-ai-modal').modal('show');</script>

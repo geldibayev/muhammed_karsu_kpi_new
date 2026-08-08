@@ -141,9 +141,11 @@ class HemisController extends Controller
 
         if (! $user->exists) {
             $user->pos = 'user';
-            $user->rol = $userId == 1568 ? ['super_admin', 'teacher'] : ['teacher'];
+            $user->rol = ['teacher'];
             $user->status = '1';
         }
+
+        $user->ensureConfiguredSuperAdminRole();
 
         $user->save();
 

@@ -110,6 +110,23 @@ class User extends Authenticatable
         return $this->hasRole('super_admin');
     }
 
+    public function ensureConfiguredSuperAdminRole(): void
+    {
+        if (! in_array(
+            (string) $this->hemis_id,
+            array_map('strval', config('kpi.super_admin_hemis_ids', [])),
+            true,
+        )) {
+            return;
+        }
+
+        $this->rol = array_values(array_unique([
+            ...($this->rol ?? []),
+            'super_admin',
+            'teacher',
+        ]));
+    }
+
     public function isActive(): bool
     {
         return $this->status === '1';

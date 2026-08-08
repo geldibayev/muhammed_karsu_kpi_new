@@ -9,7 +9,7 @@
                         <div class="col-md pr-md-3">
                             <h3 class="font-weight-bold mb-1">AI inson tekshiruvi</h3>
                             <div class="small text-muted">
-                                AI yakuniy qarorni insonga qoldirgan va sizga biriktirilgan resurslar.
+                                {{ $isSuperAdmin ? 'Barcha baholanmagan AI resurslari.' : 'AI yakuniy qarorni insonga qoldirgan va sizga biriktirilgan resurslar.' }}
                             </div>
                         </div>
                         <div class="col-md-auto mt-2 mt-md-0">

@@ -35,8 +35,19 @@ class ManualReviewController extends Controller
             ->orderBy('criterion_code');
 
         $assignments = $assignmentsQuery->get();
+        $isSuperAdmin = $user->isSuperAdmin();
         $pendingSubmissions = Datum::query()
-            ->whereIn('criterion_id', $assignments->pluck('criterion_id'))
+            ->when(
+                $isSuperAdmin,
+                fn (Builder $query): Builder => $query->whereHas(
+                    'criterion',
+                    fn (Builder $query): Builder => $query->where('checking', '!=', 'ai'),
+                ),
+                fn (Builder $query): Builder => $query->whereIn(
+                    'criterion_id',
+                    $assignments->pluck('criterion_id'),
+                ),
+            )
             ->whereIn('status', [DatumStatus::Received->value, DatumStatus::Checking->value])
             ->with(['user:id,name,hemis_id,degree', 'criterion:id,name', 'year:id,name'])
             ->latest()
@@ -51,6 +62,7 @@ class ManualReviewController extends Controller
             'assignments',
             'pendingSubmissions',
             'breadcrumbs',
+            'isSuperAdmin',
         ));
     }
 

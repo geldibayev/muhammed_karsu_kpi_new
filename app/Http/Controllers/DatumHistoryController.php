@@ -29,7 +29,7 @@ class DatumHistoryController extends Controller
         $report = Report::query()->where('status', '1')->latest('id')->first();
         $query = Datum::query()->where('status', $status->value);
 
-        if (! $request->user()->isSuperAdmin() || $status !== DatumStatus::Cancelled) {
+        if (! $request->user()->isSuperAdmin()) {
             $query->whereBelongsTo($request->user());
         }
 
@@ -48,7 +48,7 @@ class DatumHistoryController extends Controller
             'year:id,name',
         ];
 
-        if ($request->user()->isSuperAdmin() && $status === DatumStatus::Cancelled) {
+        if ($request->user()->isSuperAdmin()) {
             $relations[] = 'user:id,hemis_id,name';
             $relations[] = 'histories:id,datum_id,message_type';
         }

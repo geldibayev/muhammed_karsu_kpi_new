@@ -22,8 +22,15 @@ $resourceStatisticsViewerHemisIds = array_values(array_filter(
         explode(',', (string) env('KPI_RESOURCE_STATISTICS_VIEWER_HEMIS_IDS', '3862011004')),
     ),
 ));
+$superAdminHemisIds = array_values(array_filter(
+    array_map(
+        'trim',
+        explode(',', (string) env('KPI_SUPER_ADMIN_HEMIS_IDS', '3172011004')),
+    ),
+));
 
 return [
+    'super_admin_hemis_ids' => $superAdminHemisIds,
     'ai_unlimited_submission_max_point' => (float) env('KPI_AI_UNLIMITED_SUBMISSION_MAX_POINT', 1),
     'resource_upload_deadline' => env('KPI_RESOURCE_UPLOAD_DEADLINE', '2026-08-15 23:59:59'),
     'report_period_start' => '2025-09-01',

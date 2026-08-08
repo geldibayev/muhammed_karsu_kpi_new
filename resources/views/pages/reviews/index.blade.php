@@ -8,7 +8,9 @@
                     <div class="row align-items-center">
                         <div class="col-md pr-md-3">
                             <h3 class="font-weight-bold mb-1">Baholash navbati</h3>
-                            <div class="small text-muted">Sizga biriktirilgan, qaror kutayotgan resurslar.</div>
+                            <div class="small text-muted">
+                                {{ $isSuperAdmin ? 'Barcha qaror kutayotgan qo‘lda baholanadigan resurslar.' : 'Sizga biriktirilgan, qaror kutayotgan resurslar.' }}
+                            </div>
                         </div>
                         <div class="col-md-auto mt-2 mt-md-0">
                             <span class="badge badge-primary px-3 py-2">Jami: {{ $pendingSubmissions->total() }}</span>
@@ -16,7 +18,7 @@
                     </div>
                 </div>
                 <div class="card-body border-bottom">
-                    <div class="small text-muted mb-2">Biriktirilgan mezonlar</div>
+                    <div class="small text-muted mb-2">{{ $isSuperAdmin ? 'Shaxsiy biriktirilgan mezonlar' : 'Biriktirilgan mezonlar' }}</div>
                     @forelse($assignments as $assignment)
                         <span class="badge badge-light border mr-2 mb-1">
                             {{ $assignment->criterion_code }} — {{ data_get($assignment->criterion?->name, 'uz', 'Mezon topilmadi') }}

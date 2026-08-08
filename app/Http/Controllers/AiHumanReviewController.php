@@ -13,20 +13,26 @@ class AiHumanReviewController extends Controller
     public function __invoke(AiHumanReviewFilterRequest $request): View
     {
         $user = $request->user();
+        $isSuperAdmin = $user->isSuperAdmin();
         $selectedCriterionId = $request->integer('criterion') ?: null;
+
+        $pendingScope = fn (Builder $query): Builder => $isSuperAdmin
+            ? $query->whereIn('status', ['received', 'checking'])
+                ->whereHas('criterion', fn (Builder $query): Builder => $query->where('checking', 'ai'))
+            : $query->pendingAiHumanReviewFor((int) $user->hemis_id);
 
         $criteria = Criterion::query()
             ->select(['id', 'code', 'name', 'sort_order'])
             ->whereHas(
                 'files',
-                fn (Builder $query): Builder => $query->pendingAiHumanReviewFor((int) $user->hemis_id),
+                $pendingScope,
             )
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
 
         $pendingSubmissions = Datum::query()
-            ->pendingAiHumanReviewFor((int) $user->hemis_id)
+            ->tap($pendingScope)
             ->when(
                 $selectedCriterionId !== null,
                 fn (Builder $query): Builder => $query->where('criterion_id', $selectedCriterionId),
@@ -45,6 +51,7 @@ class AiHumanReviewController extends Controller
             'criteria',
             'selectedCriterionId',
             'breadcrumbs',
+            'isSuperAdmin',
         ));
     }
 }

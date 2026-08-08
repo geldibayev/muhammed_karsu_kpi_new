@@ -55,14 +55,22 @@ class DatumPolicy
     public function review(User $user, Datum $datum): bool
     {
         return in_array($datum->status, ['received', 'checking'], true)
-            && ($this->isAssignedReviewer($user, $datum)
+            && ($user->isSuperAdmin()
+                || $this->isAssignedReviewer($user, $datum)
                 || ($datum->usesAiChecking() && $user->can('manage-ai-operations')));
+    }
+
+    public function updateAcceptedScore(User $user, Datum $datum): bool
+    {
+        return $user->isSuperAdmin()
+            && $datum->status === DatumStatus::Accepted->value;
     }
 
     public function correctAcceptedScore(User $user, Datum $datum): bool
     {
         return $datum->status === DatumStatus::Accepted->value
             && $datum->usesAiChecking()
+            && ! $user->isSuperAdmin()
             && $user->can('manage-ai-operations');
     }
 

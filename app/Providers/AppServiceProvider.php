@@ -124,13 +124,13 @@ class AppServiceProvider extends ServiceProvider
         });
         Gate::define(
             'view-ai-status',
-            fn (User $user): bool => (string) $user->hemis_id
-                === (string) config('kpi.ai_status_viewer_hemis_id'),
+            fn (User $user): bool => $user->isSuperAdmin()
+                || (string) $user->hemis_id === (string) config('kpi.ai_status_viewer_hemis_id'),
         );
         Gate::define(
             'manage-ai-operations',
-            fn (User $user): bool => (string) $user->hemis_id
-                === (string) config('kpi.ai_operations_manager_hemis_id'),
+            fn (User $user): bool => $user->isSuperAdmin()
+                || (string) $user->hemis_id === (string) config('kpi.ai_operations_manager_hemis_id'),
         );
         Gate::define(
             'view-resource-statistics',
@@ -152,25 +152,27 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('export-employment-data', fn (User $user): bool => $user->isSuperAdmin());
         Gate::define(
             'manage-kpi-settings',
-            fn (User $user): bool => (string) $user->hemis_id
-                === (string) config('kpi.settings_manager_hemis_id'),
+            fn (User $user): bool => $user->isSuperAdmin()
+                || (string) $user->hemis_id === (string) config('kpi.settings_manager_hemis_id'),
         );
         Gate::define(
             'access-manual-reviews',
-            fn (User $user): bool => CriterionReviewerAssignment::query()
-                ->where('hemis_id', $user->hemis_id)
-                ->whereHas(
-                    'criterion',
-                    fn (Builder $query): Builder => $query->where('checking', '!=', 'ai'),
-                )
-                ->exists(),
+            fn (User $user): bool => $user->isSuperAdmin()
+                || CriterionReviewerAssignment::query()
+                    ->where('hemis_id', $user->hemis_id)
+                    ->whereHas(
+                        'criterion',
+                        fn (Builder $query): Builder => $query->where('checking', '!=', 'ai'),
+                    )
+                    ->exists(),
         );
         Gate::define(
             'access-ai-human-reviews',
-            fn (User $user): bool => AiHumanReviewAssignment::query()
-                ->active()
-                ->where('hemis_id', $user->hemis_id)
-                ->exists()
+            fn (User $user): bool => $user->isSuperAdmin()
+                || AiHumanReviewAssignment::query()
+                    ->active()
+                    ->where('hemis_id', $user->hemis_id)
+                    ->exists()
                 || Datum::query()
                     ->where('reviewer_hemis_id', $user->hemis_id)
                     ->where('status', 'checking')

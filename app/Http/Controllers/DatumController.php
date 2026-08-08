@@ -86,7 +86,8 @@ class DatumController extends Controller
     {
         $this->authorize('view', $datum);
 
-        $decisionOverridePointMaximum = auth()->user()?->can('overrideCancellation', $datum) === true
+        $decisionOverridePointMaximum = (auth()->user()?->can('overrideCancellation', $datum) === true
+            || auth()->user()?->can('updateAcceptedScore', $datum) === true)
             ? $maximumResolver->handle($datum)
             : null;
 

@@ -746,7 +746,7 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertOk();
     }
 
-    public function test_unassigned_super_admin_cannot_see_or_review_submission(): void
+    public function test_unassigned_super_admin_can_see_and_review_submission(): void
     {
         $reviewer = User::factory()->create();
         $superAdmin = User::factory()->superAdmin()->create();
@@ -757,27 +757,25 @@ class ManualReviewWorkflowTest extends TestCase
 
         $this->actingAs($superAdmin)
             ->get(route('reviews.index'))
-            ->assertForbidden();
+            ->assertOk()
+            ->assertSee($datum->name);
         $this->actingAs($superAdmin)
             ->get(route('home'))
             ->assertOk()
-            ->assertDontSee(route('reviews.index'));
+            ->assertSee(route('reviews.index'));
         $this->actingAs($superAdmin)
             ->get(route('reviews.show', $datum))
-            ->assertForbidden();
+            ->assertOk();
         $this->actingAs($superAdmin)
-            ->patch(route('reviews.approve', $datum))
-            ->assertForbidden();
-        $this->actingAs($superAdmin)
-            ->patch(route('reviews.reject', $datum), ['reason' => 'Ruxsatsiz qaror'])
-            ->assertForbidden();
+            ->patch(route('reviews.reject', $datum), ['reason' => 'Super admin qarori'])
+            ->assertRedirect(route('reviews.index'));
 
         $this->assertDatabaseHas('data', [
             'id' => $datum->id,
-            'status' => 'received',
+            'status' => 'cancelled',
             'point' => 0,
         ]);
-        $this->assertDatabaseMissing('datum_histories', [
+        $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
             'message_type' => 'manual_review_rejected',
         ]);
@@ -786,17 +784,6 @@ class ManualReviewWorkflowTest extends TestCase
             'message_type' => 'manual_review_approved',
         ]);
 
-        CriterionReviewerAssignment::query()
-            ->where('criterion_id', $criterion->id)
-            ->update(['hemis_id' => $superAdmin->hemis_id]);
-
-        $this->actingAs($superAdmin)
-            ->get(route('reviews.index'))
-            ->assertOk()
-            ->assertSee($datum->name);
-        $this->actingAs($superAdmin)
-            ->get(route('reviews.show', $datum))
-            ->assertOk();
     }
 
     public function test_assigned_reviewer_can_download_submission_but_cannot_delete_it(): void
