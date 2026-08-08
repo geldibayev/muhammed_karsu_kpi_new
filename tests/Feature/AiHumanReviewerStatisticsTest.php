@@ -130,6 +130,21 @@ class AiHumanReviewerStatisticsTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
+    public function test_configured_super_admin_hemis_id_can_see_the_menu_without_a_persisted_role(): void
+    {
+        config()->set('kpi.super_admin_hemis_ids', ['3172011004']);
+        $superAdmin = User::factory()->create(['hemis_id' => 3172011004]);
+
+        $this->actingAs($superAdmin)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee(route('ai-human-reviewer-statistics.index'));
+
+        $this->actingAs($superAdmin)
+            ->get(route('ai-human-reviewer-statistics.index'))
+            ->assertOk();
+    }
+
     public function test_empty_statistics_are_zero_safe(): void
     {
         $superAdmin = User::factory()->superAdmin()->create();

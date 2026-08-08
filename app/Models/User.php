@@ -107,7 +107,12 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole('super_admin');
+        return $this->hasRole('super_admin')
+            || in_array(
+                (string) $this->hemis_id,
+                array_map('strval', config('kpi.super_admin_hemis_ids', [])),
+                true,
+            );
     }
 
     public function ensureConfiguredSuperAdminRole(): void
