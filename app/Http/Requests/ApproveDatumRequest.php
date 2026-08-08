@@ -151,6 +151,19 @@ class ApproveDatumRequest extends FormRequest
                 'max:9999999999999999.99',
                 'decimal:0,2',
             ],
+            'criterion' => [
+                Rule::prohibitedIf(! $isAiCriterion),
+                'nullable',
+                'integer',
+                Rule::in([$criterionId]),
+            ],
+            'page' => [
+                Rule::prohibitedIf(! $isAiCriterion),
+                'nullable',
+                'integer',
+                'min:1',
+                'max:100000',
+            ],
         ];
     }
 

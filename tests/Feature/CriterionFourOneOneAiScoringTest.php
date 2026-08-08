@@ -114,11 +114,34 @@ class CriterionFourOneOneAiScoringTest extends TestCase
         ]);
 
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $datum), ['point' => 3])
+            ->get(route('ai-human-reviews.index', ['criterion' => $criterion->getKey()]))
+            ->assertOk()
+            ->assertSee(route('reviews.show', [
+                'datum' => $datum,
+                'criterion' => $criterion->getKey(),
+                'page' => 1,
+            ]));
+
+        $returnFilters = [
+            'criterion' => $criterion->getKey(),
+            'page' => 3,
+        ];
+        $detailsUrl = route('reviews.show', ['datum' => $datum, ...$returnFilters]);
+        $approvalUrl = route('reviews.approve', ['datum' => $datum, ...$returnFilters]);
+
+        $this->actingAs($reviewer)
+            ->get($detailsUrl)
+            ->assertOk()
+            ->assertSee($approvalUrl)
+            ->assertSee(route('ai-human-reviews.index', $returnFilters));
+
+        $this->actingAs($reviewer)
+            ->from($detailsUrl)
+            ->patch($approvalUrl, ['point' => 3])
             ->assertSessionHasErrors('point');
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $datum))
-            ->assertRedirect(route('ai-human-reviews.index'));
+            ->patch($approvalUrl, ['return_url' => 'https://example.com/unsafe'])
+            ->assertRedirect(route('ai-human-reviews.index', $returnFilters));
 
         $this->assertSame('accepted', $datum->fresh()->status);
         $this->assertSame(0.75, $datum->fresh()->point);

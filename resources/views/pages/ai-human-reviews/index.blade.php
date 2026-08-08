@@ -79,7 +79,11 @@
                                     <td class="align-middle text-break">{{ $datum->reason ?: 'Izoh mavjud emas' }}</td>
                                     <td class="align-middle">{{ $datum->created_at->format('d.m.Y H:i') }}</td>
                                     <td class="align-middle text-right">
-                                        <a href="{{ route('reviews.show', $datum) }}"
+                                        <a href="{{ route('reviews.show', [
+                                            'datum' => $datum,
+                                            'criterion' => $selectedCriterionId,
+                                            'page' => $pendingSubmissions->currentPage(),
+                                        ]) }}"
                                            class="btn btn-outline-info btn-sm">
                                             <i class="far fa-eye mr-1"></i> Ko‘rish
                                         </a>

@@ -79,10 +79,13 @@ class ManualReviewController extends Controller
         );
 
         $reviewIndexRoute = $this->reviewIndexRoute($datum);
+        $reviewFilters = $this->reviewReturnFilters($request, $datum);
         $reviewReturnUrl = $datum->usesAiChecking()
             && $request->user()?->can('manage-ai-operations') === true
+            && $reviewFilters === []
             ? route('ai-status.index')
-            : route($reviewIndexRoute);
+            : route($reviewIndexRoute, $reviewFilters);
+        $reviewActionParameters = ['datum' => $datum, ...$reviewFilters];
         $reviewQueue = $datum->usesAiChecking() ? 'ai' : 'manual';
         $datum->load([
             'user:id,name,hemis_id,degree',
@@ -168,6 +171,7 @@ class ManualReviewController extends Controller
             'educationalContentScoring',
             'isAcceptedScoreCorrection',
             'reviewReturnUrl',
+            'reviewActionParameters',
             'foreignLanguageCertificateScoring',
         ));
     }
@@ -179,6 +183,7 @@ class ManualReviewController extends Controller
     ): RedirectResponse {
         $isAcceptedScoreCorrection = $request->user()?->can('correctAcceptedScore', $datum) === true;
         $reviewIndexRoute = $this->reviewIndexRoute($datum);
+        $reviewFilters = $this->reviewReturnFilters($request, $datum);
 
         $action->approve(
             $request->user(),
@@ -200,13 +205,16 @@ class ManualReviewController extends Controller
         }
 
         if ($datum->usesAiChecking()
-            && $request->user()?->can('manage-ai-operations') === true) {
+            && $request->user()?->can('manage-ai-operations') === true
+            && $reviewFilters === []) {
             return redirect()
                 ->route('upload.details', $datum)
                 ->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
         }
 
-        return redirect()->route($reviewIndexRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
+        return redirect()
+            ->route($reviewIndexRoute, $reviewFilters)
+            ->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
     }
 
     public function reject(
@@ -238,5 +246,21 @@ class ManualReviewController extends Controller
         return $datum->usesAiChecking()
             ? 'ai-human-reviews.index'
             : 'reviews.index';
+    }
+
+    /** @return array{criterion?: int, page?: int} */
+    private function reviewReturnFilters(Request $request, Datum $datum): array
+    {
+        if (! $datum->usesAiChecking()) {
+            return [];
+        }
+
+        $criterionId = $request->integer('criterion');
+        $page = $request->integer('page');
+
+        return array_filter([
+            'criterion' => $criterionId === (int) $datum->criterion_id ? $criterionId : null,
+            'page' => $page >= 1 && $page <= 100_000 ? $page : null,
+        ], fn (?int $value): bool => $value !== null);
     }
 }

@@ -120,7 +120,7 @@
                             @endcan
 
                             @if($isHIndexCriterion)
-                                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
+                                <form method="POST" action="{{ route('reviews.approve', $reviewActionParameters) }}" class="mr-2">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-success btn-sm">
@@ -128,7 +128,7 @@
                                     </button>
                                 </form>
                             @elseif($isAiCriterion && $usesAutomaticAiHumanReviewScore)
-                                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
+                                <form method="POST" action="{{ route('reviews.approve', $reviewActionParameters) }}" class="mr-2">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-success btn-sm">
@@ -166,7 +166,7 @@
                                     <i class="fas fa-check mr-1"></i> Tasdiqlash
                                 </button>
                             @else
-                                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="mr-2">
+                                <form method="POST" action="{{ route('reviews.approve', $reviewActionParameters) }}" class="mr-2">
                                     @csrf
                                     @method('PATCH')
                                     <button type="submit" class="btn btn-success btn-sm">
@@ -254,7 +254,7 @@
         <div class="modal fade" id="approve-modal" tabindex="-1" role="dialog"
              aria-labelledby="approve-modal-title" aria-hidden="true">
             <div class="modal-dialog" role="document">
-                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="modal-content">
+                <form method="POST" action="{{ route('reviews.approve', $reviewActionParameters) }}" class="modal-content">
                     @csrf
                     @method('PATCH')
                     <div class="modal-header">
@@ -323,7 +323,7 @@
         <div class="modal fade" id="ai-approve-modal" tabindex="-1" role="dialog"
              aria-labelledby="ai-approve-modal-title" aria-hidden="true">
             <div class="modal-dialog" role="document">
-                <form method="POST" action="{{ route('reviews.approve', $datum) }}" class="modal-content">
+                <form method="POST" action="{{ route('reviews.approve', $reviewActionParameters) }}" class="modal-content">
                     @csrf
                     @method('PATCH')
                     <div class="modal-header">
