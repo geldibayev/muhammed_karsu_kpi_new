@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\DatumStatus;
 use App\Enums\RatingMode;
 use App\Models\Report;
 use App\Models\User;
@@ -57,6 +58,23 @@ class PaginateRatingUsers
                 'submissions as uploaded_resources_count' => fn (Builder $query): Builder => $this
                     ->applySubmissionReportScope($query, $report),
             ])
+            ->when(
+                $mode === RatingMode::AllUsers,
+                fn (Builder $query): Builder => $query->withCount([
+                    'submissions as accepted_resources_count' => fn (Builder $query): Builder => $this
+                        ->applySubmissionReportScope($query, $report)
+                        ->where('status', DatumStatus::Accepted->value),
+                    'submissions as cancelled_resources_count' => fn (Builder $query): Builder => $this
+                        ->applySubmissionReportScope($query, $report)
+                        ->where('status', DatumStatus::Cancelled->value),
+                    'submissions as reviewing_resources_count' => fn (Builder $query): Builder => $this
+                        ->applySubmissionReportScope($query, $report)
+                        ->whereIn('status', [
+                            DatumStatus::Received->value,
+                            DatumStatus::Checking->value,
+                        ]),
+                ]),
+            )
             ->withSum([
                 'points as total_points' => function (Builder $query) use ($report): void {
                     $query->when(

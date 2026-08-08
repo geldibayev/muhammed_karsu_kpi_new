@@ -326,6 +326,9 @@ class RatingPageTest extends TestCase
         $oldCriterion = $this->createCriterion($oldReport, 'Eski resurs mezoni');
         $this->createAcceptedDatum($uploadedUser, $criterion, 1, 'Birinchi joriy resurs');
         $this->createPendingDatum($uploadedUser, $criterion, 'checking');
+        $this->createPendingDatum($uploadedUser, $criterion, 'received');
+        $this->createPendingDatum($uploadedUser, $criterion, 'cancelled');
+        $this->createPendingDatum($uploadedUser, $criterion, 'deleted');
         $this->createAcceptedDatum($notUploadedUser, $oldCriterion, 1, 'Faqat eski resurs');
 
         $response = $this->actingAs($viewer)->get(route('ratings.index', [
@@ -342,12 +345,18 @@ class RatingPageTest extends TestCase
             ->assertSee('Resurs yuklagan')
             ->assertSee('Resurs yuklamagan')
             ->assertSee('Yuklagan resurslari')
+            ->assertSee('Tasdiqlangan')
+            ->assertSee('Qaytarilgan')
+            ->assertSee('Ko‘rib chiqilmoqda')
             ->assertSee('name="resource_status"', false)
             ->assertViewHas('users', function (LengthAwarePaginator $users) use ($uploadedUser, $notUploadedUser): bool {
                 $usersById = $users->getCollection()->keyBy('id');
 
                 return $users->total() === 2
-                    && (int) $usersById->get($uploadedUser->id)?->uploaded_resources_count === 2
+                    && (int) $usersById->get($uploadedUser->id)?->uploaded_resources_count === 4
+                    && (int) $usersById->get($uploadedUser->id)?->accepted_resources_count === 1
+                    && (int) $usersById->get($uploadedUser->id)?->cancelled_resources_count === 1
+                    && (int) $usersById->get($uploadedUser->id)?->reviewing_resources_count === 2
                     && (int) $usersById->get($notUploadedUser->id)?->uploaded_resources_count === 0;
             });
 
@@ -375,6 +384,8 @@ class RatingPageTest extends TestCase
         $report = $this->createReport('Excel faol hisoboti', '1');
         $criterion = $this->createCriterion($report, 'Excel resurs mezoni');
         $this->createAcceptedDatum($uploadedUser, $criterion, 1);
+        $this->createPendingDatum($uploadedUser, $criterion, 'cancelled');
+        $this->createPendingDatum($uploadedUser, $criterion, 'received');
 
         $response = $this->actingAs($viewer)->get(route('ratings.export', [
             'mode' => 'all_users',
@@ -395,11 +406,14 @@ class RatingPageTest extends TestCase
         $this->assertStringContainsString('Fakultet', $sheet);
         $this->assertStringContainsString('Kafedra', $sheet);
         $this->assertStringContainsString('Yuklagan resurslari soni', $sheet);
+        $this->assertStringContainsString('Tasdiqlangan resurslar soni', $sheet);
+        $this->assertStringContainsString('Qaytarilgan resurslar soni', $sheet);
+        $this->assertStringContainsString('Ko‘rib chiqilayotgan resurslar soni', $sheet);
         $this->assertStringContainsString('Resurs yuklagan', $sheet);
         $this->assertStringContainsString('Resurs yuklamagan', $sheet);
         $this->assertStringContainsString('Excel Yuklagan', $sheet);
         $this->assertStringContainsString('Excel Yuklamagan', $sheet);
-        $this->assertStringContainsString('<autoFilter ref="A1:H3"/>', $sheet);
+        $this->assertStringContainsString('<autoFilter ref="A1:K3"/>', $sheet);
     }
 
     public function test_faculty_rankings_and_filters_exclude_non_faculty_root_units(): void

@@ -250,6 +250,9 @@
                                 @if($isAllUsersMode)
                                     <th class="text-center">Holati</th>
                                     <th class="text-center">Yuklagan resurslari</th>
+                                    <th class="text-center">Tasdiqlangan</th>
+                                    <th class="text-center">Qaytarilgan</th>
+                                    <th class="text-center">Ko‘rib chiqilmoqda</th>
                                 @else
                                     <th class="text-center">Jami ball</th>
                                 @endif
@@ -306,6 +309,22 @@
                                         <td class="text-center align-middle font-weight-bold">
                                             {{ $resourceCount }}
                                         </td>
+                                        <td class="text-center align-middle">
+                                            <span class="badge badge-success px-3 py-2">
+                                                {{ (int) ($user->accepted_resources_count ?? 0) }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <span class="badge badge-danger px-3 py-2">
+                                                {{ (int) ($user->cancelled_resources_count ?? 0) }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center align-middle">
+                                            <span class="badge badge-warning px-3 py-2"
+                                                  title="Yuborilgan va tekshirilayotgan resurslar">
+                                                {{ (int) ($user->reviewing_resources_count ?? 0) }}
+                                            </span>
+                                        </td>
                                     @else
                                         <td class="text-center align-middle">
                                             <span class="badge badge-success px-3 py-2">
@@ -324,7 +343,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ ($isAllUsersMode ? 7 : 6) + ($showActions ? 1 : 0) }}" class="text-center text-muted py-5">
+                                    <td colspan="{{ ($isAllUsersMode ? 10 : 6) + ($showActions ? 1 : 0) }}" class="text-center text-muted py-5">
                                         <i class="fas fa-users fa-2x d-block mb-2"></i>
                                         Tanlangan shartlar bo‘yicha foydalanuvchilar topilmadi.
                                     </td>

@@ -135,6 +135,9 @@ class ExportRatingsToXlsx
             'Reytingdagi lavozimi',
             'Holati',
             'Yuklagan resurslari soni',
+            'Tasdiqlangan resurslar soni',
+            'Qaytarilgan resurslar soni',
+            'Ko‘rib chiqilayotgan resurslar soni',
         ];
         $rows = $users->values()->map(function (User $user, int $index): array {
             $workplace = $user->ratingWorkplace;
@@ -153,6 +156,9 @@ class ExportRatingsToXlsx
                 $workplace?->position?->name ?? '—',
                 $resourceCount > 0 ? 'Resurs yuklagan' : 'Resurs yuklamagan',
                 $resourceCount,
+                (int) ($user->accepted_resources_count ?? 0),
+                (int) ($user->cancelled_resources_count ?? 0),
+                (int) ($user->reviewing_resources_count ?? 0),
             ];
         })->all();
 
