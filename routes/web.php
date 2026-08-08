@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AiHumanReviewController;
+use App\Http\Controllers\AiHumanReviewerStatisticsController;
 use App\Http\Controllers\AiReviewerStatusController;
 use App\Http\Controllers\ApproveCancelledAiDatumController;
 use App\Http\Controllers\ChangeEducationalContentTypeController;
@@ -87,6 +88,9 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
     Route::get('/ai-human-reviews', AiHumanReviewController::class)
         ->middleware('can:access-ai-human-reviews')
         ->name('ai-human-reviews.index');
+    Route::get('/ai-human-reviewer-statistics', AiHumanReviewerStatisticsController::class)
+        ->middleware('can:view-ai-human-reviewer-statistics')
+        ->name('ai-human-reviewer-statistics.index');
     Route::patch('/ai-human-reviews/{datum}/reject-accepted', RejectAcceptedAiDatumController::class)
         ->name('ai-human-reviews.reject-accepted');
     Route::patch('/ai-human-reviews/{datum}/approve-cancelled', ApproveCancelledAiDatumController::class)

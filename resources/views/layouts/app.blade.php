@@ -291,6 +291,15 @@
                             </a>
                         </li>
                     @endcan
+                    @can('view-ai-human-reviewer-statistics')
+                        <li class="nav-item">
+                            <a href="{{ route('ai-human-reviewer-statistics.index') }}"
+                               class="nav-link @if(request()->routeIs('ai-human-reviewer-statistics.*')) active @endif">
+                                <i class="nav-icon fas fa-users-cog"></i>
+                                <p>AI mas’ullar statistikasi</p>
+                            </a>
+                        </li>
+                    @endcan
                     <li class="nav-item">
                         <a href="{{ route('reviewer-assignments.index') }}"
                            class="nav-link @if(request()->routeIs('reviewer-assignments.*')) active @endif">

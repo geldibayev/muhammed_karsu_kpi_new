@@ -128,6 +128,10 @@ class AppServiceProvider extends ServiceProvider
                 || (string) $user->hemis_id === (string) config('kpi.ai_status_viewer_hemis_id'),
         );
         Gate::define(
+            'view-ai-human-reviewer-statistics',
+            fn (User $user): bool => $user->isSuperAdmin(),
+        );
+        Gate::define(
             'manage-ai-operations',
             fn (User $user): bool => $user->isSuperAdmin()
                 || (string) $user->hemis_id === (string) config('kpi.ai_operations_manager_hemis_id'),
