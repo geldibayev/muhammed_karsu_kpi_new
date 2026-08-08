@@ -993,6 +993,9 @@ class CriterionSeeder extends Seeder
                         'formula_id' => 3,
                         'ai_model' => self::DEFAULT_AI_MODEL,
                         'ai_prompt' => FixedPerResourceHumanReviewCriterionRule::threeOneElevenPrompt(),
+                        'file_limit' => 4,
+                        'ai_submission_max_point' => 4,
+                        'divide_ai_point_by_authors' => false,
                     ],
                     [
                         'name' => [

@@ -18,7 +18,15 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Criterion extends Model
 {
-    public const PRIMARY_INDICATOR_CODES = ['1.2', '1.3', '1.4', '3.1.3', '3.1.4', '3.1.8'];
+    public const PRIMARY_INDICATOR_CODES = [
+        '1.2',
+        '1.3',
+        '1.4',
+        '3.1.3',
+        '3.1.4',
+        '3.1.8',
+        FixedPerResourceHumanReviewCriterionRule::THREE_ONE_ELEVEN_CODE,
+    ];
 
     public const H_INDEX_CODE = '3.1.4';
 

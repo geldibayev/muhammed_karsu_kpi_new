@@ -367,6 +367,56 @@ class DatumSubmissionTest extends TestCase
         $this->assertCriterionAllowsOnlyOneActiveFile('3.1.10');
     }
 
+    public function test_criterion_3_1_11_allows_four_active_files_and_rejects_the_fifth(): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => '3.1.11',
+            'res_type' => 'file',
+            'checking' => 'ai',
+            'file_limit' => 4,
+        ]);
+        $year = $this->createActiveYear();
+
+        foreach (range(1, 3) as $index) {
+            Datum::query()->create([
+                'name' => "Old proof {$index}.pdf",
+                'material' => [
+                    'type' => 'file',
+                    'disk' => 'local',
+                    'path' => "old-proof-{$index}.pdf",
+                ],
+                'user_id' => $teacher->getKey(),
+                'criterion_id' => $criterion->getKey(),
+                'year_id' => $year->getKey(),
+                'status' => 'checking',
+            ]);
+        }
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create('fourth-proof.pdf', 100, 'application/pdf'),
+                'year' => $year->getKey(),
+            ])
+            ->assertRedirect(route('upload.show', $criterion))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('data', 4);
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create('fifth-proof.pdf', 100, 'application/pdf'),
+                'year' => $year->getKey(),
+            ])
+            ->assertSessionHasErrors('uploadResourceFile');
+
+        $this->assertDatabaseCount('data', 4);
+    }
+
     public function test_cancelled_submission_does_not_consume_file_limit(): void
     {
         $teacher = User::factory()->create();

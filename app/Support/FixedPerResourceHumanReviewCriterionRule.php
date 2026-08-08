@@ -12,6 +12,8 @@ class FixedPerResourceHumanReviewCriterionRule
 
     public const THREE_ONE_TEN_CODE = '3.1.10';
 
+    public const THREE_ONE_ELEVEN_CODE = '3.1.11';
+
     public const FOUR_ONE_TWO_CODE = '4.1.2';
 
     /** @var array<string, array<string, float>> */
@@ -61,7 +63,7 @@ class FixedPerResourceHumanReviewCriterionRule
             'hold_degrees' => 3.0,
             'foreign_lang' => 3.0,
         ],
-        '3.1.11' => [
+        self::THREE_ONE_ELEVEN_CODE => [
             'hold_degrees' => 3.0,
             'no_degrees' => 4.0,
             'foreign_lang' => 4.0,

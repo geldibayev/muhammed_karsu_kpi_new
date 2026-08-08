@@ -122,12 +122,17 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
     {
         $fixture = $this->createCriteria();
         $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $unlimitedFormula = Formula::query()->create([
+            'code' => Formula::Unlimited,
+            'name' => ['uz' => 'Cheklanmagan yig‘indi'],
+            'status' => '1',
+        ]);
         $criterion = Criterion::query()->create([
             'code' => '3.1.11',
             'name' => ['uz' => 'Talaba stipendiatligi'],
             'parent_id' => $fixture['criteria']['3.1.12']->parent_id,
             'report_id' => $fixture['report']->getKey(),
-            'formula_id' => $fixture['criteria']['3.1.12']->formula_id,
+            'formula_id' => $unlimitedFormula->getKey(),
             'checking' => 'ai',
             'file_limit' => 1,
             'upload' => '1',
@@ -187,6 +192,7 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
             'name' => ['uz' => 'Bo‘lim'],
             'report_id' => $report->getKey(),
             'formula_id' => $formula->getKey(),
+            'status' => '1',
         ]);
         $maximums = [
             '3.1.12' => [3, 3, 3, 3],

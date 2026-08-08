@@ -154,10 +154,11 @@ class KpiCriterionSpecification
             ),
             '3.1.11' => self::rule(
                 self::Unlimited,
-                1,
+                4,
                 'current',
                 [3, 4, 4, 4],
                 4,
+                false,
                 aiPrompt: FixedPerResourceHumanReviewCriterionRule::threeOneElevenPrompt(),
             ),
             '3.1.12' => self::rule(
