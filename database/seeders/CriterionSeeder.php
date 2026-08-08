@@ -1149,7 +1149,7 @@ class CriterionSeeder extends Seeder
                         ],
                         'observation' => 'current',
                         'report_id' => 1,
-                        'checking' => 'manual',
+                        'checking' => 'ai',
                         'file_limit' => 4,
                         'template' => '0',
                         'res_type' => 'all',
@@ -1157,27 +1157,15 @@ class CriterionSeeder extends Seeder
                         'evaluation' => [
                             'hold_degrees' => 3,
                             'no_degrees' => 3,
-                            'foreign_lang' => 3,
+                            'foreign_lang' => 2,
                             'physical' => 3,
                         ],
                         'year' => 2025,
                         'formula_id' => 2,
                         'ai_model' => self::DEFAULT_AI_MODEL,
-                        'ai_prompt' => "Siz qat'iy AI baholovchisiz. Taqdim etilgan hujjatlarni (OAVdagi maqolalar, video havola, ijtimoiy tarmoqdagi rasmiy postlar yoki efir lavhalari) tahlil qiling.
-                        Baholash qoidalari jami %pointing% ballgacha:
-                        1. Chiqish mavzusi universitet yoki mamlakatdagi islohotlar (ta'lim, ijtimoiy, iqtisodiy va h.k.) targ'ibotiga oid bo'lishi shart.
-                        2. OAV darajasini aniqlang:
-                           - Xalqaro OAVlarda chiqish: 2.0 ball.
-                           - Respublika darajasidagi OAVlarda (TV, gazeta, rasmiy portal): 1.0 ball.
-                           - Ijtimoiy tarmoqlardagi nufuzli sahifalardagi rasmiy chiqishlar: 0.5 ball.
-
-                        Tahlil natijasiga ko'ra quyidagi qarorlardan birini qabul qiling:
-                        - Agar chiqish islohotlar targ'ibotiga oidligi va OAV darajasi tasdiqlansa: \"accepted\" statusini bering va \"point\" qismiga mos ballni yozing.
-                        - Agar hujjat (video/maqola) xira bo'lsa, chiqish islohotlarga aloqadorligi yoki OAV darajasi aniq bo'lmasa, yoxud inson (administrator) tekshiruvi talab etilsa: \"checking\" statusini bering (\"point\": 0).
-                        - Agar chiqish shaxsiy xarakterda bo'lsa, islohotlarga aloqasi bo'lmasa yoki OAV nufuzi past bo'lsa: \"cancelled\" statusini bering (\"point\": 0).
-
-                        Javobni hech qanday markdown belgilarisiz (```json...``` kabi emas) va qo'shimcha so'zlarsiz, faqatgina quyidagi qat'iy JSON formatida qaytaring:
-                        {\"status\": \"accepted|checking|cancelled\", \"point\": <raqam: 2.0, 1.0, 0.5 yoki 0>, \"reason\": \"<Qabul qilingan qarorning sababi, qaysi OAV ekanligi va islohotlarning qaysi yo'nalishi yoritilganligi haqida qisqacha izoh>\"}",
+                        'ai_submission_max_point' => 0.75,
+                        'divide_ai_point_by_authors' => false,
+                        'ai_prompt' => FixedPerResourceHumanReviewCriterionRule::fourOneOnePrompt(),
                     ],
                     [
                         'name' => [

@@ -52,6 +52,7 @@ class AiQueueCommandsTest extends TestCase
     public function test_command_queues_legacy_and_failed_ai_resources_once(): void
     {
         $legacy = $this->createDatum(['status' => 'received']);
+        $this->markAsQueued($legacy);
         $failed = $this->createDatum();
         $failed->histories()->create([
             'user_id' => $failed->user_id,
@@ -101,7 +102,7 @@ class AiQueueCommandsTest extends TestCase
             'datum_id' => $failed->id,
             'message_type' => 'ai_queued',
         ]);
-        $this->assertDatabaseCount('datum_histories', 5);
+        $this->assertDatabaseCount('datum_histories', 6);
     }
 
     public function test_recovery_requeues_a_stale_orphan_once_even_after_an_older_evaluation(): void

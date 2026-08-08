@@ -612,8 +612,14 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertNull(Cache::get('kpi:ai-worker:last-seen-at'));
     }
 
-    public function test_failed_job_leaves_submission_checking_without_human_reviewer_assignment(): void
+    public function test_failed_job_leaves_submission_checking_and_assigns_human_reviewer(): void
     {
+        $reviewer = User::factory()->create();
+        AiHumanReviewAssignment::query()->create([
+            'hemis_id' => $reviewer->hemis_id,
+            'active_slot' => 1,
+            'assigned_at' => now(),
+        ]);
         $datum = $this->createDatum(['reviewer_hemis_id' => 3172011004]);
 
         (new ProcessAiDatumEvaluation($datum->id))->failed(new RuntimeException('Network error'));
@@ -621,13 +627,19 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $datum->refresh();
         $this->assertSame('checking', $datum->status);
         $this->assertSame(0.0, $datum->point);
-        $this->assertNull($datum->reviewer_hemis_id);
+        $this->assertSame($reviewer->hemis_id, $datum->reviewer_hemis_id);
         $this->assertSame(Datum::PUBLIC_CHECKING_REASON, $datum->reason);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
             'type' => 'warning',
             'message_type' => 'ai_failed',
             'message' => 'AI xizmatiga tarmoq orqali ulanib bo‘lmadi.',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'type' => 'info',
+            'message_type' => 'ai_human_review_assigned',
+            'message' => "AI texnik xatosidan keyin HEMIS ID {$reviewer->hemis_id} mas’ulga biriktirildi.",
         ]);
     }
 

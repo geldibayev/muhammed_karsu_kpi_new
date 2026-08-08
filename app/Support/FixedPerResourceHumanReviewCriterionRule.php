@@ -6,6 +6,8 @@ use App\Data\AiEvaluationResult;
 
 class FixedPerResourceHumanReviewCriterionRule
 {
+    public const FOUR_ONE_ONE_CODE = '4.1.1';
+
     public const TWO_ONE_TWO_CODE = '2.1.2';
 
     public const THREE_ONE_TEN_CODE = '3.1.10';
@@ -14,6 +16,12 @@ class FixedPerResourceHumanReviewCriterionRule
 
     /** @var array<string, array<string, float>> */
     private const POINTS = [
+        self::FOUR_ONE_ONE_CODE => [
+            'hold_degrees' => 0.75,
+            'no_degrees' => 0.75,
+            'foreign_lang' => 0.75,
+            'physical' => 0.75,
+        ],
         PatentCriterionRule::CODE => [
             'hold_degrees' => 3.0,
             'no_degrees' => 4.0,
@@ -145,6 +153,28 @@ QAROR:
 - Dars xorijiy tilda olib borilmagani yoki hujjat mezonga aloqasizligi aniq bo'lsa cancelled qaytaring.
 
 Point maydoniga har qanday statusda 0 yozing: yakuniy ballni server hisoblaydi. Reason ichida fan, xorijiy til va dars olib borilganini tasdiqlovchi dalilni qisqa yozing.
+PROMPT;
+    }
+
+    public static function fourOneOnePrompt(): string
+    {
+        return <<<'PROMPT'
+Siz 4.1.1 mezoni bo'yicha professor-o'qituvchining OAV yoki ijtimoiy tarmoqlarda universitet va mamlakatda amalga oshirilayotgan islohotlar yuzasidan chiqish qilganini tekshiruvchi qat'iy AI yordamchisiz.
+
+VAZIFA:
+- Gazetada chop etilgan maqola, televideniyedagi chiqish, rasmiy OAV materiali yoki rasmiy ijtimoiy tarmoq chiqishini tekshiring.
+- Gazeta maqolasi nusxasi, televideniye chiqishi bo'yicha tashkilot bergan rasmiy ma'lumotnoma va boshqa ishonchli tasdiqlovchi hujjatlar dalil hisoblanadi.
+- Materialda resursni taqdim etgan professor-o'qituvchining muallif yoki chiqish qilgan shaxs ekani aniq tasdiqlanishi kerak.
+- Chiqish mavzusi universitetdagi yoki mamlakatdagi islohotlar, jumladan ta'lim, ijtimoiy yoki iqtisodiy yangilanishlarga bevosita oid bo'lishi kerak.
+- Materialning chop etilgan, efirga uzatilgan yoki e'lon qilingan sanasini aniqlang va tizim talab qilgan resource_date maydonida qaytaring.
+- Ballni tanlamang va hisoblamang. Har bir tasdiqlangan resursga server 0.75 ball beradi; yakuniy ball serverda chet tili yo'nalishi uchun 2 ball, qolgan toifalar uchun 3 ball bilan cheklanadi.
+
+QAROR:
+- OAV yoki rasmiy ijtimoiy tarmoqdagi chiqish, professor-o'qituvchining ishtiroki, islohotlarga oid mavzu va sana aniq tasdiqlansa accepted qaytaring.
+- Hujjat xira, kesilgan, qarama-qarshi bo'lsa yoki chiqish, shaxs, mavzu yoxud sana ishonchli aniqlanmasa checking qaytaring; resurs amaldagi inson tekshiruvchisiga yuboriladi.
+- Material OAV yoki rasmiy ijtimoiy tarmoq chiqishi emasligi, professor-o'qituvchiga tegishli emasligi, islohotlarga aloqasizligi yoki ruxsat etilgan davrdan tashqaridaligi aniq bo'lsa cancelled qaytaring.
+
+Point maydoniga har qanday statusda 0 yozing: yakuniy ballni server hisoblaydi. Reason ichida OAV yoki platforma nomi, chiqish turi, professor-o'qituvchining ishtiroki va yoritilgan islohotga oid dalilni qisqa yozing.
 PROMPT;
     }
 

@@ -232,7 +232,10 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
         try {
             DB::transaction(function () use ($reason): void {
-                $datum = Datum::query()->lockForUpdate()->find($this->datumId);
+                $datum = Datum::query()
+                    ->with('criterion:id,code')
+                    ->lockForUpdate()
+                    ->find($this->datumId);
 
                 if ($datum === null
                     || $datum->status !== 'checking'
@@ -240,15 +243,34 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                     return;
                 }
 
+                $reviewerHemisId = $datum->criterion === null
+                    ? null
+                    : AiHumanReviewAssignment::reviewerHemisIdFor(
+                        $datum->criterion,
+                        sharedLock: true,
+                    );
+                $reviewerHemisId = is_numeric($reviewerHemisId) ? (int) $reviewerHemisId : null;
+
                 $datum->update([
                     'reason' => Datum::PUBLIC_CHECKING_REASON,
-                    'reviewer_hemis_id' => null,
+                    'reviewer_hemis_id' => $reviewerHemisId,
                 ]);
                 $datum->histories()->create([
                     'user_id' => $datum->user_id,
                     'type' => 'warning',
                     'message' => $reason,
                     'message_type' => 'ai_failed',
+                ]);
+
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => $reviewerHemisId === null ? 'warning' : 'info',
+                    'message' => $reviewerHemisId === null
+                        ? 'AI texnik xatosidan keyin inson tekshiruvchisi topilmadi.'
+                        : "AI texnik xatosidan keyin HEMIS ID {$reviewerHemisId} mas’ulga biriktirildi.",
+                    'message_type' => $reviewerHemisId === null
+                        ? 'ai_human_review_unassigned'
+                        : 'ai_human_review_assigned',
                 ]);
             }, 3);
         } catch (Throwable $historyException) {

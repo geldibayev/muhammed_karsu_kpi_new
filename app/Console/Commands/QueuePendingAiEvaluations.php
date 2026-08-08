@@ -157,7 +157,9 @@ class QueuePendingAiEvaluations extends Command
                 && CarbonImmutable::parse($lastQueueAt)->lte($this->staleThreshold());
         }
 
-        return $lastQueueId === 0 || $lastFailureId > $lastQueueId;
+        return $datum->status === 'received'
+            || $lastQueueId === 0
+            || $lastFailureId > $lastQueueId;
     }
 
     private function markAsQueued(int $datumId, bool $recoverStale): ?int
@@ -194,7 +196,8 @@ class QueuePendingAiEvaluations extends Command
                     || CarbonImmutable::parse($lastQueueAt)->gt($this->staleThreshold())) {
                     return null;
                 }
-            } elseif ((int) $history?->last_queue_id > (int) $history?->last_failure_id) {
+            } elseif ($datum->status !== 'received'
+                && (int) $history?->last_queue_id > (int) $history?->last_failure_id) {
                 return null;
             }
 

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Criterion;
 use App\Models\CriterionManualScoreOption;
 use App\Models\Formula;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -21,7 +22,7 @@ class OavCriterionRuleSeeder extends Seeder
         DB::transaction(function (): void {
             $criterion = $this->criterion();
             $formula = Formula::query()
-                ->where('code', Formula::Competition)
+                ->where('code', Formula::Maximum)
                 ->first();
 
             if ($formula === null) {
@@ -29,9 +30,12 @@ class OavCriterionRuleSeeder extends Seeder
             }
 
             $criterion->update([
-                'checking' => 'manual',
+                'checking' => 'ai',
                 'file_limit' => 4,
                 'formula_id' => $formula->getKey(),
+                'ai_submission_max_point' => 0.75,
+                'divide_ai_point_by_authors' => false,
+                'ai_prompt' => FixedPerResourceHumanReviewCriterionRule::fourOneOnePrompt(),
             ]);
 
             $criterion->criterionEvaluations()->each(function ($evaluation): void {
@@ -43,21 +47,7 @@ class OavCriterionRuleSeeder extends Seeder
 
             CriterionManualScoreOption::query()
                 ->where('criterion_id', $criterion->getKey())
-                ->where('code', '!=', 'approved_resource')
                 ->update(['active' => false]);
-
-            CriterionManualScoreOption::query()->updateOrCreate(
-                [
-                    'criterion_id' => $criterion->getKey(),
-                    'code' => 'approved_resource',
-                ],
-                [
-                    'label' => ['uz' => 'Tasdiqlangan resurs'],
-                    'point' => 0.75,
-                    'sort_order' => 1,
-                    'active' => true,
-                ],
-            );
         }, 3);
     }
 

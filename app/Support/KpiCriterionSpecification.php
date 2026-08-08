@@ -180,7 +180,15 @@ class KpiCriterionSpecification
             ),
             '3.1.15' => self::rule(self::Maximum, 1, 'end_of_council', [2, null, null, null]),
 
-            '4.1.1' => self::rule(self::Competition, 4, 'current', [3, 3, 2, 3]),
+            '4.1.1' => self::rule(
+                self::Maximum,
+                4,
+                'current',
+                [3, 3, 2, 3],
+                0.75,
+                false,
+                aiPrompt: FixedPerResourceHumanReviewCriterionRule::fourOneOnePrompt(),
+            ),
             '4.1.2' => self::rule(
                 self::Maximum,
                 1,
