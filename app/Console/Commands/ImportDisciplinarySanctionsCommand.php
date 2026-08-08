@@ -10,11 +10,11 @@ class ImportDisciplinarySanctionsCommand extends Command
 {
     /** @var string */
     protected $signature = 'kpi:discipline:import
-                            {--file=hemis_id.xlsx : Private storage ichidagi XLSX fayl nomi}
+                            {--file= : Ixtiyoriy: private storage ichidagi XLSX fayl nomi}
                             {--apply : Ro‘yxatni saqlash, 4.1.6 ballarini yozish va reportni qayta hisoblash}';
 
     /** @var string */
-    protected $description = 'Intizomiy jazoga tortilganlar XLSX ro‘yxatini import qiladi va 4.1.6 ballarini hisoblaydi';
+    protected $description = 'Koddagi yoki XLSX dagi intizomiy jazo ro‘yxatini import qiladi va 4.1.6 ballarini hisoblaydi';
 
     public function handle(ImportDisciplinarySanctions $action): int
     {
@@ -22,7 +22,9 @@ class ImportDisciplinarySanctionsCommand extends Command
         $apply = (bool) $this->option('apply');
 
         try {
-            $result = $action->handle($filename, $apply);
+            $result = $filename === ''
+                ? $action->handleBuiltIn($apply)
+                : $action->handle($filename, $apply);
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());
 

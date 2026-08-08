@@ -16,7 +16,9 @@ use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
 use App\Models\User;
+use App\Support\DisciplinarySanctionHemisIds;
 use App\Support\XlsxWriter;
+use Database\Seeders\DisciplinarySanctionSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Mockery\MockInterface;
@@ -43,13 +45,16 @@ class DisciplinaryCriterionScoringTest extends TestCase
             ['Azamat', $futureHemisId],
         ]);
 
-        $this->artisan('kpi:discipline:import')
+        $this->artisan('kpi:discipline:import', ['--file' => 'hemis_id.xlsx'])
             ->expectsOutputToContain('DRY RUN')
             ->assertSuccessful();
         $this->assertDatabaseCount('disciplinary_sanction_imports', 0);
         $this->assertDatabaseCount('data', 0);
 
-        $this->artisan('kpi:discipline:import', ['--apply' => true])
+        $this->artisan('kpi:discipline:import', [
+            '--file' => 'hemis_id.xlsx',
+            '--apply' => true,
+        ])
             ->expectsOutputToContain('APPLIED')
             ->assertSuccessful();
 
@@ -70,6 +75,40 @@ class DisciplinaryCriterionScoringTest extends TestCase
             'user_id' => $futureUser->getKey(),
             'message_type' => 'disciplinary_score_assigned',
         ]);
+    }
+
+    public function test_builtin_roster_and_seeder_work_without_an_xlsx_file_and_are_idempotent(): void
+    {
+        $criterion = $this->criterion();
+        $sanctionedUser = User::factory()->create(['hemis_id' => 3462411069]);
+        $cleanUser = User::factory()->create(['hemis_id' => 3172011004]);
+
+        $this->assertCount(80, DisciplinarySanctionHemisIds::all());
+        $this->assertCount(80, array_unique(DisciplinarySanctionHemisIds::all()));
+
+        $this->artisan('kpi:discipline:import')
+            ->expectsOutputToContain('DRY RUN')
+            ->assertSuccessful();
+        $this->assertDatabaseCount('disciplinary_sanction_imports', 0);
+
+        $this->artisan('kpi:discipline:import', ['--apply' => true])
+            ->expectsOutputToContain('APPLIED')
+            ->assertSuccessful();
+
+        $this->assertDatabaseCount('disciplinary_sanctions', 80);
+        $this->assertDatabaseHas('disciplinary_sanction_imports', [
+            'source_file' => DisciplinarySanctionHemisIds::SOURCE,
+            'row_count' => 80,
+        ]);
+        $this->assertScore($sanctionedUser, $criterion, 0);
+        $this->assertScore($cleanUser, $criterion, 2);
+        $historyCount = $this->datum($sanctionedUser, $criterion)->histories()->count();
+
+        $this->seed(DisciplinarySanctionSeeder::class);
+
+        $this->assertDatabaseCount('disciplinary_sanction_imports', 1);
+        $this->assertDatabaseCount('disciplinary_sanctions', 80);
+        $this->assertSame($historyCount, $this->datum($sanctionedUser, $criterion)->histories()->count());
     }
 
     public function test_new_authoritative_snapshot_rescores_users_and_reimport_is_idempotent(): void

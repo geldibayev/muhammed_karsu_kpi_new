@@ -6,6 +6,7 @@ use App\Models\DisciplinarySanction;
 use App\Models\DisciplinarySanctionImport;
 use App\Models\Report;
 use App\Models\User;
+use App\Support\DisciplinarySanctionHemisIds;
 use App\Support\XlsxFirstSheetReader;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -32,6 +33,24 @@ class ImportDisciplinarySanctions
             throw new RuntimeException('XLSX fayl hashini hisoblab bo‘lmadi.');
         }
 
+        return $this->sync($filename, $hash, $sanctions, $apply);
+    }
+
+    /** @return array{rows: int, existing_users: int, scored_users: int, changed_scores: int, changed_snapshot: bool} */
+    public function handleBuiltIn(bool $apply): array
+    {
+        $sanctions = $this->sanctionsFromHemisIds(DisciplinarySanctionHemisIds::all());
+        $hash = hash('sha256', implode("\n", array_keys($sanctions)));
+
+        return $this->sync(DisciplinarySanctionHemisIds::SOURCE, $hash, $sanctions, $apply);
+    }
+
+    /**
+     * @param  array<string, int>  $sanctions
+     * @return array{rows: int, existing_users: int, scored_users: int, changed_scores: int, changed_snapshot: bool}
+     */
+    private function sync(string $source, string $hash, array $sanctions, bool $apply): array
+    {
         $existingUsers = User::query()->whereIn('hemis_id', array_keys($sanctions))->count();
         $result = [
             'rows' => count($sanctions),
@@ -47,12 +66,12 @@ class ImportDisciplinarySanctions
             return $result;
         }
 
-        return DB::transaction(function () use ($filename, $hash, $sanctions, $result): array {
-            $latestImport = DisciplinarySanctionImport::query()->latest('id')->first();
+        return DB::transaction(function () use ($source, $hash, $sanctions, $result): array {
+            $latestImport = DisciplinarySanctionImport::query()->latest('id')->lockForUpdate()->first();
             $import = $latestImport?->source_hash === $hash
                 ? $latestImport
                 : DisciplinarySanctionImport::query()->create([
-                    'source_file' => $filename,
+                    'source_file' => $source,
                     'source_hash' => $hash,
                     'row_count' => count($sanctions),
                     'imported_at' => now(),
@@ -89,6 +108,33 @@ class ImportDisciplinarySanctions
 
             return $result;
         }, attempts: 3);
+    }
+
+    /**
+     * @param  list<string>  $hemisIds
+     * @return array<string, int>
+     */
+    private function sanctionsFromHemisIds(array $hemisIds): array
+    {
+        $sanctions = [];
+
+        foreach ($hemisIds as $index => $hemisId) {
+            if (preg_match('/^\d{10}$/', $hemisId) !== 1) {
+                throw new RuntimeException("Koddagi {$hemisId} HEMIS ID yaroqsiz.");
+            }
+
+            if (array_key_exists($hemisId, $sanctions)) {
+                throw new RuntimeException("Koddagi HEMIS ID {$hemisId} ro‘yxatda takrorlangan.");
+            }
+
+            $sanctions[$hemisId] = $index + 1;
+        }
+
+        if ($sanctions === []) {
+            throw new RuntimeException('Koddagi intizomiy jazo ro‘yxati bo‘sh.');
+        }
+
+        return $sanctions;
     }
 
     private function validatedPath(string $filename): string
