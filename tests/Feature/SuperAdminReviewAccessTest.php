@@ -53,6 +53,11 @@ class SuperAdminReviewAccessTest extends TestCase
             ->get(route('ai-human-reviews.index'))
             ->assertOk()
             ->assertSee($aiDatum->name);
+        $this->actingAs($superAdmin)
+            ->get(route('ai-human-reviews.index', ['criterion' => $aiCriterion->getKey()]))
+            ->assertOk()
+            ->assertSee($aiDatum->name)
+            ->assertDontSee($manualDatum->name);
         $this->actingAs($superAdmin)->get(route('reviews.show', $manualDatum))->assertOk();
         $this->actingAs($superAdmin)->get(route('reviews.show', $aiDatum))->assertOk();
 

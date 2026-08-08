@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Datum;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 
 class AiHumanReviewFilterRequest extends FormRequest
@@ -21,21 +22,28 @@ class AiHumanReviewFilterRequest extends FormRequest
      */
     public function rules(): array
     {
-        $reviewerHemisId = (int) $this->user()->hemis_id;
+        $user = $this->user();
 
         return [
             'criterion' => [
                 'bail',
                 'nullable',
                 'integer',
-                function (string $attribute, mixed $value, Closure $fail) use ($reviewerHemisId): void {
+                function (string $attribute, mixed $value, Closure $fail) use ($user): void {
                     $hasPendingResource = Datum::query()
-                        ->pendingAiHumanReviewFor($reviewerHemisId)
+                        ->when(
+                            $user->isSuperAdmin(),
+                            fn (Builder $query): Builder => $query->pendingAiHumanReviews(),
+                            fn (Builder $query): Builder => $query
+                                ->pendingAiHumanReviewFor((int) $user->hemis_id),
+                        )
                         ->where('criterion_id', (int) $value)
                         ->exists();
 
                     if (! $hasPendingResource) {
-                        $fail('Tanlangan kriteriya bo\'yicha sizga biriktirilgan resurs topilmadi.');
+                        $fail($user->isSuperAdmin()
+                            ? 'Tanlangan kriteriya bo\'yicha baholanmagan AI resurs topilmadi.'
+                            : 'Tanlangan kriteriya bo\'yicha sizga biriktirilgan resurs topilmadi.');
                     }
                 },
             ],

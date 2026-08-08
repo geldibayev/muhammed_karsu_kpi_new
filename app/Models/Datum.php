@@ -46,6 +46,19 @@ class Datum extends Model
             );
     }
 
+    public function scopePendingAiHumanReviews(Builder $query): Builder
+    {
+        return $query
+            ->whereIn('status', [
+                DatumStatus::Received->value,
+                DatumStatus::Checking->value,
+            ])
+            ->whereHas(
+                'criterion',
+                fn (Builder $query): Builder => $query->where('checking', 'ai'),
+            );
+    }
+
     public function usesAiChecking(): bool
     {
         $criterion = $this->relationLoaded('criterion')
