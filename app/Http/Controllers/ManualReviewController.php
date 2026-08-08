@@ -187,12 +187,14 @@ class ManualReviewController extends Controller
                 ->with('success', 'Tasdiqlangan resurs balli server qoidasi bo‘yicha qayta hisoblandi.');
         }
 
-        $redirectRoute = $datum->usesAiChecking()
-            && $request->user()?->can('manage-ai-operations') === true
-            ? 'ai-status.index'
-            : $reviewIndexRoute;
+        if ($datum->usesAiChecking()
+            && $request->user()?->can('manage-ai-operations') === true) {
+            return redirect()
+                ->route('upload.details', $datum)
+                ->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
+        }
 
-        return redirect()->route($redirectRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
+        return redirect()->route($reviewIndexRoute)->with('success', 'Resurs tasdiqlandi va ball hisoblandi.');
     }
 
     public function reject(

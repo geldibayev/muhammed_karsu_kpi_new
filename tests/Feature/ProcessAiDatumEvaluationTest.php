@@ -656,6 +656,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
     public function test_configured_hemis_user_sees_ai_status_dashboard_statistics_and_latest_checks(): void
     {
         config()->set('kpi.ai_status_viewer_hemis_id', '3172011004');
+        config()->set('kpi.ai_operations_manager_hemis_id', '3172011004');
         $statusViewer = User::factory()->create(['hemis_id' => 3172011004]);
         $this->createAiHistory('ai_evaluation', 'success', 'Birinchi tekshiruv');
         $this->createAiHistory('ai_failed', 'warning', 'Ikkinchi xato');
@@ -698,6 +699,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertDontSee('AI xizmatining urinishlari')
             ->assertDontSee('Hisoblash tartibi')
             ->assertDontSee('Hisobotlar kesimida AI holati')
+            ->assertDontSee('Eng eski baholanmagan AI resurslar')
+            ->assertDontSee('Oxirgi tasdiqlangan AI resurslar')
             ->assertSee('Oxirgi 3 ta AI tekshiruvi')
             ->assertSee('Uchinchi tekshiruv')
             ->assertSee('Birinchi tekshiruv')
@@ -705,6 +708,8 @@ class ProcessAiDatumEvaluationTest extends TestCase
             ->assertDontSee('Oxirgi worker heartbeat')
             ->assertDontSee('Qo‘lda tekshiriladigan kriteriya')
             ->assertViewMissing('statistics')
+            ->assertViewMissing('pendingResources')
+            ->assertViewMissing('acceptedResources')
             ->assertViewHas('recentChecks', fn (array $recentChecks): bool => count($recentChecks) === 2
                 && $recentChecks[0]['message'] === 'Uchinchi tekshiruv'
                 && $recentChecks[1]['message'] === 'Birinchi tekshiruv')

@@ -28,7 +28,7 @@ class AiOperationsManagerTest extends TestCase
 
         $this->actingAs($manager)
             ->patch(route('reviews.approve', $datum), ['publication_tier' => 'q1'])
-            ->assertRedirect(route('ai-status.index'));
+            ->assertRedirect(route('upload.details', $datum));
 
         $datum->refresh();
         $this->assertSame('accepted', $datum->status);
