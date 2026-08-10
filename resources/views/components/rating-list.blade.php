@@ -373,10 +373,22 @@
                                     @endif
                                     @if($showActions)
                                         <td class="text-center align-middle">
-                                            <a href="{{ route('ratings.show', array_merge(['user' => $user], $exportFilters)) }}"
-                                               class="btn btn-outline-primary btn-xs">
-                                                <i class="fas fa-eye mr-1"></i> Ko‘rish
-                                            </a>
+                                            <div class="d-inline-flex align-items-center">
+                                                @can('syncHemis', $user)
+                                                    <form method="POST" action="{{ route('users.hemis-sync.store', $user) }}" class="mr-1">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-outline-secondary btn-xs"
+                                                                title="HEMISdan yangilash"
+                                                                aria-label="{{ $user->short }} ma’lumotlarini HEMISdan yangilash">
+                                                            <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                                                        </button>
+                                                    </form>
+                                                @endcan
+                                                <a href="{{ route('ratings.show', array_merge(['user' => $user], $exportFilters)) }}"
+                                                   class="btn btn-outline-primary btn-xs">
+                                                    <i class="fas fa-eye mr-1"></i> Ko‘rish
+                                                </a>
+                                            </div>
                                         </td>
                                     @endif
                                 </tr>

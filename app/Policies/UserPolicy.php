@@ -7,6 +7,11 @@ use App\Models\User;
 
 class UserPolicy
 {
+    public function syncHemis(User $user, User $target): bool
+    {
+        return $user->isSuperAdmin();
+    }
+
     public function deleteExternalPartTimer(User $user, User $externalPartTimer): bool
     {
         return $user->isSuperAdmin()

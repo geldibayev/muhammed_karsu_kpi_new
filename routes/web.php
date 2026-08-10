@@ -23,6 +23,7 @@ use App\Http\Controllers\RejectAcceptedAiDatumController;
 use App\Http\Controllers\RequeueCancelledAiDatumController;
 use App\Http\Controllers\ResourceStatisticsController;
 use App\Http\Controllers\ReviewerAssignmentController;
+use App\Http\Controllers\SyncHemisUserController;
 use App\Http\Controllers\SystemSettingsController;
 use App\Http\Controllers\UpdateAcceptedDatumScoreController;
 use App\Http\Controllers\UserRoleController;
@@ -67,6 +68,8 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
     Route::get('/ratings/{user}', [RatingController::class, 'show'])
         ->middleware('can:view-ratings')
         ->name('ratings.show');
+    Route::post('/users/{user}/hemis-sync', SyncHemisUserController::class)
+        ->name('users.hemis-sync.store');
     Route::get('/criteria/{criterion}/rating', CriterionRatingController::class)
         ->middleware('can:view-ratings')
         ->name('criteria.ratings.show');
