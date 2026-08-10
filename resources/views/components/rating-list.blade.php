@@ -1,6 +1,7 @@
 @props([
     'departments',
     'faculties',
+    'positions',
     'filters',
     'mode',
     'report',
@@ -19,8 +20,10 @@
     $isAllUsersMode = $mode === RatingMode::AllUsers;
     $isFacultyMode = $mode === RatingMode::Faculties;
     $isDepartmentMode = $mode === RatingMode::Departments;
+    $isDegreeMode = in_array($mode, [RatingMode::WithDegree, RatingMode::WithoutDegree], true);
     $selectedFaculty = $faculties->firstWhere('id', (int) ($filters['faculty'] ?? 0));
     $selectedDepartment = $departments->firstWhere('id', (int) ($filters['department'] ?? 0));
+    $selectedPosition = $positions->firstWhere('id', (int) ($filters['position'] ?? 0));
     $exportFilters = array_filter(
         $filters,
         fn ($value, $key) => $key !== 'page' && $value !== null && $value !== '',
@@ -32,6 +35,7 @@
         $isDepartmentMode && $users !== null => data_get($selectedDepartment?->name, 'uz', 'Kafedra').' ichki reytingi',
         $isFacultyMode => 'Fakultetlar reytingi',
         $isDepartmentMode => 'Kafedralar reytingi',
+        $isDegreeMode && $selectedPosition => $selectedPosition->name.' — '.$mode->label().' reytingi',
         default => 'Foydalanuvchilar reytingi',
     };
     $totalLabel = match (true) {
@@ -80,8 +84,14 @@
                         [RatingMode::Faculties, 'fas fa-university', 'Fakultet bo‘yicha'],
                         [RatingMode::Departments, 'fas fa-sitemap', 'Kafedra bo‘yicha'],
                     ] as [$tabMode, $icon, $label])
+                        @php
+                            $tabFilters = ['mode' => $tabMode->value];
+                            if ($selectedPosition && in_array($tabMode, [RatingMode::WithDegree, RatingMode::WithoutDegree], true)) {
+                                $tabFilters['position'] = $selectedPosition->id;
+                            }
+                        @endphp
                         <li class="nav-item">
-                            <a href="{{ route($filterRoute, ['mode' => $tabMode->value]) }}"
+                            <a href="{{ route($filterRoute, $tabFilters) }}"
                                class="nav-link @if($mode === $tabMode) active @endif">
                                 <i class="{{ $icon }} mr-1"></i> {{ $label }}
                             </a>
@@ -89,6 +99,32 @@
                     @endforeach
                 </ul>
             </div>
+
+            @if($isDegreeMode)
+                <div class="card-header py-2">
+                    <div class="small font-weight-bold text-muted mb-2">Lavozim bo‘yicha reyting</div>
+                    <nav class="nav nav-pills flex-wrap" aria-label="Lavozim bo‘yicha reyting">
+                        <a href="{{ route($filterRoute, array_filter([
+                            ...$exportFilters,
+                            'position' => null,
+                        ])) }}"
+                           class="nav-link py-1 px-3 mr-1 mb-1 @if(!$selectedPosition) active @endif"
+                           @if(!$selectedPosition) aria-current="page" @endif>
+                            Barchasi
+                        </a>
+                        @foreach($positions as $position)
+                            <a href="{{ route($filterRoute, [
+                                ...$exportFilters,
+                                'position' => $position->id,
+                            ]) }}"
+                               class="nav-link py-1 px-3 mr-1 mb-1 @if($selectedPosition?->is($position)) active @endif"
+                               @if($selectedPosition?->is($position)) aria-current="page" @endif>
+                                {{ $position->name }}
+                            </a>
+                        @endforeach
+                    </nav>
+                </div>
+            @endif
 
             <div class="card-body border-bottom">
                 @if(($isFacultyMode || $isDepartmentMode) && $users !== null)
@@ -105,6 +141,9 @@
 
                 <form method="GET" action="{{ route($filterRoute) }}">
                     <input type="hidden" name="mode" value="{{ $mode->value }}">
+                    @if($selectedPosition)
+                        <input type="hidden" name="position" value="{{ $selectedPosition->id }}">
+                    @endif
                     <div class="row">
                         <div class="{{ $isAllUsersMode ? 'col-lg-3' : 'col-lg-4' }} col-md-6 mb-3 mb-lg-0">
                             <label class="small font-weight-bold" for="rating-search">

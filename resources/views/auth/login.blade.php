@@ -35,6 +35,7 @@
             <x-rating-list
                 :$departments
                 :$faculties
+                :$positions
                 :$filters
                 :$mode
                 :$report

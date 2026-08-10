@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 class PaginateRatingUsers
 {
     /**
-     * @param  array{search?: string|null, degree_group?: string, resource_status?: string|null, faculty?: int|null, department?: int|null}  $filters
+     * @param  array{search?: string|null, degree_group?: string, resource_status?: string|null, position?: int|null, faculty?: int|null, department?: int|null}  $filters
      * @return LengthAwarePaginator<int, User>
      */
     public function handle(?Report $report, array $filters): LengthAwarePaginator
@@ -32,7 +32,7 @@ class PaginateRatingUsers
     }
 
     /**
-     * @param  array{search?: string|null, mode?: string, degree_group?: string, resource_status?: string|null, faculty?: int|null, department?: int|null}  $filters
+     * @param  array{search?: string|null, mode?: string, degree_group?: string, resource_status?: string|null, position?: int|null, faculty?: int|null, department?: int|null}  $filters
      * @return Builder<User>
      */
     private function query(?Report $report, array $filters): Builder
@@ -91,6 +91,14 @@ class PaginateRatingUsers
             ->when(
                 $mode === RatingMode::WithoutDegree,
                 fn (Builder $query): Builder => $query->where('degree', '!=', 'hold_degrees'),
+            )
+            ->when(
+                in_array($mode, [RatingMode::WithDegree, RatingMode::WithoutDegree], true)
+                    ? ($filters['position'] ?? null)
+                    : null,
+                fn (Builder $query, int $positionId): Builder => $query
+                    ->whereHas('ratingWorkplace', fn (Builder $workplaceQuery): Builder => $workplaceQuery
+                        ->where('staff_position_id', $positionId)),
             )
             ->when(
                 $filters['search'] ?? null,

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\RatingMode;
 use App\Models\Department;
+use App\Models\StaffPosition;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,6 +25,7 @@ class RatingFilterRequest extends FormRequest
             'mode' => ['nullable', Rule::enum(RatingMode::class)],
             'degree_group' => ['nullable', 'string', Rule::in(['with_degree', 'without_degree'])],
             'resource_status' => ['nullable', 'string', Rule::in(['uploaded', 'not_uploaded'])],
+            'position' => ['nullable', 'integer', Rule::exists(StaffPosition::class, 'id')],
             'faculty' => [
                 'nullable',
                 'integer',

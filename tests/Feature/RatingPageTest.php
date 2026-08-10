@@ -291,6 +291,75 @@ class RatingPageTest extends TestCase
             ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 1);
     }
 
+    public function test_degree_group_rankings_can_be_split_into_visible_position_tabs(): void
+    {
+        $viewer = User::factory()->create();
+        $faculty = $this->createDepartment('Lavozimlar fakulteti');
+        $department = $this->createDepartment('Lavozimlar kafedrasi', $faculty);
+        $firstProfessor = User::factory()->create([
+            'name' => $this->userName('Birinchi Professor'),
+            'degree' => 'hold_degrees',
+        ]);
+        $secondProfessor = User::factory()->create([
+            'name' => $this->userName('Ikkinchi Professor'),
+            'degree' => 'hold_degrees',
+        ]);
+        $docent = User::factory()->create([
+            'name' => $this->userName('Ilmiy Dotsent'),
+            'degree' => 'hold_degrees',
+        ]);
+        $professorWithoutDegree = User::factory()->create([
+            'name' => $this->userName('Darajasiz Professor'),
+            'degree' => 'no_degrees',
+        ]);
+
+        $professorWorkplace = $this->createWorkplace($firstProfessor, $department, 'Professor');
+        $this->createWorkplace($secondProfessor, $department, 'Professor yordamchi')
+            ->update(['staff_position_id' => $professorWorkplace->staff_position_id]);
+        $this->createWorkplace($docent, $department, 'Dotsent');
+        $this->createWorkplace($professorWithoutDegree, $department, 'Professor darajasiz')
+            ->update(['staff_position_id' => $professorWorkplace->staff_position_id]);
+
+        $report = $this->createReport('Lavozimlar hisoboti', '1');
+        $criterion = $this->createCriterion($report, 'Lavozimlar mezoni');
+        $this->createPoint($firstProfessor, $criterion, $report, 9);
+        $this->createPoint($secondProfessor, $criterion, $report, 5);
+        $this->createPoint($docent, $criterion, $report, 20);
+        $this->createPoint($professorWithoutDegree, $criterion, $report, 15);
+
+        $filters = [
+            'mode' => 'with_degree',
+            'position' => $professorWorkplace->staff_position_id,
+        ];
+        $expectedFilters = [...$filters, 'degree_group' => 'with_degree'];
+        $response = $this->actingAs($viewer)->get(route('ratings.index', $filters));
+
+        $response
+            ->assertOk()
+            ->assertSee('Lavozim bo‘yicha reyting')
+            ->assertSee('Professor — Ilmiy darajaga ega reytingi')
+            ->assertSee(route('ratings.index', $expectedFilters))
+            ->assertSee(route('ratings.export', $expectedFilters))
+            ->assertSeeInOrder(['Birinchi Professor', 'Ikkinchi Professor'])
+            ->assertDontSee('Ilmiy Dotsent')
+            ->assertDontSee('Darajasiz Professor')
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 2
+                && $users->items()[0]->is($firstProfessor)
+                && $users->items()[1]->is($secondProfessor));
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'without_degree',
+                'position' => $professorWorkplace->staff_position_id,
+            ]))
+            ->assertOk()
+            ->assertSee('Professor — Ilmiy darajaga ega emas reytingi')
+            ->assertSee('Darajasiz Professor')
+            ->assertDontSee('Birinchi Professor')
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 1
+                && $users->items()[0]->is($professorWithoutDegree));
+    }
+
     public function test_invalid_rating_filters_are_rejected(): void
     {
         $viewer = User::factory()->create();
@@ -305,6 +374,10 @@ class RatingPageTest extends TestCase
                 'resource_status' => 'invalid',
             ]))
             ->assertSessionHasErrors('resource_status');
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', ['position' => PHP_INT_MAX]))
+            ->assertSessionHasErrors('position');
     }
 
     public function test_all_users_tab_lists_and_filters_users_by_current_report_resource_status(): void
@@ -642,7 +715,7 @@ class RatingPageTest extends TestCase
             'name' => $this->userName('Oddiy Foydalanuvchi'),
             'degree' => 'hold_degrees',
         ]);
-        $this->createWorkplace($firstUser, $department, 'Professor');
+        $firstWorkplace = $this->createWorkplace($firstUser, $department, 'Professor');
         $this->createWorkplace($secondUser, $department, 'Dotsent');
         $report = $this->createReport('Eksport hisoboti', '1');
         $criterion = $this->createCriterion($report, 'Eksport mezoni');
@@ -652,6 +725,7 @@ class RatingPageTest extends TestCase
         $response = $this->actingAs($viewer)->get(route('ratings.export', [
             'mode' => 'with_degree',
             'faculty' => $faculty->getKey(),
+            'position' => $firstWorkplace->staff_position_id,
         ]));
 
         $response
@@ -671,7 +745,7 @@ class RatingPageTest extends TestCase
 
         $this->assertIsString($sheet);
         $this->assertStringContainsString('=2+2 Formula Emas', $sheet);
-        $this->assertStringContainsString('Oddiy Foydalanuvchi', $sheet);
+        $this->assertStringNotContainsString('Oddiy Foydalanuvchi', $sheet);
         $this->assertStringContainsString('12.5', $sheet);
         $this->assertStringNotContainsString('<f>', $sheet);
 
