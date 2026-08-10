@@ -327,6 +327,32 @@ class RatingPageTest extends TestCase
         $this->createPoint($docent, $criterion, $report, 20);
         $this->createPoint($professorWithoutDegree, $criterion, $report, 15);
 
+        $excludedPositionNames = [
+            'Kabinet mudiri',
+            'Matbuot kotibi',
+            'Bo‘lim boshlig‘i',
+            'Menejer',
+            'Muhandis',
+            'Rektor',
+            'Tyutor',
+            'Uslubchi',
+            'Veb-dizayner',
+            'Yoshlar bilan ishlash bo‘yicha mutaxassis',
+            'Dekan muovini',
+        ];
+        $excludedPositions = collect($excludedPositionNames)->map(function (string $excludedPositionName): StaffPosition {
+            return StaffPosition::query()->create([
+                'id' => $this->referenceId++,
+                'name' => $excludedPositionName,
+            ]);
+        });
+        $visiblePositions = collect(['Dekan', 'Kafedra mudiri'])->map(function (string $visiblePositionName): StaffPosition {
+            return StaffPosition::query()->create([
+                'id' => $this->referenceId++,
+                'name' => $visiblePositionName,
+            ]);
+        });
+
         $filters = [
             'mode' => 'with_degree',
             'position' => $professorWorkplace->staff_position_id,
@@ -340,12 +366,31 @@ class RatingPageTest extends TestCase
             ->assertSee('Professor — Ilmiy darajaga ega reytingi')
             ->assertSee(route('ratings.index', $expectedFilters))
             ->assertSee(route('ratings.export', $expectedFilters))
+            ->assertSee('Dekan')
+            ->assertSee('Kafedra mudiri')
             ->assertSeeInOrder(['Birinchi Professor', 'Ikkinchi Professor'])
             ->assertDontSee('Ilmiy Dotsent')
             ->assertDontSee('Darajasiz Professor')
             ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 2
                 && $users->items()[0]->is($firstProfessor)
-                && $users->items()[1]->is($secondProfessor));
+                && $users->items()[1]->is($secondProfessor))
+            ->assertViewHas('positions', fn (Collection $positions): bool => $positions
+                ->pluck('id')
+                ->intersect($excludedPositions->pluck('id'))
+                ->isEmpty());
+
+        foreach ($excludedPositions as $excludedPosition) {
+            $response->assertDontSee(route('ratings.index', [
+                ...$expectedFilters,
+                'position' => $excludedPosition->id,
+            ]));
+        }
+        foreach ($visiblePositions as $visiblePosition) {
+            $response->assertSee(route('ratings.index', [
+                ...$expectedFilters,
+                'position' => $visiblePosition->id,
+            ]));
+        }
 
         $this->actingAs($viewer)
             ->get(route('ratings.index', [

@@ -9,9 +9,25 @@ use App\Models\StaffPosition;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class GetRatingIndexData
 {
+    private const EXCLUDED_POSITION_NAME_FRAGMENTS = [
+        'kabinetmudiri',
+        'matbuotkotibi',
+        'bolimboshligi',
+        'menejer',
+        'muhandis',
+        'tyutor',
+        'uslubchi',
+        'vebdizayner',
+        'webdizayner',
+        'yoshlarbilanishlash',
+        'dekanmuovini',
+        'dekanorinbosari',
+    ];
+
     public function __construct(
         private PaginateRatingUsers $paginateRatingUsers,
         private GetRatingUnitRankings $getRatingUnitRankings,
@@ -56,7 +72,16 @@ class GetRatingIndexData
         $positions = StaffPosition::query()
             ->select(['id', 'name'])
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->reject(function (StaffPosition $position): bool {
+                $normalizedName = Str::lower(
+                    preg_replace('/[^\p{L}\p{N}]+/u', '', $position->name) ?? '',
+                );
+
+                return $normalizedName === 'rektor'
+                    || Str::contains($normalizedName, self::EXCLUDED_POSITION_NAME_FRAGMENTS);
+            })
+            ->values();
 
         $showUnitRankings = ($mode === RatingMode::Faculties && empty($filters['faculty']))
             || ($mode === RatingMode::Departments && empty($filters['department']));
