@@ -341,6 +341,7 @@ class RatingPageTest extends TestCase
             'Veb-dizayner',
             'Yoshlar bilan ishlash bo‘yicha mutaxassis',
             'Dekan muovini',
+            'Ilmiy kotib',
         ];
         $excludedPositions = collect($excludedPositionNames)->map(function (string $excludedPositionName): StaffPosition {
             return StaffPosition::query()->create([
@@ -380,7 +381,7 @@ class RatingPageTest extends TestCase
                 ->pluck('id')
                 ->intersect($excludedPositions->pluck('id'))
                 ->isEmpty()
-                && $positions->pluck('name')->take(7)->values()->all() === [
+                && $positions->pluck('name')->values()->all() === [
                     'Dekan',
                     'Kafedra mudiri',
                     'Professor',

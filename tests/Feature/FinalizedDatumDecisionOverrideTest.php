@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
+use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\Evaluation;
 use App\Models\Formula;
@@ -16,6 +17,110 @@ use Tests\TestCase;
 class FinalizedDatumDecisionOverrideTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    public function test_configured_reviewer_manages_final_decisions_only_for_assigned_criteria(): void
+    {
+        [$reviewer, $owner, $aiCriterion] = $this->context('ai');
+        $reviewer->update(['hemis_id' => 3462011207]);
+        config()->set('kpi.accepted_ai_reviewer_hemis_id', $reviewer->hemis_id);
+        config()->set('kpi.assigned_final_decision_reviewer_hemis_id', $reviewer->hemis_id);
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            $aiCriterion->code => $reviewer->hemis_id,
+        ]);
+
+        $manualCriterion = $aiCriterion->replicate();
+        $manualCriterion->fill([
+            'code' => 'test.manual.assigned',
+            'checking' => 'manual',
+        ])->save();
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $manualCriterion->getKey(),
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 5,
+        ]);
+        CriterionReviewerAssignment::query()->create([
+            'criterion_id' => $manualCriterion->getKey(),
+            'criterion_code' => $manualCriterion->code,
+            'hemis_id' => $reviewer->hemis_id,
+        ]);
+
+        $unassignedCriterion = $aiCriterion->replicate();
+        $unassignedCriterion->fill(['code' => 'test.ai.unassigned'])->save();
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $unassignedCriterion->getKey(),
+            'evaluation' => 'no_degrees',
+            'has' => '1',
+            'score' => 5,
+        ]);
+
+        $assigned = $this->datum($owner, $aiCriterion, 'accepted', 2, 'AI tasdiqladi.');
+        $manualAccepted = $this->datum($owner, $manualCriterion, 'accepted', 2, 'Mas’ul tasdiqladi.');
+        $manualCancelled = $this->datum($owner, $manualCriterion, 'cancelled', 0, 'Mas’ul rad etdi.');
+        $unassignedAccepted = $this->datum($owner, $unassignedCriterion, 'accepted', 2, 'AI tasdiqladi.');
+        $unassignedCancelled = $this->datum($owner, $unassignedCriterion, 'cancelled', 0, 'AI rad etdi.');
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $assigned))
+            ->assertOk()
+            ->assertSee('Ballni o‘zgartirish')
+            ->assertSee('Tasdiqlangan resursni rad etish');
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $manualAccepted))
+            ->assertOk()
+            ->assertSee('Ballni o‘zgartirish')
+            ->assertSee('Tasdiqlangan resursni rad etish');
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $manualCancelled))
+            ->assertOk()
+            ->assertSee('Rad etilgan resursni tasdiqlash');
+
+        $this->actingAs($reviewer)
+            ->patch(route('submissions.accepted-score.update', $assigned), [
+                'point' => 4,
+                'score_change_reason' => 'Ball qayta tekshirildi.',
+            ])
+            ->assertRedirect(route('upload.details', $assigned));
+        $this->assertSame(4.0, $assigned->fresh()->point);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $assigned->getKey(),
+            'user_id' => $reviewer->getKey(),
+            'message_type' => 'accepted_score_updated_by_reviewer',
+        ]);
+
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.reject-accepted', $assigned), [
+                'reason' => 'Tasdiqlash xato bo‘lgan.',
+            ])
+            ->assertRedirect(route('upload.details', $assigned));
+        $this->assertSame('cancelled', $assigned->fresh()->status);
+
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.approve-cancelled', $assigned), ['point' => 3.5])
+            ->assertRedirect(route('upload.details', $assigned));
+        $this->assertSame('accepted', $assigned->fresh()->status);
+        $this->assertSame(3.5, $assigned->fresh()->point);
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $unassignedAccepted))
+            ->assertOk()
+            ->assertDontSee('Ballni o‘zgartirish')
+            ->assertDontSee('Tasdiqlangan resursni rad etish');
+        $this->actingAs($reviewer)
+            ->patch(route('submissions.accepted-score.update', $unassignedAccepted), [
+                'point' => 1,
+                'score_change_reason' => 'Ruxsatsiz urinish.',
+            ])
+            ->assertForbidden();
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.reject-accepted', $unassignedAccepted), [
+                'reason' => 'Ruxsatsiz urinish.',
+            ])
+            ->assertForbidden();
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.approve-cancelled', $unassignedCancelled), ['point' => 1])
+            ->assertForbidden();
+    }
 
     public function test_legacy_ai_decisions_without_ai_history_can_be_reversed_in_both_directions(): void
     {

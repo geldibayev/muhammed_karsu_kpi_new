@@ -24,23 +24,6 @@ class GetRatingIndexData
         'stajyoroqituvchi' => 7,
     ];
 
-    private const EXCLUDED_POSITION_NAME_FRAGMENTS = [
-        'kabinetmudiri',
-        'kattailmiyxodim',
-        'kattailmiyhodim',
-        'matbuotkotibi',
-        'bolimboshligi',
-        'menejer',
-        'muhandis',
-        'tyutor',
-        'uslubchi',
-        'vebdizayner',
-        'webdizayner',
-        'yoshlarbilanishlash',
-        'dekanmuovini',
-        'dekanorinbosari',
-    ];
-
     public function __construct(
         private PaginateRatingUsers $paginateRatingUsers,
         private GetRatingUnitRankings $getRatingUnitRankings,
@@ -86,12 +69,10 @@ class GetRatingIndexData
             ->select(['id', 'name'])
             ->orderBy('name')
             ->get()
-            ->reject(function (StaffPosition $position): bool {
-                $normalizedName = $this->normalizePositionName($position->name);
-
-                return $normalizedName === 'rektor'
-                    || Str::contains($normalizedName, self::EXCLUDED_POSITION_NAME_FRAGMENTS);
-            })
+            ->filter(fn (StaffPosition $position): bool => array_key_exists(
+                $this->normalizePositionName($position->name),
+                self::POSITION_SORT_ORDER,
+            ))
             ->sortBy(fn (StaffPosition $position): int => self::POSITION_SORT_ORDER[
                 $this->normalizePositionName($position->name)
             ] ?? PHP_INT_MAX)

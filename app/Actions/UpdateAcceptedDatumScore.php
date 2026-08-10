@@ -54,7 +54,8 @@ class UpdateAcceptedDatumScore
 
             $previousPoint = (float) $lockedDatum->point;
             $point = round($point, 4);
-            $auditMessage = 'Super administrator tasdiqlangan resurs ballini '
+            $actorLabel = $reviewer->isSuperAdmin() ? 'Super administrator' : 'Kriteriya mas’uli';
+            $auditMessage = $actorLabel.' tasdiqlangan resurs ballini '
                 .number_format($previousPoint, 4, '.', '').' dan '
                 .number_format($point, 4, '.', '').' ga o‘zgartirdi. Sabab: '.trim($reason);
 
@@ -69,7 +70,9 @@ class UpdateAcceptedDatumScore
                 'user_id' => $reviewer->getKey(),
                 'type' => 'warning',
                 'message' => $auditMessage,
-                'message_type' => 'accepted_score_updated_by_super_admin',
+                'message_type' => $reviewer->isSuperAdmin()
+                    ? 'accepted_score_updated_by_super_admin'
+                    : 'accepted_score_updated_by_reviewer',
             ]);
 
             return $lockedDatum;

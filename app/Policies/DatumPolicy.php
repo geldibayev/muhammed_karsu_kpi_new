@@ -64,8 +64,8 @@ class DatumPolicy
 
     public function updateAcceptedScore(User $user, Datum $datum): bool
     {
-        return $user->isSuperAdmin()
-            && $datum->status === DatumStatus::Accepted->value;
+        return $datum->status === DatumStatus::Accepted->value
+            && ($user->isSuperAdmin() || $this->canManageAssignedFinalDecision($user, $datum));
     }
 
     public function correctAcceptedScore(User $user, Datum $datum): bool
@@ -79,13 +79,13 @@ class DatumPolicy
     public function overrideAcceptance(User $user, Datum $datum): bool
     {
         return $datum->status === DatumStatus::Accepted->value
-            && $this->canOverrideFinalDecision($user);
+            && $this->canOverrideFinalDecision($user, $datum);
     }
 
     public function overrideCancellation(User $user, Datum $datum): bool
     {
         return $datum->status === DatumStatus::Cancelled->value
-            && $this->canOverrideFinalDecision($user);
+            && $this->canOverrideFinalDecision($user, $datum);
     }
 
     public function overrideAiAcceptance(User $user, Datum $datum): bool
@@ -102,7 +102,7 @@ class DatumPolicy
     {
         return $datum->status === DatumStatus::Accepted->value
             && $datum->criterion()->where('code', EducationalContentCriterionRule::CODE)->exists()
-            && ($this->canOverrideFinalDecision($user) || $this->isAssignedReviewer($user, $datum));
+            && ($this->canOverrideFinalDecision($user, $datum) || $this->isAssignedReviewer($user, $datum));
     }
 
     public function requeueAiEvaluation(User $user, Datum $datum): bool
@@ -145,10 +145,45 @@ class DatumPolicy
         return $user->isSuperAdmin() || $datum->user_id === $user->id;
     }
 
-    private function canOverrideFinalDecision(User $user): bool
+    private function canOverrideFinalDecision(User $user, Datum $datum): bool
     {
-        return $user->isSuperAdmin()
-            || (string) config('kpi.accepted_ai_reviewer_hemis_id') === (string) $user->hemis_id;
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($this->isAssignedFinalDecisionReviewer($user)) {
+            return $this->isCriterionReviewer($user, $datum);
+        }
+
+        return (string) config('kpi.accepted_ai_reviewer_hemis_id') === (string) $user->hemis_id;
+    }
+
+    private function canManageAssignedFinalDecision(User $user, Datum $datum): bool
+    {
+        return $this->isAssignedFinalDecisionReviewer($user)
+            && $this->isCriterionReviewer($user, $datum);
+    }
+
+    private function isAssignedFinalDecisionReviewer(User $user): bool
+    {
+        return (string) config('kpi.assigned_final_decision_reviewer_hemis_id') === (string) $user->hemis_id;
+    }
+
+    private function isCriterionReviewer(User $user, Datum $datum): bool
+    {
+        $criterion = $datum->loadMissing('criterion:id,code,checking')->criterion;
+
+        if ($criterion?->checking === 'ai') {
+            $reviewers = config('kpi.ai_human_review_criterion_reviewers', []);
+
+            return is_array($reviewers)
+                && (string) ($reviewers[$criterion->code] ?? '') === (string) $user->hemis_id;
+        }
+
+        return CriterionReviewerAssignment::query()
+            ->where('hemis_id', $user->hemis_id)
+            ->where('criterion_id', $datum->criterion_id)
+            ->exists();
     }
 
     private function isRatingSubmissionVisible(User $user, Datum $datum): bool
