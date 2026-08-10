@@ -22,7 +22,7 @@ class FixedPerResourceAiHumanReviewTest extends TestCase
     {
         $fixture = $this->createCriteria();
         $expectedReviewers = [
-            '3.1.12' => 3462211323,
+            '3.1.12' => 3462111204,
             '3.1.14' => 3462011188,
             '4.1.3' => 3462211323,
             '4.1.4' => 3462211323,
