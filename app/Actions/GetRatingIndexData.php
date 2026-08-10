@@ -13,6 +13,16 @@ use Illuminate\Support\Str;
 
 class GetRatingIndexData
 {
+    private const POSITION_SORT_ORDER = [
+        'dekan' => 1,
+        'kafedramudiri' => 2,
+        'professor' => 3,
+        'dotsent' => 4,
+        'assistent' => 5,
+        'stajeroqituvchi' => 6,
+        'stajyoroqituvchi' => 6,
+    ];
+
     private const EXCLUDED_POSITION_NAME_FRAGMENTS = [
         'kabinetmudiri',
         'kattailmiyxodim',
@@ -76,13 +86,14 @@ class GetRatingIndexData
             ->orderBy('name')
             ->get()
             ->reject(function (StaffPosition $position): bool {
-                $normalizedName = Str::lower(
-                    preg_replace('/[^\p{L}\p{N}]+/u', '', $position->name) ?? '',
-                );
+                $normalizedName = $this->normalizePositionName($position->name);
 
                 return $normalizedName === 'rektor'
                     || Str::contains($normalizedName, self::EXCLUDED_POSITION_NAME_FRAGMENTS);
             })
+            ->sortBy(fn (StaffPosition $position): int => self::POSITION_SORT_ORDER[
+                $this->normalizePositionName($position->name)
+            ] ?? PHP_INT_MAX)
             ->values();
 
         $showUnitRankings = ($mode === RatingMode::Faculties && empty($filters['faculty']))
@@ -102,5 +113,10 @@ class GetRatingIndexData
                 ? null
                 : $this->paginateRatingUsers->handle($report, $filters),
         ];
+    }
+
+    private function normalizePositionName(string $name): string
+    {
+        return Str::lower(preg_replace('/[^\p{L}\p{N}]+/u', '', $name) ?? '');
     }
 }

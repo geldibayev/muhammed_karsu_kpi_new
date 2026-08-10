@@ -348,7 +348,7 @@ class RatingPageTest extends TestCase
                 'name' => $excludedPositionName,
             ]);
         });
-        $visiblePositions = collect(['Dekan', 'Kafedra mudiri'])->map(function (string $visiblePositionName): StaffPosition {
+        $visiblePositions = collect(['Dekan', 'Kafedra mudiri', 'Assistent', 'Stajer-o‘qituvchi'])->map(function (string $visiblePositionName): StaffPosition {
             return StaffPosition::query()->create([
                 'id' => $this->referenceId++,
                 'name' => $visiblePositionName,
@@ -379,7 +379,15 @@ class RatingPageTest extends TestCase
             ->assertViewHas('positions', fn (Collection $positions): bool => $positions
                 ->pluck('id')
                 ->intersect($excludedPositions->pluck('id'))
-                ->isEmpty());
+                ->isEmpty()
+                && $positions->pluck('name')->take(6)->values()->all() === [
+                    'Dekan',
+                    'Kafedra mudiri',
+                    'Professor',
+                    'Dotsent',
+                    'Assistent',
+                    'Stajer-o‘qituvchi',
+                ]);
 
         foreach ($excludedPositions as $excludedPosition) {
             $response->assertDontSee(route('ratings.index', [
