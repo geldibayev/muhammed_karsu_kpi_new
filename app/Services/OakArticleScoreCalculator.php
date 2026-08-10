@@ -47,6 +47,7 @@ class OakArticleScoreCalculator
                 .'. Taqsimlangan ball: '.number_format($point, 4, '.', '').'.',
             authorCount: $result->authorCount,
             resourceDate: $result->resourceDate,
+            publicationIssue: $result->publicationIssue,
         );
     }
 }

@@ -11,6 +11,7 @@ use App\Support\HIndexCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\KpiCriterionSpecification;
 use App\Support\MasterClassCriterionRule;
+use App\Support\OakArticleCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
 use Database\Seeders\CriterionSeeder;
 use Database\Seeders\KpiCriterionSpecificationSeeder;
@@ -176,6 +177,11 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $this->assertSame(
             IndustryFundingCriterionRule::PROMPT,
             $criterionThreeOneThirteen->ai_prompt,
+        );
+
+        $this->assertSame(
+            OakArticleCriterionRule::PROMPT,
+            Criterion::query()->where('code', OakArticleCriterionRule::CODE)->value('ai_prompt'),
         );
 
         $criterionTwoOneFive = Criterion::query()->where('code', '2.1.5')->firstOrFail();

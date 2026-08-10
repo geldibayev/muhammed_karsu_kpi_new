@@ -18,6 +18,7 @@ class AiEvaluationResult
         public readonly ?float $receivedAmount = null,
         public readonly ?string $universityTier = null,
         public readonly ?string $publicationTier = null,
+        public readonly ?int $publicationIssue = null,
     ) {}
 
     /** @param array<string, mixed> $payload */
@@ -27,6 +28,7 @@ class AiEvaluationResult
         bool $requiresTranslationEvidence = false,
         bool $requiresUniversityTier = false,
         bool $requiresPublicationTier = false,
+        bool $requiresPublicationIssue = false,
     ): self {
         $payloadKeys = array_keys($payload);
         sort($payloadKeys);
@@ -66,6 +68,17 @@ class AiEvaluationResult
             ]];
         }
 
+        if ($requiresPublicationIssue) {
+            $allowedPayloadKeys = [[
+                'author_count',
+                'point',
+                'publication_issue',
+                'reason',
+                'resource_date',
+                'status',
+            ]];
+        }
+
         if (! in_array($payloadKeys, $allowedPayloadKeys, true)) {
             throw new UnexpectedValueException('AI javobida kutilmagan yoki yetishmayotgan maydon bor.');
         }
@@ -83,6 +96,7 @@ class AiEvaluationResult
         $receivedAmount = $payload['received_amount'] ?? null;
         $universityTier = $payload['university_tier'] ?? null;
         $publicationTier = $payload['publication_tier'] ?? null;
+        $publicationIssue = $payload['publication_issue'] ?? null;
         $usesReceivedAmount = array_key_exists('received_amount', $payload);
         $isTranslation = $payload['is_translation'] ?? null;
         $sourceLanguage = $payload['source_language'] ?? null;
@@ -160,6 +174,15 @@ class AiEvaluationResult
             throw new UnexpectedValueException('Qabul qilingan resurs uchun kvartil yoki konferensiya turi aniq tasdiqlanmadi.');
         }
 
+        if ($publicationIssue !== null
+            && (! is_int($publicationIssue) || $publicationIssue < 0 || $publicationIssue > 1000)) {
+            throw new UnexpectedValueException('AI jurnal sonini 0 dan 1000 gacha butun son ko‘rinishida qaytarishi kerak.');
+        }
+
+        if ($requiresPublicationIssue && $publicationIssue === null) {
+            throw new UnexpectedValueException('AI OAK maqolasi uchun jurnal sonini qaytarmadi.');
+        }
+
         if ($authorCount !== null
             && (! is_int($authorCount) || $authorCount < 0 || $authorCount > 1000)) {
             throw new UnexpectedValueException('AI mualliflar soni 0 dan 1000 gacha butun son bo‘lishi kerak.');
@@ -227,6 +250,7 @@ class AiEvaluationResult
             receivedAmount: $status === 'accepted' && $usesReceivedAmount ? (float) $receivedAmount : null,
             universityTier: $universityTier,
             publicationTier: $publicationTier,
+            publicationIssue: $publicationIssue,
         );
     }
 
@@ -237,6 +261,7 @@ class AiEvaluationResult
         bool $requiresTranslationEvidence = false,
         bool $requiresUniversityTier = false,
         bool $requiresPublicationTier = false,
+        bool $requiresPublicationIssue = false,
     ): self {
         $payload = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
@@ -250,6 +275,7 @@ class AiEvaluationResult
             $requiresTranslationEvidence,
             $requiresUniversityTier,
             $requiresPublicationTier,
+            $requiresPublicationIssue,
         );
     }
 

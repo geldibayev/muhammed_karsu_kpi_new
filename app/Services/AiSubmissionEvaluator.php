@@ -65,6 +65,7 @@ class AiSubmissionEvaluator
         $requiresReceivedAmount = $criterion->isIndustryFundingCriterion();
         $requiresUniversityTier = $criterion->isProfessionalDevelopmentCriterion();
         $requiresPublicationTier = $criterion->usesPublicationTierAiHumanReviewScore();
+        $requiresPublicationIssue = $criterion->isOakArticleCriterion();
 
         if ($maximumPoint === null) {
             return AiEvaluationResult::checking('Foydalanuvchi uchun mezon ball chegarasi topilmadi.');
@@ -95,6 +96,7 @@ class AiSubmissionEvaluator
                 $requiresTranslationEvidence,
                 $requiresUniversityTier,
                 $requiresPublicationTier,
+                $requiresPublicationIssue,
             ));
 
         $contentParts = [$this->buildPrompt(
@@ -106,6 +108,7 @@ class AiSubmissionEvaluator
             $requiresTranslationEvidence,
             $requiresUniversityTier,
             $requiresPublicationTier,
+            $requiresPublicationIssue,
         )];
 
         if ($resourceUrl !== null) {
@@ -167,6 +170,7 @@ PROMPT;
                         $requiresTranslationEvidence,
                         $requiresUniversityTier,
                         $requiresPublicationTier,
+                        $requiresPublicationIssue,
                     ),
                     prompt: $contentParts[0],
                 );
@@ -216,6 +220,7 @@ PROMPT;
                 $requiresTranslationEvidence,
                 $requiresUniversityTier,
                 $requiresPublicationTier,
+                $requiresPublicationIssue,
             );
 
             $result = $this->aiResourceDatePolicy->enforce($datum, $result);
@@ -316,6 +321,7 @@ PROMPT;
         bool $requiresTranslationEvidence = false,
         bool $requiresUniversityTier = false,
         bool $requiresPublicationTier = false,
+        bool $requiresPublicationIssue = false,
     ): GenerationConfig {
         return new GenerationConfig(
             temperature: 0.1,
@@ -329,6 +335,7 @@ PROMPT;
                 $requiresTranslationEvidence,
                 $requiresUniversityTier,
                 $requiresPublicationTier,
+                $requiresPublicationIssue,
             ),
         );
     }
@@ -393,6 +400,7 @@ PROMPT;
         bool $requiresTranslationEvidence,
         bool $requiresUniversityTier,
         bool $requiresPublicationTier,
+        bool $requiresPublicationIssue,
     ): string {
         $criterionPrompt = trim((string) preg_replace('/[ \t]+/', ' ', (string) $datum->criterion?->ai_prompt));
         $criterionPrompt = str_replace('%pointing%', (string) $maximumPoint, $criterionPrompt);
@@ -407,6 +415,11 @@ PROMPT;
         $periodStartYear = $periodStart->year;
         $periodEndYear = $periodEnd->year;
         $isPrintedEducationalLiterature = $datum->criterion?->isPrintedEducationalLiteratureCriterion() === true;
+        $criterionPrompt = str_replace(
+            ['%period_start_year%', '%period_end_year%'],
+            [(string) $periodStartYear, (string) $periodEndYear],
+            $criterionPrompt,
+        );
         $trustedTimeContext = json_encode([
             'current_date_iso' => $currentDate->toDateString(),
             'current_date_display' => $currentDate->format('d.m.Y'),
@@ -423,6 +436,7 @@ PROMPT;
                 'eligible_end_date' => $periodEnd->toDateString(),
             ],
             'printed_educational_literature_exception' => $isPrintedEducationalLiterature,
+            'oak_article_year_issue_exception' => $requiresPublicationIssue,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $trustedUserContext = json_encode([
             'author_full_name' => $datum->user?->full,
@@ -432,10 +446,11 @@ PROMPT;
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         $requiresResourceDate = true;
-        $resourceDateFormat = $isPrintedEducationalLiterature
+        $resourceDateFormat = $isPrintedEducationalLiterature || $requiresPublicationIssue
             ? 'YYYY-MM-DD yoki faqat YYYY'
             : 'YYYY-MM-DD';
         $responseExample = match (true) {
+            $requiresPublicationIssue => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"publication_issue\":3,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresPublicationTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"publication_tier\":\"q1|q2|q3|q4|conference|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresTranslationEvidence => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"is_translation\":true,\"source_language\":\"manba tili\",\"target_language\":\"uz|kaa|ru\",\"reason\":\"qisqa asos\"}",
             $requiresUniversityTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"university_tier\":\"top_100|top_300|top_500|top_1000|outside_top_1000|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
@@ -458,6 +473,9 @@ PROMPT;
         $publicationTierInstruction = $requiresPublicationTier
             ? '3.1.3 TASNIFI: publication_tier maydoniga faqat q1, q2, q3, q4, conference yoki unknown yozing. Ballni hisoblamang va point uchun qat’iy 0 qaytaring. Accepted faqat bitta aniq kvartil yoki Scopus/WoS conference paper tasdiqlanganda mumkin.'
             : '';
+        $publicationIssueInstruction = $requiresPublicationIssue
+            ? "3.1.1 JURNAL SONI: publication_issue maydoniga jurnal sonini butun son ko'rinishida yozing; aniqlanmasa 0 qaytaring. {$periodEndYear}-yil to'liq qabul qilinadi. {$periodStartYear}-yil faqat 3 yoki 4-son bo'lsa qabul qilinadi."
+            : '';
         $pointInstruction = $requiresReceivedAmount
             ? 'Accepted bo‘lmasa received_amount va author_count 0 bo‘lishi shart.'
             : 'Status accepted bo‘lmasa point 0 bo‘lishi shart.';
@@ -476,7 +494,8 @@ SANA TEKSHIRUVI QOIDALARI:
 - BARCHA resurslar uchun nashr qilingan, berilgan, tasdiqlangan yoki amalga oshirilgan sanani hujjatdan toping va resource_date maydonida qaytaring.
 - Umumiy qoida qat'iy: sana report_period.eligible_start_date ({$periodStartDisplay}) va report_period.eligible_end_date ({$periodEndDisplay}) oralig'ida bo'lishi shart; ikkala chegara ham qabul qilinadi.
 - Faqat printed_educational_literature_exception true bo'lgan chop etilgan darslik va o'quv qo'llanmalar istisno: ularning nashr yili {$periodStartYear} yoki {$periodEndYear} bo'lsa qabul qilinadi, oy va kun umumiy davrdan tashqarida bo'lishi mumkin. Hujjatda faqat nashr yili bo'lsa resource_date maydonida YYYY qaytarishga ruxsat beriladi.
-- printed_educational_literature_exception false bo'lsa, faqat yil yetarli emas va resource_date qat'iy YYYY-MM-DD formatida bo'lishi kerak.
+- Faqat oak_article_year_issue_exception true bo'lgan 3.1.1 OAK maqolalari uchun {$periodEndYear}-yil to'liq, {$periodStartYear}-yil esa jurnalning faqat 3 yoki 4-soni qabul qilinadi. Ular uchun faqat YYYY ko'rsatilishi yetarli; jurnal sonini publication_issue maydonida qaytaring.
+- printed_educational_literature_exception va oak_article_year_issue_exception false bo'lsa, faqat yil yetarli emas va resource_date qat'iy YYYY-MM-DD formatida bo'lishi kerak.
 - Sana yoki ruxsat etilgan istisno uchun nashr yili chegaradan tashqarida bo'lsa, cancelled statusini, 0 ballni va reason ichida topilgan sana hamda ruxsat etilgan davrni aniq ko'rsating.
 - Sana o'qilmasa yoki noaniq bo'lsa, resource_date uchun bo'sh satr, checking statusi va 0 ball qaytaring; sanani o'ylab topmang.
 
@@ -493,6 +512,7 @@ Faqat quyidagi kalitlarga ega JSON obyekt qaytaring:
 {$printedLiteratureInstruction}
 {$receivedAmountInstruction}
 {$publicationTierInstruction}
+{$publicationIssueInstruction}
 PROMPT;
     }
 
@@ -528,6 +548,7 @@ PROMPT;
         bool $requiresTranslationEvidence = false,
         bool $requiresUniversityTier = false,
         bool $requiresPublicationTier = false,
+        bool $requiresPublicationIssue = false,
     ): Schema {
         $properties = [
             'status' => new Schema(
@@ -607,6 +628,14 @@ PROMPT;
             );
         }
 
+        if ($requiresPublicationIssue) {
+            $properties['publication_issue'] = new Schema(
+                type: DataType::INTEGER,
+                minimum: 0,
+                maximum: 1000,
+            );
+        }
+
         $required = $requiresReceivedAmount ? ['status', 'received_amount'] : ['status', 'point'];
 
         if ($requiresAuthorCount) {
@@ -633,6 +662,10 @@ PROMPT;
 
         if ($requiresPublicationTier) {
             $required[] = 'publication_tier';
+        }
+
+        if ($requiresPublicationIssue) {
+            $required[] = 'publication_issue';
         }
 
         $required[] = 'reason';

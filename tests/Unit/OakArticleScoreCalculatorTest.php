@@ -41,6 +41,7 @@ class OakArticleScoreCalculatorTest extends TestCase
             reason: 'OAK jurnali tasdiqlandi.',
             authorCount: 6,
             resourceDate: '2025-10-20',
+            publicationIssue: 3,
         );
 
         $result = $calculator->apply($aiResult, 'hold_degrees');
@@ -49,6 +50,7 @@ class OakArticleScoreCalculatorTest extends TestCase
         $this->assertSame(0.0833, $result->point);
         $this->assertSame(6, $result->authorCount);
         $this->assertSame('2025-10-20', $result->resourceDate);
+        $this->assertSame(3, $result->publicationIssue);
         $this->assertStringContainsString('Taqsimlangan ball: 0.0833', $result->reason);
     }
 

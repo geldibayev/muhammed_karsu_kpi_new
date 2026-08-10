@@ -104,6 +104,31 @@ class AiEvaluationResultTest extends TestCase
         $this->assertSame('2025', $result->resourceDate);
     }
 
+    public function test_oak_publication_issue_is_validated_and_preserved(): void
+    {
+        $result = AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 0,
+            'author_count' => 2,
+            'publication_issue' => 3,
+            'resource_date' => '2025',
+            'reason' => 'OAK maqolasi tasdiqlandi.',
+        ], 1, requiresPublicationIssue: true);
+
+        $this->assertSame(3, $result->publicationIssue);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        AiEvaluationResult::fromPayload([
+            'status' => 'accepted',
+            'point' => 0,
+            'author_count' => 2,
+            'publication_issue' => '3',
+            'resource_date' => '2025',
+            'reason' => 'OAK maqolasi tasdiqlandi.',
+        ], 1, requiresPublicationIssue: true);
+    }
+
     /** @param array<string, mixed> $payload */
     #[DataProvider('invalidPayloads')]
     public function test_invalid_payloads_are_rejected(array $payload, float $maximumPoint): void

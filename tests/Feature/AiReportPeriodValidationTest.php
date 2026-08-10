@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Actions\DescribeAiFailure;
 use App\Data\AiEvaluationResult;
 use App\Models\Criterion;
+use App\Models\CriterionEvaluation;
 use App\Models\Datum;
+use App\Models\Evaluation;
 use App\Models\Formula;
 use App\Models\Observance;
 use App\Models\Report;
@@ -19,6 +21,7 @@ use App\Services\IndustryFundingScoreCalculator;
 use App\Services\InternationalCooperationScoreValidator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
+use App\Support\OakArticleCriterionRule;
 use App\Support\ScopusCriterionRule;
 use Gemini\Data\GenerationConfig;
 use Gemini\Laravel\Facades\Gemini;
@@ -83,6 +86,70 @@ class AiReportPeriodValidationTest extends TestCase
                     && data_get($schema, 'properties.page_count.type') === 'INTEGER'
                     && in_array('page_count', data_get($schema, 'required', []), true)
                     && in_array('author_count', data_get($schema, 'required', []), true);
+            },
+        );
+    }
+
+    #[DataProvider('oakArticleYearsAndIssues')]
+    public function test_oak_articles_use_publication_year_and_issue(
+        ?string $resourceDate,
+        int $publicationIssue,
+        string $expectedStatus,
+    ): void {
+        config()->set('kpi.report_period_start', '2025-09-01');
+        config()->set('kpi.report_period_end', '2026-08-31');
+        $datum = new Datum;
+        $datum->setRelation('criterion', new Criterion(['code' => OakArticleCriterionRule::CODE]));
+        $result = new AiEvaluationResult(
+            status: 'accepted',
+            point: 0.5,
+            reason: 'OAK maqolasi tasdiqlandi.',
+            authorCount: 1,
+            resourceDate: $resourceDate,
+            publicationIssue: $publicationIssue,
+        );
+
+        $enforced = (new AiResourceDatePolicy)->enforce($datum, $result);
+
+        $this->assertSame($expectedStatus, $enforced->status);
+    }
+
+    public function test_oak_year_only_result_and_issue_are_required_in_ai_schema(): void
+    {
+        $result = $this->evaluateResource(
+            '2025',
+            criterionCode: OakArticleCriterionRule::CODE,
+            aiReason: 'OAK jurnalining 3-soni tasdiqlandi.',
+            publicationIssue: 3,
+        );
+
+        $this->assertSame('accepted', $result->status);
+        $this->assertSame(3, $result->publicationIssue);
+        Gemini::assertFunctionCalled(
+            resource: GenerativeModel::class,
+            model: 'gemini-test',
+            callback: function (string $method, array $parameters): bool {
+                $generationConfig = $parameters[0] ?? null;
+                $schema = $generationConfig instanceof GenerationConfig
+                    ? $generationConfig->responseSchema?->toArray()
+                    : null;
+
+                return $method === 'withGenerationConfig'
+                    && data_get($schema, 'properties.publication_issue.type') === 'INTEGER'
+                    && in_array('publication_issue', data_get($schema, 'required', []), true);
+            },
+        );
+        Gemini::assertSent(
+            resource: GenerativeModel::class,
+            model: 'gemini-test',
+            callback: function (string $method, array $parameters): bool {
+                $contentParts = $parameters[0] ?? null;
+                $prompt = is_array($contentParts) ? ($contentParts[0] ?? null) : null;
+
+                return $method === 'generateContent'
+                    && is_string($prompt)
+                    && str_contains($prompt, '2026-yil to\'liq qabul qilinadi')
+                    && str_contains($prompt, '2025-yil faqat 3 yoki 4-son');
             },
         );
     }
@@ -173,6 +240,20 @@ class AiReportPeriodValidationTest extends TestCase
         yield 'publication year missing' => ['1.2', '', 'checking', 'Resurs sanasi aniq topilmadi'];
     }
 
+    /** @return iterable<string, array{string|null, int, string}> */
+    public static function oakArticleYearsAndIssues(): iterable
+    {
+        yield '2026 year only' => ['2026', 0, 'accepted'];
+        yield '2026 exact date' => ['2026-01-01', 1, 'accepted'];
+        yield '2025 issue 3' => ['2025', 3, 'accepted'];
+        yield '2025 issue 4' => ['2025-01-01', 4, 'accepted'];
+        yield '2025 issue 2' => ['2025', 2, 'cancelled'];
+        yield '2025 unknown issue' => ['2025', 0, 'checking'];
+        yield '2024 issue 4' => ['2024', 4, 'cancelled'];
+        yield '2027 issue 3' => ['2027', 3, 'cancelled'];
+        yield 'missing publication year' => [null, 0, 'checking'];
+    }
+
     private function evaluateResource(
         string $resourceDate,
         string $observation = 'current',
@@ -181,6 +262,7 @@ class AiReportPeriodValidationTest extends TestCase
         ?string $reportEnd = null,
         string $aiStatus = 'accepted',
         string $aiReason = 'Q1 Scopus maqolasi tasdiqlandi.',
+        ?int $publicationIssue = null,
     ): AiEvaluationResult {
         config()->set('kpi.report_period_start', '2025-09-01');
         config()->set('kpi.report_period_end', '2026-08-31');
@@ -206,18 +288,32 @@ class AiReportPeriodValidationTest extends TestCase
         ]);
         $criterion = Criterion::query()->create([
             'code' => $criterionCode,
-            'name' => ['uz' => ScopusCriterionRule::NAME_UZ],
+            'name' => ['uz' => $criterionCode === OakArticleCriterionRule::CODE ? 'OAK maqolasi' : ScopusCriterionRule::NAME_UZ],
             'report_id' => $report->id,
             'observation' => $observation,
             'formula_id' => 3,
             'checking' => 'ai',
-            'ai_prompt' => ScopusCriterionRule::PROMPT,
+            'ai_prompt' => $criterionCode === OakArticleCriterionRule::CODE
+                ? OakArticleCriterionRule::PROMPT
+                : ScopusCriterionRule::PROMPT,
             'ai_model' => 'gemini-test',
             'ai_submission_max_point' => $criterionCode === ScopusCriterionRule::CODE ? 20 : 5,
             'divide_ai_point_by_authors' => false,
             'upload' => '1',
             'status' => '1',
         ]);
+        if ($criterionCode === OakArticleCriterionRule::CODE) {
+            Evaluation::query()->updateOrCreate(['code' => $user->degree], [
+                'name' => ['uz' => 'Ilmiy darajasiz'],
+                'status' => '1',
+            ]);
+            CriterionEvaluation::query()->create([
+                'criterion_id' => $criterion->getKey(),
+                'evaluation' => $user->degree,
+                'has' => '1',
+                'score' => 3,
+            ]);
+        }
         $datum = Datum::query()->create([
             'name' => 'scopus.jpg',
             'material' => [
@@ -238,12 +334,13 @@ class AiReportPeriodValidationTest extends TestCase
                         'parts' => [[
                             'text' => json_encode(array_filter([
                                 'status' => $aiStatus,
-                                'point' => $criterionCode === ScopusCriterionRule::CODE ? 0 : 5,
+                                'point' => in_array($criterionCode, [ScopusCriterionRule::CODE, OakArticleCriterionRule::CODE], true) ? 0 : 5,
                                 'publication_tier' => $criterionCode === ScopusCriterionRule::CODE
                                     ? ($aiStatus === 'accepted' ? 'q1' : 'unknown')
                                     : null,
                                 'author_count' => $criterionCode === ScopusCriterionRule::CODE ? null : 4,
                                 'page_count' => in_array($criterionCode, ['1.2', '1.3'], true) ? 160 : null,
+                                'publication_issue' => $publicationIssue,
                                 'resource_date' => $resourceDate,
                                 'reason' => $aiReason,
                             ], static fn (mixed $value): bool => $value !== null), JSON_THROW_ON_ERROR),

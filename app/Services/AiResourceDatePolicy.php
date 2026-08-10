@@ -21,6 +21,10 @@ class AiResourceDatePolicy
             return $this->enforcePrintedEducationalLiteratureYear($result);
         }
 
+        if ($datum->criterion?->isOakArticleCriterion()) {
+            return $this->enforceOakArticleYearAndIssue($result);
+        }
+
         $periodStart = $this->periodStart();
         $periodEnd = $this->periodEnd();
 
@@ -80,6 +84,47 @@ class AiResourceDatePolicy
         }
 
         return $result;
+    }
+
+    private function enforceOakArticleYearAndIssue(AiEvaluationResult $result): AiEvaluationResult
+    {
+        $resourceYear = (int) substr((string) $result->resourceDate, 0, 4);
+        $startYear = $this->periodStart()->year;
+        $endYear = $this->periodEnd()->year;
+
+        if ($resourceYear < $startYear || $resourceYear > $endYear) {
+            return new AiEvaluationResult(
+                status: 'cancelled',
+                point: 0,
+                reason: "OAK maqolasining nashr yili ({$resourceYear}) ruxsat etilgan {$startYear} yoki {$endYear} yilga mos emas.",
+                resourceDate: $result->resourceDate,
+                publicationIssue: $result->publicationIssue,
+            );
+        }
+
+        if ($resourceYear === $endYear) {
+            return $result;
+        }
+
+        if (in_array($result->publicationIssue, [3, 4], true)) {
+            return $result;
+        }
+
+        if ($result->publicationIssue === null || $result->publicationIssue === 0) {
+            return $result->status === 'accepted'
+                ? AiEvaluationResult::checking(
+                    "{$startYear}-yildagi OAK maqolasi uchun jurnal soni aniqlanmadi. Inson tekshiruvi zarur.",
+                )
+                : $result;
+        }
+
+        return new AiEvaluationResult(
+            status: 'cancelled',
+            point: 0,
+            reason: "{$startYear}-yildagi OAK maqolasi jurnalning faqat 3 yoki 4-sonida chop etilgan bo‘lsa qabul qilinadi. Aniqlangan son: {$result->publicationIssue}.",
+            resourceDate: $result->resourceDate,
+            publicationIssue: $result->publicationIssue,
+        );
     }
 
     private function configuredDate(string $key): Carbon
