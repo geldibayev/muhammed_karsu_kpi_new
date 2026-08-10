@@ -19,8 +19,9 @@ class GetRatingIndexData
         'professor' => 3,
         'dotsent' => 4,
         'assistent' => 5,
-        'stajeroqituvchi' => 6,
-        'stajyoroqituvchi' => 6,
+        'kattaoqituvchi' => 6,
+        'stajeroqituvchi' => 7,
+        'stajyoroqituvchi' => 7,
     ];
 
     private const EXCLUDED_POSITION_NAME_FRAGMENTS = [
