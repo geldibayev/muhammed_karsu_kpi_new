@@ -18,8 +18,8 @@ class GetRatingIndexData
         'kafedramudiri' => 2,
         'professor' => 3,
         'dotsent' => 4,
-        'assistent' => 5,
-        'kattaoqituvchi' => 6,
+        'kattaoqituvchi' => 5,
+        'assistent' => 6,
         'stajeroqituvchi' => 7,
         'stajyoroqituvchi' => 7,
     ];

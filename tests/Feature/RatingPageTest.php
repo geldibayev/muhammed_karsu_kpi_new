@@ -385,8 +385,8 @@ class RatingPageTest extends TestCase
                     'Kafedra mudiri',
                     'Professor',
                     'Dotsent',
-                    'Assistent',
                     'Katta o‘qituvchi',
+                    'Assistent',
                     'Stajer-o‘qituvchi',
                 ]);
 
