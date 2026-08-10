@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Datum;
 use App\Models\User;
+use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -13,11 +14,17 @@ class UpdateAcceptedDatumScore
     public function __construct(
         private ResolveAiManualPointMaximum $maximumResolver,
         private RecalculateReportPoints $recalculateReportPoints,
+        private ScientificPublicationHumanReviewScoreCalculator $scientificPublicationScoreCalculator,
     ) {}
 
-    public function handle(User $reviewer, Datum $datum, float $point, string $reason): Datum
-    {
-        $updatedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $reason): Datum {
+    public function handle(
+        User $reviewer,
+        Datum $datum,
+        ?float $point,
+        string $reason,
+        ?string $publicationTier = null,
+    ): Datum {
+        $updatedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $reason, $publicationTier): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'criterion.criterionEvaluations', 'criterion.formula', 'user'])
                 ->lockForUpdate()
@@ -26,7 +33,20 @@ class UpdateAcceptedDatumScore
             Gate::forUser($reviewer)->authorize('updateAcceptedScore', $lockedDatum);
 
             $maximumPoint = $this->maximumResolver->handle($lockedDatum);
-            if ($maximumPoint === null || ! is_finite($point) || $point < 0 || $point > $maximumPoint) {
+            if ($lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()) {
+                if ($publicationTier === null || ! array_key_exists(
+                    $publicationTier,
+                    ScientificPublicationHumanReviewScoreCalculator::PUBLICATION_TIER_POINTS,
+                )) {
+                    throw ValidationException::withMessages([
+                        'publication_tier' => 'Jurnal kvartili yoki nashr turini tanlang.',
+                    ]);
+                }
+
+                $point = $this->scientificPublicationScoreCalculator->publicationTierPoint($publicationTier);
+            }
+
+            if ($maximumPoint === null || $point === null || ! is_finite($point) || $point < 0 || $point > $maximumPoint) {
                 throw ValidationException::withMessages([
                     'point' => 'Kiritilgan ball foydalanuvchi uchun belgilangan chegaraga mos emas.',
                 ]);
@@ -40,6 +60,9 @@ class UpdateAcceptedDatumScore
 
             $lockedDatum->update([
                 'point' => $point,
+                'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
+                    ? $publicationTier
+                    : $lockedDatum->publication_tier,
                 'reason' => $auditMessage,
             ]);
             $lockedDatum->histories()->create([

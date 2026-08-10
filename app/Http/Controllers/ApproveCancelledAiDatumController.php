@@ -22,10 +22,11 @@ class ApproveCancelledAiDatumController extends Controller
             $datum,
             $request->filled('point') ? $request->float('point') : null,
             $request->filled('score_option_id') ? $request->integer('score_option_id') : null,
+            $request->filled('publication_tier') ? $request->string('publication_tier')->toString() : null,
         );
 
         return redirect()
             ->route('upload.details', $datum)
-            ->with('success', 'Rad etilgan resurs qo‘lda kiritilgan ball bilan tasdiqlandi.');
+            ->with('success', 'Rad etilgan resurs tasdiqlandi va ball hisoblandi.');
     }
 }

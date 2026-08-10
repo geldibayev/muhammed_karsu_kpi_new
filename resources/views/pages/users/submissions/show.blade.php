@@ -18,6 +18,13 @@
             'certificate_date' => 'Guvohnoma sanasi',
             'form' => 'Mulk turi',
         ];
+        $publicationTierLabels = [
+            'q1' => 'Q1 — 20 ball',
+            'q2' => 'Q2 — 15 ball',
+            'q3' => 'Q3 — 10 ball',
+            'q4' => 'Q4 — 5 ball',
+            'conference' => 'Scopus/WoS konferensiya materiali — 5 ball',
+        ];
     @endphp
 
     <section class="content">
@@ -249,6 +256,23 @@
                                     </button>
                                 </div>
                                 <div class="modal-body">
+                                    @if($datum->criterion?->usesPublicationTierAiHumanReviewScore())
+                                        <div class="form-group">
+                                            <label for="updated-publication-tier">Jurnal kvartili yoki nashr turi</label>
+                                            <select id="updated-publication-tier" name="publication_tier" required
+                                                    class="form-control @error('publication_tier') is-invalid @enderror">
+                                                <option value="">Tanlang</option>
+                                                @foreach($publicationTierLabels as $publicationTier => $publicationTierLabel)
+                                                    <option value="{{ $publicationTier }}"
+                                                        @selected(old('publication_tier', $datum->publication_tier) === $publicationTier)>
+                                                        {{ $publicationTierLabel }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                            <small class="form-text text-muted">Ball tanlangan kvartil bo‘yicha serverda hisoblanadi.</small>
+                                            @error('publication_tier')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        </div>
+                                    @else
                                     <div class="form-group">
                                         <label for="updated-point">Yangi ball</label>
                                         <input id="updated-point" name="point" type="number" min="0"
@@ -260,6 +284,7 @@
                                         </small>
                                         @error('point')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                     </div>
+                                    @endif
                                     <div class="form-group mb-0">
                                         <label for="updated-point-reason">O‘zgartirish sababi</label>
                                         <textarea id="updated-point-reason" name="score_change_reason" rows="4" maxlength="5000"
@@ -420,6 +445,23 @@
                                     @error('score_option_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                @elseif($datum->criterion?->usesPublicationTierAiHumanReviewScore())
+                                    <div class="alert alert-info py-2">
+                                        Ball tanlangan kvartil bo‘yicha serverda avtomatik hisoblanadi.
+                                    </div>
+                                    <label for="cancelled-publication-tier">Jurnal kvartili yoki nashr turi</label>
+                                    <select id="cancelled-publication-tier" name="publication_tier" required
+                                            class="form-control @error('publication_tier') is-invalid @enderror">
+                                        <option value="">Tanlang</option>
+                                        @foreach($publicationTierLabels as $publicationTier => $publicationTierLabel)
+                                            <option value="{{ $publicationTier }}" @selected(old('publication_tier') === $publicationTier)>
+                                                {{ $publicationTierLabel }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('publication_tier')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 @else
                                 <div class="alert alert-info py-2">
                                     Ruxsat etilgan ball oralig‘i:
@@ -449,13 +491,13 @@
 @endsection
 
 @section('script')
-    @if(($errors->has('point') || $errors->has('score_change_reason'))
+    @if(($errors->has('point') || $errors->has('publication_tier') || $errors->has('score_change_reason'))
         && $status === \App\Enums\DatumStatus::Accepted
         && auth()->user()?->can('updateAcceptedScore', $datum))
         <script>$('#update-accepted-score-modal').modal('show');</script>
     @elseif($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Accepted)
         <script>$('#change-educational-content-type-modal').modal('show');</script>
-    @elseif($errors->has('point') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
+    @elseif($errors->has('point') || $errors->has('publication_tier') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
         <script>$('#approve-cancelled-ai-modal').modal('show');</script>
     @elseif($errors->has('reason'))
         <script>$('#reject-accepted-ai-modal').modal('show');</script>

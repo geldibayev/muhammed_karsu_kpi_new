@@ -6,6 +6,7 @@ use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Models\User;
 use App\Services\DatumResourceFingerprintGenerator;
+use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
 use App\Support\ForeignLanguageCertificateCriterionRule;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ class ApproveCancelledAiDatum
         private DatumResourceFingerprintGenerator $fingerprintGenerator,
         private DatumResourceIdentifierRegistry $identifierRegistry,
         private RecalculateReportPoints $recalculateReportPoints,
+        private ScientificPublicationHumanReviewScoreCalculator $scientificPublicationScoreCalculator,
     ) {}
 
     public function handle(
@@ -26,8 +28,9 @@ class ApproveCancelledAiDatum
         Datum $datum,
         ?float $point,
         ?int $scoreOptionId = null,
+        ?string $publicationTier = null,
     ): Datum {
-        $approvedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $scoreOptionId): Datum {
+        $approvedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $scoreOptionId, $publicationTier): Datum {
             $lockedDatum = Datum::query()
                 ->with([
                     'criterion.report',
@@ -92,6 +95,19 @@ class ApproveCancelledAiDatum
                 }
             }
 
+            if ($lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()) {
+                if ($publicationTier === null || ! array_key_exists(
+                    $publicationTier,
+                    ScientificPublicationHumanReviewScoreCalculator::PUBLICATION_TIER_POINTS,
+                )) {
+                    throw ValidationException::withMessages([
+                        'publication_tier' => 'Jurnal kvartili yoki nashr turini tanlang.',
+                    ]);
+                }
+
+                $point = $this->scientificPublicationScoreCalculator->publicationTierPoint($publicationTier);
+            }
+
             if ($maximumPoint === null
                 || $point === null
                 || ! is_finite($point)
@@ -104,13 +120,18 @@ class ApproveCancelledAiDatum
 
             $point = round($point, 4);
             $aiDecision = $this->latestDecisionWasAi($lockedDatum);
+            $scoreDescription = match (true) {
+                $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore() => 'Tanlangan kvartil yoki nashr turi: '
+                    .mb_strtoupper((string) $publicationTier).'. Hisoblangan ball: ',
+                $scoreOption === null => 'Qo‘lda kiritilgan ball: ',
+                default => 'Tanlangan daraja yoki resurs turi: '
+                    .data_get($scoreOption->label, 'uz', $scoreOption->code).'. Hisoblangan ball: ',
+            };
             $auditMessage = ($aiDecision
                 ? 'Gemini rad etgan resurs'
                 : 'Oldin rad etilgan resurs')
                 .' inson tekshiruvida tasdiqlandi. '
-                .($scoreOption === null
-                    ? 'Qo‘lda kiritilgan ball: '
-                    : 'Tanlangan daraja yoki resurs turi: '.data_get($scoreOption->label, 'uz', $scoreOption->code).'. Hisoblangan ball: ')
+                .$scoreDescription
                 .number_format($point, 4, '.', '').'. '
                 .'Maksimal ruxsat etilgan ball: '.number_format($maximumPoint, 4, '.', '').'.';
 
@@ -118,6 +139,9 @@ class ApproveCancelledAiDatum
                 'status' => 'accepted',
                 'point' => $point,
                 'manual_score_option_id' => $scoreOption?->getKey(),
+                'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
+                    ? $publicationTier
+                    : $lockedDatum->publication_tier,
                 'reviewer_hemis_id' => null,
                 'reason' => $auditMessage,
             ]);

@@ -20,8 +20,9 @@ class UpdateAcceptedDatumScoreController extends Controller
         $action->handle(
             $request->user(),
             $datum,
-            $request->float('point'),
+            $request->filled('point') ? $request->float('point') : null,
             $request->validated('score_change_reason'),
+            $request->filled('publication_tier') ? $request->string('publication_tier')->toString() : null,
         );
 
         return redirect()

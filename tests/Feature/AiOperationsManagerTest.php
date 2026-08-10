@@ -79,6 +79,84 @@ class AiOperationsManagerTest extends TestCase
         ]);
     }
 
+    public function test_scopus_detail_overrides_use_publication_tier_and_server_point(): void
+    {
+        [, $owner, $criterion] = $this->context();
+        $superAdmin = User::factory()->superAdmin()->create();
+        $accepted = $this->datum($owner, $criterion, 'accepted', 20);
+        $accepted->update(['publication_tier' => 'q1']);
+        $cancelled = $this->datum($owner, $criterion, 'cancelled', 0);
+
+        $this->actingAs($superAdmin)
+            ->get(route('upload.details', $accepted))
+            ->assertOk()
+            ->assertSee('name="publication_tier"', false)
+            ->assertSee('Q2 — 15 ball')
+            ->assertDontSee('name="point"', false);
+
+        $this->actingAs($superAdmin)
+            ->patch(route('submissions.accepted-score.update', $accepted), [
+                'score_change_reason' => 'Kvartil qayta tekshirildi.',
+            ])
+            ->assertSessionHasErrors('publication_tier');
+
+        $this->actingAs($superAdmin)
+            ->patch(route('submissions.accepted-score.update', $accepted), [
+                'publication_tier' => 'q5',
+                'score_change_reason' => 'Kvartil qayta tekshirildi.',
+            ])
+            ->assertSessionHasErrors('publication_tier');
+
+        $this->actingAs($superAdmin)
+            ->patch(route('submissions.accepted-score.update', $accepted), [
+                'publication_tier' => 'q2',
+                'point' => 1,
+                'score_change_reason' => 'Kvartil qayta tekshirildi.',
+            ])
+            ->assertSessionHasErrors('point');
+
+        $this->actingAs($superAdmin)
+            ->patch(route('submissions.accepted-score.update', $accepted), [
+                'publication_tier' => 'q2',
+                'score_change_reason' => 'Kvartil qayta tekshirildi.',
+            ])
+            ->assertRedirect(route('upload.details', $accepted))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(15.0, $accepted->fresh()->point);
+        $this->assertSame('q2', $accepted->fresh()->publication_tier);
+
+        $this->actingAs($superAdmin)
+            ->get(route('upload.details', $cancelled))
+            ->assertOk()
+            ->assertSee('name="publication_tier"', false)
+            ->assertSee('Q3 — 10 ball')
+            ->assertDontSee('name="point"', false);
+
+        $this->actingAs($superAdmin)
+            ->patch(route('ai-human-reviews.approve-cancelled', $cancelled))
+            ->assertSessionHasErrors('publication_tier');
+
+        $this->actingAs($superAdmin)
+            ->patch(route('ai-human-reviews.approve-cancelled', $cancelled), [
+                'publication_tier' => 'q3',
+                'point' => 1,
+            ])
+            ->assertSessionHasErrors('point');
+
+        $this->actingAs($superAdmin)
+            ->patch(route('ai-human-reviews.approve-cancelled', $cancelled), [
+                'publication_tier' => 'q3',
+            ])
+            ->assertRedirect(route('upload.details', $cancelled))
+            ->assertSessionHasNoErrors();
+
+        $cancelled->refresh();
+        $this->assertSame('accepted', $cancelled->status);
+        $this->assertSame(10.0, $cancelled->point);
+        $this->assertSame('q3', $cancelled->publication_tier);
+    }
+
     public function test_another_user_cannot_evaluate_or_correct_ai_resources(): void
     {
         [, $owner, $criterion] = $this->context();
@@ -99,6 +177,7 @@ class AiOperationsManagerTest extends TestCase
     /** @return array{User, User, Criterion} */
     private function context(): array
     {
+        config()->set('kpi.super_admin_hemis_ids', []);
         $manager = User::factory()->create([
             'hemis_id' => '3172011004',
             'rol' => ['teacher'],
