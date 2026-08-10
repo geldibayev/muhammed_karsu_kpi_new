@@ -15,6 +15,8 @@ class GetRatingIndexData
 {
     private const EXCLUDED_POSITION_NAME_FRAGMENTS = [
         'kabinetmudiri',
+        'kattailmiyxodim',
+        'kattailmiyhodim',
         'matbuotkotibi',
         'bolimboshligi',
         'menejer',

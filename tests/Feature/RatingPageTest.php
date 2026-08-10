@@ -329,6 +329,8 @@ class RatingPageTest extends TestCase
 
         $excludedPositionNames = [
             'Kabinet mudiri',
+            'Katta ilmiy xodim',
+            'Katta ilmiy hodim',
             'Matbuot kotibi',
             'Bo‘lim boshlig‘i',
             'Menejer',
