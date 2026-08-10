@@ -7,7 +7,6 @@ use App\Data\AiEvaluationResult;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
-use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\Evaluation;
 use App\Models\Formula;
@@ -83,10 +82,9 @@ class CriterionFourOneOneAiScoringTest extends TestCase
         [, $criterion] = $this->context();
         $reviewer = User::factory()->create();
         $owner = User::factory()->create(['degree' => 'no_degrees']);
-        CriterionReviewerAssignment::query()->create([
-            'criterion_id' => $criterion->getKey(),
-            'criterion_code' => FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_ONE_CODE,
-            'hemis_id' => $reviewer->hemis_id,
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            ...config('kpi.ai_human_review_criterion_reviewers'),
+            '4.1.1' => $reviewer->hemis_id,
         ]);
         $datum = Datum::query()->create([
             'name' => 'Televideniye chiqishi bo‘yicha ma’lumotnoma',

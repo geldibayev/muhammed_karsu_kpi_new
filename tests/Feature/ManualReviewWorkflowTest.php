@@ -67,29 +67,21 @@ class ManualReviewWorkflowTest extends TestCase
         $this->seed(CriterionManualScoreOptionSeeder::class);
         $this->seed(CriterionManualScoreOptionSeeder::class);
 
-        $this->assertDatabaseCount('criterion_reviewer_assignments', 9);
+        $this->assertDatabaseCount('criterion_reviewer_assignments', 8);
         $this->assertDatabaseHas('criterion_reviewer_assignments', [
             'hemis_id' => 3172011004,
             'criterion_id' => 2,
             'criterion_code' => '1.1',
         ]);
-        $this->assertDatabaseHas('criterion_reviewer_assignments', [
-            'hemis_id' => 3172011004,
+        $this->assertDatabaseMissing('criterion_reviewer_assignments', [
             'criterion_id' => 36,
-            'criterion_code' => '4.1.1',
         ]);
         $this->assertDatabaseHas('criterion_reviewer_assignments', [
             'hemis_id' => 3462611061,
             'criterion_id' => 16,
             'criterion_code' => '2.1.4',
         ]);
-        $oavAssignment = CriterionReviewerAssignment::query()
-            ->where('criterion_code', '4.1.1')
-            ->firstOrFail();
-        $this->assertNull($oavAssignment->user);
-
         $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
-        $this->assertTrue($oavAssignment->fresh()->user->is($reviewer));
         $this->assertDatabaseCount('criterion_manual_score_options', 12);
 
         $expectedScoreOptions = [
@@ -746,7 +738,7 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertOk();
     }
 
-    public function test_unassigned_super_admin_can_see_and_review_submission(): void
+    public function test_unassigned_super_admin_can_review_submission_without_seeing_it_in_their_queue(): void
     {
         $reviewer = User::factory()->create();
         $superAdmin = User::factory()->superAdmin()->create();
@@ -758,7 +750,7 @@ class ManualReviewWorkflowTest extends TestCase
         $this->actingAs($superAdmin)
             ->get(route('reviews.index'))
             ->assertOk()
-            ->assertSee($datum->name);
+            ->assertDontSee($datum->name);
         $this->actingAs($superAdmin)
             ->get(route('home'))
             ->assertOk()

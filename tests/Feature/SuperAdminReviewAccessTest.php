@@ -36,7 +36,7 @@ class SuperAdminReviewAccessTest extends TestCase
         $this->assertTrue(Gate::forUser($user->fresh())->allows('manage-kpi-settings'));
     }
 
-    public function test_super_admin_can_see_and_review_every_pending_submission(): void
+    public function test_super_admin_can_review_every_submission_without_unassigned_manual_items_in_their_queue(): void
     {
         [$manualCriterion, $aiCriterion] = $this->criteria();
         $owner = User::factory()->create();
@@ -48,7 +48,7 @@ class SuperAdminReviewAccessTest extends TestCase
         $this->actingAs($superAdmin)
             ->get(route('reviews.index'))
             ->assertOk()
-            ->assertSee($manualDatum->name);
+            ->assertDontSee($manualDatum->name);
         $this->actingAs($superAdmin)
             ->get(route('ai-human-reviews.index'))
             ->assertOk()

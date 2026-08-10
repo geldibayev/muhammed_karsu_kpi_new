@@ -11,16 +11,7 @@ class CriterionReviewerAssignmentSeeder extends Seeder
 {
     public function run(): void
     {
-        $oavReviewerHemisId = (int) config('kpi.ai_status_viewer_hemis_id');
-
-        if ($oavReviewerHemisId <= 0) {
-            throw new RuntimeException('KPI mas’ullarining HEMIS ID sozlamalari to‘liq emas.');
-        }
-
         $reviewersByCriterionCode = array_map('intval', config('kpi.criterion_reviewers', []));
-        $reviewersByCriterionCode += [
-            '4.1.1' => $oavReviewerHemisId,
-        ];
 
         if (in_array(0, $reviewersByCriterionCode, true)) {
             throw new RuntimeException('Mezon mas’ullarining HEMIS ID sozlamalarida noto‘g‘ri qiymat bor.');

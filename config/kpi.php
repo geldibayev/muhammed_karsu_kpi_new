@@ -59,6 +59,7 @@ return [
         '3.1.13' => $industryFundingAndUniversityProjectReviewerHemisId,
         '3.1.14' => $industryFundingAndUniversityProjectReviewerHemisId,
         '3.1.15' => $scientificPublicationsReviewerHemisId,
+        '4.1.1' => env('KPI_AI_HUMAN_REVIEWER_4_1_1_HEMIS_ID', $primarySuperAdminHemisId),
         '4.1.2' => $fixedPerResourceReviewerHemisId,
         '4.1.3' => $fixedPerResourceReviewerHemisId,
         '4.1.4' => $fixedPerResourceReviewerHemisId,
