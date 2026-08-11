@@ -21,7 +21,7 @@ class FixedPerResourceHumanReviewCriterionRule
         self::FOUR_ONE_ONE_CODE => [
             'hold_degrees' => 0.75,
             'no_degrees' => 0.75,
-            'foreign_lang' => 0.75,
+            'foreign_lang' => 0.5,
             'physical' => 0.75,
         ],
         PatentCriterionRule::CODE => [
@@ -169,7 +169,7 @@ VAZIFA:
 - Materialda resursni taqdim etgan professor-o'qituvchining muallif yoki chiqish qilgan shaxs ekani aniq tasdiqlanishi kerak.
 - Chiqish mavzusi universitetdagi yoki mamlakatdagi islohotlar, jumladan ta'lim, ijtimoiy yoki iqtisodiy yangilanishlarga bevosita oid bo'lishi kerak.
 - Materialning chop etilgan, efirga uzatilgan yoki e'lon qilingan sanasini aniqlang va tizim talab qilgan resource_date maydonida qaytaring.
-- Ballni tanlamang va hisoblamang. Har bir tasdiqlangan resursga server 0.75 ball beradi; yakuniy ball serverda chet tili yo'nalishi uchun 2 ball, qolgan toifalar uchun 3 ball bilan cheklanadi.
+- Ballni tanlamang va hisoblamang. Har bir tasdiqlangan resursga server chet tili yo'nalishi uchun 0.5 ball, qolgan toifalar uchun 0.75 ball beradi; yakuniy ball chet tili yo'nalishi uchun 2 ball, qolgan toifalar uchun 3 ball bilan cheklanadi.
 
 QAROR:
 - OAV yoki rasmiy ijtimoiy tarmoqdagi chiqish, professor-o'qituvchining ishtiroki, islohotlarga oid mavzu va sana aniq tasdiqlansa accepted qaytaring.

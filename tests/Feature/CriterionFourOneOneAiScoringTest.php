@@ -33,9 +33,14 @@ class CriterionFourOneOneAiScoringTest extends TestCase
         RateLimiter::clear(ProcessAiDatumEvaluation::RATE_LIMIT_KEY);
     }
 
-    public function test_ai_only_decides_status_and_server_assigns_point_seventy_five(): void
+    public function test_ai_only_decides_status_and_server_assigns_category_point(): void
     {
-        foreach (['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'] as $category) {
+        foreach ([
+            'hold_degrees' => 0.75,
+            'no_degrees' => 0.75,
+            'foreign_lang' => 0.5,
+            'physical' => 0.75,
+        ] as $category => $expectedPoint) {
             $accepted = FixedPerResourceHumanReviewCriterionRule::normalizeAiResult(
                 new AiEvaluationResult('accepted', 99, 'OAV chiqishi tasdiqlandi.'),
                 FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_ONE_CODE,
@@ -43,7 +48,7 @@ class CriterionFourOneOneAiScoringTest extends TestCase
             );
 
             $this->assertSame('accepted', $accepted->status);
-            $this->assertSame(0.75, $accepted->point);
+            $this->assertSame($expectedPoint, $accepted->point);
         }
 
         $checking = FixedPerResourceHumanReviewCriterionRule::normalizeAiResult(
@@ -75,13 +80,14 @@ class CriterionFourOneOneAiScoringTest extends TestCase
         $this->assertStringContainsString('Gazetada chop etilgan maqola', $specification['ai_prompt']);
         $this->assertStringContainsString('televideniye chiqishi', $specification['ai_prompt']);
         $this->assertStringContainsString('resource_date', $specification['ai_prompt']);
+        $this->assertStringContainsString("chet tili yo'nalishi uchun 0.5 ball", $specification['ai_prompt']);
     }
 
     public function test_uncertain_ai_result_goes_to_existing_reviewer_and_human_approval_uses_server_point(): void
     {
         [, $criterion] = $this->context();
         $reviewer = User::factory()->create();
-        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $owner = User::factory()->create(['degree' => 'foreign_lang']);
         config()->set('kpi.ai_human_review_criterion_reviewers', [
             ...config('kpi.ai_human_review_criterion_reviewers'),
             '4.1.1' => $reviewer->hemis_id,
@@ -142,7 +148,7 @@ class CriterionFourOneOneAiScoringTest extends TestCase
             ->assertRedirect(route('ai-human-reviews.index', $returnFilters));
 
         $this->assertSame('accepted', $datum->fresh()->status);
-        $this->assertSame(0.75, $datum->fresh()->point);
+        $this->assertSame(0.5, $datum->fresh()->point);
     }
 
     public function test_server_enforces_report_period_for_oav_resource(): void
@@ -203,7 +209,7 @@ class CriterionFourOneOneAiScoringTest extends TestCase
                     'user_id' => $owner->getKey(),
                     'criterion_id' => $criterion->getKey(),
                     'status' => 'accepted',
-                    'point' => 0.75,
+                    'point' => $owner->degree === 'foreign_lang' ? 0.5 : 0.75,
                 ]);
             }
         }
@@ -212,6 +218,46 @@ class CriterionFourOneOneAiScoringTest extends TestCase
 
         $this->assertSame(3.0, $this->finalPoint($report, $criterion, $regularOwner));
         $this->assertSame(2.0, $this->finalPoint($report, $criterion, $foreignLanguageOwner));
+    }
+
+    public function test_migration_corrects_existing_accepted_resource_points_idempotently(): void
+    {
+        [$report, $criterion] = $this->context();
+        $regularOwner = User::factory()->create(['degree' => 'no_degrees']);
+        $foreignLanguageOwner = User::factory()->create(['degree' => 'foreign_lang']);
+        $regularDatum = Datum::query()->create([
+            'name' => 'Eski OAV resursi',
+            'user_id' => $regularOwner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'accepted',
+            'point' => 0,
+        ]);
+        $foreignLanguageDatum = Datum::query()->create([
+            'name' => 'Eski chet tili OAV resursi',
+            'user_id' => $foreignLanguageOwner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'accepted',
+            'point' => 0.75,
+        ]);
+
+        $migration = require database_path('migrations/2026_08_11_151357_correct_criterion_four_one_one_resource_points.php');
+        $migration->up();
+        $migration->up();
+
+        $this->assertSame(0.75, $regularDatum->fresh()->point);
+        $this->assertSame(0.5, $foreignLanguageDatum->fresh()->point);
+        $this->assertSame(1, $regularDatum->histories()
+            ->where('message_type', 'fixed_resource_point_recalculated')
+            ->count());
+        $this->assertSame(1, $foreignLanguageDatum->histories()
+            ->where('message_type', 'fixed_resource_point_recalculated')
+            ->count());
+        $this->assertSame(0.75, $this->finalPoint($report, $criterion, $regularOwner));
+        $this->assertSame(0.5, $this->finalPoint($report, $criterion, $foreignLanguageOwner));
+        $this->assertSame(
+            FixedPerResourceHumanReviewCriterionRule::fourOneOnePrompt(),
+            $criterion->fresh()->ai_prompt,
+        );
     }
 
     /** @return array{Report, Criterion} */
