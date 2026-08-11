@@ -4,6 +4,8 @@ namespace App\Actions;
 
 use App\Models\Report;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
+use UnexpectedValueException;
 
 class SyncHemisWorkplacesForLogin
 {
@@ -13,9 +15,25 @@ class SyncHemisWorkplacesForLogin
         private AssignDisciplinaryCriterionScore $assignDisciplinaryCriterionScore,
     ) {}
 
-    public function handle(User $user): User
+    public function handle(User $user, bool $allowConfiguredReviewerWithoutWorkplace = false): User
     {
-        $result = $this->syncHemisWorkplaces->handle($user);
+        try {
+            $result = $this->syncHemisWorkplaces->handle($user);
+        } catch (UnexpectedValueException $exception) {
+            if ($exception->getMessage() !== SyncHemisWorkplaces::MISSING_WORKPLACE_MESSAGE
+                || ! $allowConfiguredReviewerWithoutWorkplace
+                || ! $this->isConfiguredReviewer($user)) {
+                throw $exception;
+            }
+
+            Log::warning('Configured reviewer logged in without HEMIS workplace sync.', [
+                'user_id' => $user->getKey(),
+                'hemis_id' => $user->hemis_id,
+                'reason' => $exception->getMessage(),
+            ]);
+
+            return $user;
+        }
 
         if ($result->degreeChanged) {
             Report::query()
@@ -26,5 +44,15 @@ class SyncHemisWorkplacesForLogin
         $this->assignDisciplinaryCriterionScore->handle($result->user);
 
         return $result->user;
+    }
+
+    private function isConfiguredReviewer(User $user): bool
+    {
+        $reviewerHemisIds = [
+            ...array_values(config('kpi.ai_human_review_criterion_reviewers', [])),
+            ...array_values(config('kpi.criterion_reviewers', [])),
+        ];
+
+        return in_array((string) $user->hemis_id, array_map('strval', $reviewerHemisIds), true);
     }
 }

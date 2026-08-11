@@ -22,6 +22,8 @@ use UnexpectedValueException;
 
 class SyncHemisWorkplaces
 {
+    public const MISSING_WORKPLACE_MESSAGE = 'HEMIS foydalanuvchi uchun ish joyi ma’lumotini qaytarmadi.';
+
     public function __construct(
         private ResolveUserEvaluationCategory $resolveUserEvaluationCategory,
     ) {}
@@ -52,7 +54,7 @@ class SyncHemisWorkplaces
         }
 
         if ($employees === []) {
-            throw new UnexpectedValueException('HEMIS foydalanuvchi uchun ish joyi ma’lumotini qaytarmadi.');
+            throw new UnexpectedValueException(self::MISSING_WORKPLACE_MESSAGE);
         }
 
         [$degreeChanged, $primaryWorkplaceCount] = DB::transaction(function () use ($user, $employees): array {

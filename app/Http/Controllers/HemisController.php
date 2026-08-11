@@ -52,7 +52,10 @@ class HemisController extends Controller
                 );
             }
 
-            $user = $syncHemisWorkplacesForLogin->handle($user);
+            $user = $syncHemisWorkplacesForLogin->handle(
+                $user,
+                allowConfiguredReviewerWithoutWorkplace: true,
+            );
 
             Auth::login($user);
             $request->session()->regenerate();
