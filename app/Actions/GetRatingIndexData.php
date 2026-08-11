@@ -15,13 +15,14 @@ class GetRatingIndexData
 {
     private const POSITION_SORT_ORDER = [
         'dekan' => 1,
-        'kafedramudiri' => 2,
-        'professor' => 3,
-        'dotsent' => 4,
-        'kattaoqituvchi' => 5,
-        'assistent' => 6,
-        'stajeroqituvchi' => 7,
-        'stajyoroqituvchi' => 7,
+        'dekanmuovini' => 2,
+        'kafedramudiri' => 3,
+        'professor' => 4,
+        'dotsent' => 5,
+        'kattaoqituvchi' => 6,
+        'assistent' => 7,
+        'stajeroqituvchi' => 8,
+        'stajyoroqituvchi' => 8,
     ];
 
     public function __construct(

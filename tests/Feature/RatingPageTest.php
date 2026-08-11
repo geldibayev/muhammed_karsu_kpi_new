@@ -340,7 +340,6 @@ class RatingPageTest extends TestCase
             'Uslubchi',
             'Veb-dizayner',
             'Yoshlar bilan ishlash bo‘yicha mutaxassis',
-            'Dekan muovini',
             'Ilmiy kotib',
         ];
         $excludedPositions = collect($excludedPositionNames)->map(function (string $excludedPositionName): StaffPosition {
@@ -349,7 +348,7 @@ class RatingPageTest extends TestCase
                 'name' => $excludedPositionName,
             ]);
         });
-        $visiblePositions = collect(['Dekan', 'Kafedra mudiri', 'Assistent', 'Katta o‘qituvchi', 'Stajer-o‘qituvchi'])->map(function (string $visiblePositionName): StaffPosition {
+        $visiblePositions = collect(['Dekan', 'Dekan muovini', 'Kafedra mudiri', 'Assistent', 'Katta o‘qituvchi', 'Stajer-o‘qituvchi'])->map(function (string $visiblePositionName): StaffPosition {
             return StaffPosition::query()->create([
                 'id' => $this->referenceId++,
                 'name' => $visiblePositionName,
@@ -383,6 +382,7 @@ class RatingPageTest extends TestCase
                 ->isEmpty()
                 && $positions->pluck('name')->values()->all() === [
                     'Dekan',
+                    'Dekan muovini',
                     'Kafedra mudiri',
                     'Professor',
                     'Dotsent',
