@@ -85,7 +85,7 @@ class KpiCriterionSpecification
                 [10, 10, 10, 10],
                 descriptionUz: ForeignLanguageCertificateCriterionRule::DESCRIPTION_UZ,
             ),
-            '2.1.4' => self::rule(self::Competition, 0, 'current', [4, 4, 4, 4]),
+            '2.1.4' => self::rule(self::Maximum, 0, 'current', [4, 4, 4, 4]),
             '2.1.5' => self::rule(
                 self::Maximum,
                 1,

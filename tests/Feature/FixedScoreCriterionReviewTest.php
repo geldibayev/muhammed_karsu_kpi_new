@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\RecalculateReportPoints;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\CriterionManualScoreOption;
@@ -79,6 +80,23 @@ class FixedScoreCriterionReviewTest extends TestCase
     {
         $fixture = $this->createFixture();
         $unauthorizedUser = User::factory()->create();
+        $leadingUser = User::factory()->create(['degree' => 'no_degrees']);
+        Datum::query()->insert([
+            [
+                'name' => 'Birinchi tasdiqlangan loyiha',
+                'user_id' => $leadingUser->getKey(),
+                'criterion_id' => $fixture['criterion']->getKey(),
+                'status' => 'accepted',
+                'point' => 4,
+            ],
+            [
+                'name' => 'Ikkinchi tasdiqlangan loyiha',
+                'user_id' => $leadingUser->getKey(),
+                'criterion_id' => $fixture['criterion']->getKey(),
+                'status' => 'accepted',
+                'point' => 4,
+            ],
+        ]);
         $this->runAssignmentCommand($fixture['reviewer']);
 
         $this->actingAs($unauthorizedUser)
@@ -116,6 +134,16 @@ class FixedScoreCriterionReviewTest extends TestCase
             'datum_id' => $fixture['datum']->getKey(),
             'user_id' => $fixture['reviewer']->getKey(),
             'message_type' => 'manual_review_approved',
+        ]);
+        $this->assertDatabaseHas('points', [
+            'user_id' => $fixture['owner']->getKey(),
+            'criterion_id' => $fixture['criterion']->getKey(),
+            'point' => 4,
+        ]);
+        $this->assertDatabaseHas('points', [
+            'user_id' => $leadingUser->getKey(),
+            'criterion_id' => $fixture['criterion']->getKey(),
+            'point' => 4,
         ]);
 
         $this->actingAs($fixture['reviewer'])
@@ -158,6 +186,59 @@ class FixedScoreCriterionReviewTest extends TestCase
         ]);
     }
 
+    public function test_existing_competition_points_are_rebuilt_with_the_maximum_formula(): void
+    {
+        $fixture = $this->createFixture();
+        $competitionFormula = Formula::query()->create([
+            'code' => Formula::Competition,
+            'name' => ['uz' => 'Raqobat asosida'],
+            'status' => '1',
+        ]);
+        $fixture['criterion']->update(['formula_id' => $competitionFormula->getKey()]);
+        $fixture['datum']->update(['status' => 'accepted', 'point' => 4]);
+
+        $leadingUser = User::factory()->create(['degree' => 'no_degrees']);
+        Datum::query()->insert([
+            [
+                'name' => 'Eski loyiha bir',
+                'user_id' => $leadingUser->getKey(),
+                'criterion_id' => $fixture['criterion']->getKey(),
+                'status' => 'accepted',
+                'point' => 4,
+            ],
+            [
+                'name' => 'Eski loyiha ikki',
+                'user_id' => $leadingUser->getKey(),
+                'criterion_id' => $fixture['criterion']->getKey(),
+                'status' => 'accepted',
+                'point' => 4,
+            ],
+        ]);
+
+        app(RecalculateReportPoints::class)->handle($fixture['criterion']->report);
+
+        $this->assertDatabaseHas('points', [
+            'user_id' => $fixture['owner']->getKey(),
+            'criterion_id' => $fixture['criterion']->getKey(),
+            'point' => 2,
+        ]);
+
+        $migration = require database_path('migrations/2026_08_11_145810_use_maximum_formula_for_criterion_two_one_four.php');
+        $migration->up();
+
+        $this->assertSame(Formula::Maximum, $fixture['criterion']->fresh()->formula->code);
+        $this->assertDatabaseHas('points', [
+            'user_id' => $fixture['owner']->getKey(),
+            'criterion_id' => $fixture['criterion']->getKey(),
+            'point' => 4,
+        ]);
+        $this->assertDatabaseHas('points', [
+            'user_id' => $leadingUser->getKey(),
+            'criterion_id' => $fixture['criterion']->getKey(),
+            'point' => 4,
+        ]);
+    }
+
     /**
      * @return array{
      *     reviewer: User,
@@ -174,7 +255,8 @@ class FixedScoreCriterionReviewTest extends TestCase
             'status' => '1',
         ]);
         $formula = Formula::query()->create([
-            'name' => ['uz' => 'Raqobat reyting tizimida'],
+            'code' => Formula::Maximum,
+            'name' => ['uz' => 'Maksimal ballga asoslangan'],
             'status' => '1',
         ]);
         Criterion::query()->create([
@@ -188,6 +270,7 @@ class FixedScoreCriterionReviewTest extends TestCase
             'name' => ['uz' => 'Ikkinchi bo‘lim'],
             'report_id' => $report->getKey(),
             'formula_id' => $formula->getKey(),
+            'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
             'id' => 16,
