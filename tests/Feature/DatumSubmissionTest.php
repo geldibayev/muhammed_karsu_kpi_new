@@ -138,6 +138,48 @@ class DatumSubmissionTest extends TestCase
         Queue::assertNothingPushed();
     }
 
+    public function test_criterion_four_one_one_accepts_a_file_or_url_for_ai_review(): void
+    {
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => '4.1.1',
+            'res_type' => 'all',
+            'checking' => 'ai',
+            'ai_prompt' => 'OAV chiqishini tekshiring.',
+            'ai_model' => 'gemini-test',
+        ]);
+        $year = $this->createActiveYear();
+        Queue::fake();
+
+        $this->actingAs($teacher)
+            ->get(route('upload.show', $criterion))
+            ->assertOk()
+            ->assertSee('value="file"', false)
+            ->assertSee('value="url"', false)
+            ->assertSee('id="uploadResourceFile"', false)
+            ->assertSee('id="uploadResourceUrl"', false)
+            ->assertSee('yoxud ochiq URL kiriting');
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'url',
+                'uploadResourceUrl' => 'https://example.com/oav-chiqishi',
+                'year' => $year->getKey(),
+            ])
+            ->assertRedirect(route('upload.show', $criterion))
+            ->assertSessionHasNoErrors();
+
+        $datum = Datum::query()->sole();
+
+        $this->assertSame('url', data_get($datum->material, 'type'));
+        $this->assertSame('https://example.com/oav-chiqishi', data_get($datum->material, 'link'));
+        $this->assertSame('checking', $datum->status);
+        Queue::assertPushed(
+            ProcessAiDatumEvaluation::class,
+            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $datum->getKey(),
+        );
+    }
+
     public function test_criterion_3_1_15_only_allows_users_with_scientific_degrees_to_submit(): void
     {
         Storage::fake('local');

@@ -192,7 +192,8 @@ class Criterion extends Model
     /** @return array<int, 'file'|'url'> */
     public function allowedSubmissionResourceTypes(): array
     {
-        if ($this->checking === 'ai') {
+        if ($this->checking === 'ai'
+            && $this->code !== FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_ONE_CODE) {
             return ['file'];
         }
 

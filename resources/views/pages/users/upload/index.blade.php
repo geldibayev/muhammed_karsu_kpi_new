@@ -157,7 +157,11 @@
                                             <label class="small mb-0">Resurs manbai</label>
                                             @if($upload->checking === 'ai')
                                                 <div class="small text-muted mb-1">
-                                                    AI tekshiruvi uchun PDF, JPG, JPEG yoki PNG fayl yuklang.
+                                                    @if(in_array('url', $allowedResourceTypes, true))
+                                                        AI tekshiruvi uchun PDF, JPG, JPEG yoki PNG fayl yuklang yoxud ochiq URL kiriting.
+                                                    @else
+                                                        AI tekshiruvi uchun PDF, JPG, JPEG yoki PNG fayl yuklang.
+                                                    @endif
                                                 </div>
                                             @endif
 
