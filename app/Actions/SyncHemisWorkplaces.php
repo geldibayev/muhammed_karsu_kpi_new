@@ -62,6 +62,7 @@ class SyncHemisWorkplaces
                 ->firstOrFail();
 
             $workplaces = collect($employees)
+                ->filter(fn (mixed $employee): bool => $this->isWorkingEmployee($lockedUser, $employee))
                 ->map(fn (mixed $employee): array => $this->workplaceAttributes($lockedUser, $employee))
                 ->sortBy(fn (array $attributes): string => $this->workplaceSortKey($attributes))
                 ->values();
@@ -155,6 +156,21 @@ class SyncHemisWorkplaces
             'status_id' => $this->syncReference(EmployeeStatus::class, data_get($employee, 'employeeStatus')),
             'type_id' => $this->syncReference(EmployeeType::class, data_get($employee, 'employeeType')),
         ];
+    }
+
+    private function isWorkingEmployee(User $user, mixed $employee): bool
+    {
+        if (! is_array($employee)) {
+            throw new UnexpectedValueException("HEMIS foydalanuvchi [{$user->getKey()}] ish joyini yaroqsiz formatda qaytardi.");
+        }
+
+        $statusId = data_get($employee, 'employeeStatus.code');
+
+        if (! is_numeric($statusId)) {
+            throw new UnexpectedValueException('HEMIS ish joyining xodim holatini yaroqli formatda qaytarmadi.');
+        }
+
+        return (int) $statusId === EmployeeStatus::WORKING_ID;
     }
 
     /** @param  class-string<Model>  $model */

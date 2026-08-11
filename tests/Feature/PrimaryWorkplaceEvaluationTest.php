@@ -97,6 +97,57 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
         $this->assertSame('no_degrees', $user->fresh()->degree);
     }
 
+    public function test_hemis_sync_replaces_a_released_dean_position_with_the_working_position(): void
+    {
+        $user = User::factory()->create(['degree' => 'no_degrees']);
+        $this->createStoredWorkplace($user, 201, 11, 10, 101);
+
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response([
+                'data' => [
+                    'items' => [
+                        $this->employee(201, 11, 10, 101, 'Dekan', 14, 'Bo‘shagan'),
+                        $this->employee(202, 11, 11, 102, 'O‘qituvchi'),
+                    ],
+                ],
+            ]),
+        ]);
+
+        app(SyncHemisWorkplaces::class)->handle($user);
+
+        $syncedUser = $user->fresh();
+
+        $this->assertSame(1, $syncedUser->workplaces()->count());
+        $this->assertSame(102, $syncedUser->ratingWorkplace?->staff_position_id);
+        $this->assertSame('O‘qituvchi', $syncedUser->ratingWorkplace?->position?->name);
+        $this->assertSame(EmployeeStatus::WORKING_ID, $syncedUser->ratingWorkplace?->status_id);
+        $this->assertSame('hold_degrees', $syncedUser->degree);
+    }
+
+    public function test_hemis_sync_removes_workplaces_when_hemis_only_returns_released_positions(): void
+    {
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        $this->createStoredWorkplace($user, 201, 11, 11, 101);
+
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response([
+                'data' => [
+                    'items' => [
+                        $this->employee(201, 11, 11, 101, 'Dekan', 14, 'Bo‘shagan'),
+                    ],
+                ],
+            ]),
+        ]);
+
+        app(SyncHemisWorkplaces::class)->handle($user);
+
+        $syncedUser = $user->fresh();
+
+        $this->assertSame(0, $syncedUser->workplaces()->count());
+        $this->assertNull($syncedUser->ratingWorkplace);
+        $this->assertSame('no_degrees', $syncedUser->degree);
+    }
+
     public function test_login_sync_recalculates_active_reports_when_category_changes(): void
     {
         $user = User::factory()->create(['degree' => 'hold_degrees']);
@@ -454,6 +505,8 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
         int $degreeId,
         int $positionId,
         string $positionName,
+        int $statusId = EmployeeStatus::WORKING_ID,
+        string $statusName = 'Ishlamoqda',
     ): array {
         return [
             'department' => ['id' => $departmentId],
@@ -467,7 +520,7 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
             ],
             'employmentStaff' => ['code' => $formId, 'name' => $formId === 11 ? '1 stavka' : '0.5 stavka'],
             'staffPosition' => ['code' => $positionId, 'name' => $positionName],
-            'employeeStatus' => ['code' => 1, 'name' => 'Ishlamoqda'],
+            'employeeStatus' => ['code' => $statusId, 'name' => $statusName],
             'employeeType' => ['code' => 1, 'name' => 'Xodim'],
         ];
     }
