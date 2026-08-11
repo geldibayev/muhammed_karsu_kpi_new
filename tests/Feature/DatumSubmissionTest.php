@@ -17,6 +17,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -177,6 +178,55 @@ class DatumSubmissionTest extends TestCase
             ProcessAiDatumEvaluation::class,
             fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $datum->getKey(),
         );
+    }
+
+    #[DataProvider('fileRequiredScientificPublicationCriterionCodes')]
+    public function test_scientific_publication_criterion_requires_a_file_but_not_a_doi(string $criterionCode): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => $criterionCode,
+            'res_type' => 'all',
+            'checking' => 'ai',
+            'template' => '3',
+            'ai_prompt' => 'Maqolani tekshiring.',
+            'ai_model' => 'gemini-test',
+        ]);
+        $year = $this->createActiveYear();
+        $language = Language::query()->create([
+            'name' => ['uz' => 'Ingliz tili'],
+            'status' => '1',
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('upload.show', $criterion))
+            ->assertOk()
+            ->assertSee('DOI ixtiyoriy, fayl yuklash majburiy.');
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'year' => $year->getKey(),
+                'article' => $this->scopusArticle($language, '10.1000/Test.Article'),
+            ])
+            ->assertSessionHasErrors('uploadResourceFile');
+
+        $this->assertDatabaseCount('data', 0);
+        Queue::assertNothingPushed();
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'uploadResourceFile' => UploadedFile::fake()->create('article.pdf', 100, 'application/pdf'),
+                'year' => $year->getKey(),
+                'article' => $this->scopusArticle($language),
+            ])
+            ->assertRedirect(route('upload.show', $criterion))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('file', data_get(Datum::query()->sole()->material, 'type'));
     }
 
     public function test_scopus_upload_page_displays_missing_and_invalid_doi_errors(): void
@@ -739,6 +789,15 @@ class DatumSubmissionTest extends TestCase
         ]);
 
         return $year;
+    }
+
+    /** @return array<string, array{string}> */
+    public static function fileRequiredScientificPublicationCriterionCodes(): array
+    {
+        return [
+            '3.1.1' => ['3.1.1'],
+            '3.1.2' => ['3.1.2'],
+        ];
     }
 
     /** @return array<string, int|string|null> */

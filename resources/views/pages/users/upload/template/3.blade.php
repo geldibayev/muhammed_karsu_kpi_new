@@ -46,6 +46,8 @@
                    placeholder="10.xxxx/... yoki https://doi.org/10.xxxx/...">
             @if($upload->usesPublicationTierAiHumanReviewScore())
                 <small class="form-text text-muted">Yaroqli DOI kiritsangiz, fayl yuklash majburiy emas.</small>
+            @else
+                <small class="form-text text-muted">DOI ixtiyoriy, fayl yuklash majburiy.</small>
             @endif
             @error('article.doi')
                 <div class="invalid-feedback">{{ $message }}</div>
