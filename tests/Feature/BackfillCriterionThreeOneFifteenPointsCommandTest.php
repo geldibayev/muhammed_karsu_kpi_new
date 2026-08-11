@@ -89,6 +89,32 @@ class BackfillCriterionThreeOneFifteenPointsCommandTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_migration_corrects_existing_points_idempotently(): void
+    {
+        $report = Report::query()->create([
+            'name' => ['uz' => 'KPI hisoboti'],
+            'status' => '1',
+        ]);
+        $criterion = $this->createCriterion($report, '3.1.15');
+        $owner = User::factory()->create(['degree' => 'hold_degrees']);
+        $datum = $this->createDatum($owner, $criterion, 'accepted', 1);
+
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldReceive('handle')
+            ->twice()
+            ->with(Mockery::on(fn (Report $actual): bool => $actual->is($report)));
+        $this->app->instance(RecalculateReportPoints::class, $recalculateReportPoints);
+
+        $migration = require database_path('migrations/2026_08_11_152333_backfill_criterion_three_one_fifteen_points.php');
+        $migration->up();
+        $migration->up();
+
+        $this->assertSame(2.0, $datum->fresh()->point);
+        $this->assertSame(1, $datum->histories()
+            ->where('message_type', 'criterion_3_1_15_point_corrected')
+            ->count());
+    }
+
     private function createCriterion(Report $report, string $code): Criterion
     {
         return Criterion::query()->create([
