@@ -35,6 +35,8 @@ class StoreDatumRequest extends FormRequest
         $allowedResourceTypes = $criterion instanceof Criterion
             ? $criterion->allowedSubmissionResourceTypes()
             : ['file', 'url'];
+        $allowsDoiWithoutFile = $criterion instanceof Criterion
+            && $criterion->usesPublicationTierAiHumanReviewScore();
 
         if ($criterion instanceof Criterion && $criterion->usesHIndexSubmission()) {
             return [
@@ -58,7 +60,10 @@ class StoreDatumRequest extends FormRequest
             'year' => $this->yearRules($criterion),
             'uploadResourceFile' => [
                 'nullable',
-                Rule::requiredIf($this->input('uploadResourceType') === 'file'),
+                Rule::requiredIf(
+                    $this->input('uploadResourceType') === 'file'
+                    && (! $allowsDoiWithoutFile || ! $this->filled('article.doi')),
+                ),
                 Rule::prohibitedIf($this->input('uploadResourceType') !== 'file'),
                 File::types(['pdf', 'jpg', 'jpeg', 'png'])->max($maximumFileSizeMb * 1024),
             ],
@@ -77,7 +82,12 @@ class StoreDatumRequest extends FormRequest
             'article.lang' => ['nullable', 'integer', 'exists:languages,id'],
             'article.authors_num' => ['nullable', 'integer', 'min:1', 'max:1000'],
             'article.authors' => ['nullable', 'string', 'max:5000'],
-            'article.doi' => ['nullable', 'string', 'max:255'],
+            'article.doi' => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:~^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)?10\.\d{4,9}/\S+$~iu',
+            ],
             'article.journal' => ['nullable', 'string', 'max:1000'],
             'article.params' => ['nullable', 'string', 'max:2000'],
             'data' => ['nullable', 'array:name,division,authors,publisher,publish_params,certificate_no,certificate_date,form'],
@@ -190,13 +200,17 @@ class StoreDatumRequest extends FormRequest
     {
         return [
             'uploadResourceType.in' => 'Bu mezon uchun tanlangan resurs turiga ruxsat berilmagan.',
-            'uploadResourceFile.required' => 'Yuklanadigan faylni tanlang.',
+            'uploadResourceFile.required' => $this->route('upload') instanceof Criterion
+                && $this->route('upload')->usesPublicationTierAiHumanReviewScore()
+                    ? 'Fayl yuklang yoki yaroqli DOI kiriting.'
+                    : 'Yuklanadigan faylni tanlang.',
             'uploadResourceFile.mimes' => 'Faqat PDF, JPG, JPEG yoki PNG fayl yuklash mumkin.',
             'uploadResourceFile.max' => sprintf(
                 'Fayl hajmi %d MB dan oshmasligi kerak.',
                 max(1, (int) config('kpi.upload_max_file_size_mb', 5)),
             ),
             'uploadResourceUrl.required' => 'Resurs havolasini kiriting.',
+            'article.doi.regex' => 'DOI 10.xxxx/... yoki https://doi.org/10.xxxx/... formatida bo‘lishi kerak.',
             'year.exists' => 'Faqat ushbu mezonga biriktirilgan faol yilni tanlash mumkin.',
         ];
     }

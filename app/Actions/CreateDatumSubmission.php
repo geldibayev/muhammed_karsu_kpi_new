@@ -158,31 +158,39 @@ class CreateDatumSubmission
             ];
         } else {
             $file = $validated['uploadResourceFile'] ?? null;
+            $doi = data_get($validated, 'article.doi');
 
             if (! $file instanceof UploadedFile) {
-                throw new RuntimeException('Tasdiqlangan yuklama fayli topilmadi.');
+                if (! is_string($doi) || blank($doi)) {
+                    throw new RuntimeException('Tasdiqlangan yuklama fayli yoki DOI topilmadi.');
+                }
+
+                $material = [
+                    'type' => 'url',
+                    'link' => $this->doiUrl($doi),
+                ];
+            } else {
+                $storedPath = $file->store('uploads/kpi_resources/'.now()->format('Y/m'), 'local');
+
+                if ($storedPath === false) {
+                    throw new RuntimeException('Yuklangan faylni saqlab bo\'lmadi.');
+                }
+
+                $sha256 = hash_file('sha256', $file->getRealPath());
+                if (! is_string($sha256)) {
+                    throw new RuntimeException('Yuklangan fayl uchun nazorat summasi hisoblanmadi.');
+                }
+
+                $material = [
+                    'type' => 'file',
+                    'disk' => 'local',
+                    'path' => $storedPath,
+                    'original_name' => $file->getClientOriginalName(),
+                    'extension' => mb_strtolower($file->getClientOriginalExtension()),
+                    'mime' => $file->getMimeType(),
+                    'sha256' => $sha256,
+                ];
             }
-
-            $storedPath = $file->store('uploads/kpi_resources/'.now()->format('Y/m'), 'local');
-
-            if ($storedPath === false) {
-                throw new RuntimeException('Yuklangan faylni saqlab bo\'lmadi.');
-            }
-
-            $sha256 = hash_file('sha256', $file->getRealPath());
-            if (! is_string($sha256)) {
-                throw new RuntimeException('Yuklangan fayl uchun nazorat summasi hisoblanmadi.');
-            }
-
-            $material = [
-                'type' => 'file',
-                'disk' => 'local',
-                'path' => $storedPath,
-                'original_name' => $file->getClientOriginalName(),
-                'extension' => mb_strtolower($file->getClientOriginalExtension()),
-                'mime' => $file->getMimeType(),
-                'sha256' => $sha256,
-            ];
         }
 
         foreach (['article', 'data'] as $metadataKey) {
@@ -195,5 +203,16 @@ class CreateDatumSubmission
         }
 
         return $material;
+    }
+
+    private function doiUrl(string $doi): string
+    {
+        $doi = preg_replace(
+            '~^(?:https?://(?:dx\.)?doi\.org/|doi:\s*)~iu',
+            '',
+            trim($doi),
+        ) ?? trim($doi);
+
+        return 'https://doi.org/'.$doi;
     }
 }

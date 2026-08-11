@@ -7,9 +7,11 @@ use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Datum;
 use App\Models\Evaluation;
+use App\Models\Language;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\Year;
+use App\Support\ScopusCriterionRule;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -136,6 +138,86 @@ class DatumSubmissionTest extends TestCase
 
         $this->assertDatabaseCount('data', 0);
         Queue::assertNothingPushed();
+    }
+
+    public function test_scopus_criterion_accepts_a_valid_doi_without_a_file(): void
+    {
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => ScopusCriterionRule::CODE,
+            'res_type' => 'all',
+            'checking' => 'ai',
+            'template' => '3',
+            'ai_prompt' => ScopusCriterionRule::PROMPT,
+            'ai_model' => 'gemini-test',
+        ]);
+        $year = $this->createActiveYear();
+        $language = Language::query()->create([
+            'name' => ['uz' => 'Ingliz tili'],
+            'status' => '1',
+        ]);
+        Queue::fake();
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'year' => $year->getKey(),
+                'article' => $this->scopusArticle($language, 'doi:10.1000/Test.Article'),
+            ])
+            ->assertRedirect(route('upload.show', $criterion))
+            ->assertSessionHasNoErrors();
+
+        $datum = Datum::query()->sole();
+
+        $this->assertSame('url', data_get($datum->material, 'type'));
+        $this->assertSame('https://doi.org/10.1000/Test.Article', data_get($datum->material, 'link'));
+        $this->assertSame('doi:10.1000/Test.Article', data_get($datum->material, 'article.doi'));
+        $this->assertSame('checking', $datum->status);
+        Queue::assertPushed(
+            ProcessAiDatumEvaluation::class,
+            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $datum->getKey(),
+        );
+    }
+
+    public function test_scopus_upload_page_displays_missing_and_invalid_doi_errors(): void
+    {
+        $teacher = User::factory()->create();
+        $criterion = $this->createCriterion([
+            'code' => ScopusCriterionRule::CODE,
+            'res_type' => 'all',
+            'checking' => 'ai',
+            'template' => '3',
+        ]);
+        $year = $this->createActiveYear();
+        $language = Language::query()->create([
+            'name' => ['uz' => 'Ingliz tili'],
+            'status' => '1',
+        ]);
+
+        $this->actingAs($teacher)
+            ->from(route('upload.show', $criterion))
+            ->followingRedirects()
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'year' => $year->getKey(),
+                'article' => $this->scopusArticle($language),
+            ])
+            ->assertOk()
+            ->assertSee('Resursni yuborishda xatolik:')
+            ->assertSee('Fayl yuklang yoki yaroqli DOI kiriting.');
+
+        $this->actingAs($teacher)
+            ->from(route('upload.show', $criterion))
+            ->followingRedirects()
+            ->post(route('upload.store', $criterion), [
+                'uploadResourceType' => 'file',
+                'year' => $year->getKey(),
+                'article' => $this->scopusArticle($language, 'noto‘g‘ri-doi'),
+            ])
+            ->assertOk()
+            ->assertSee('DOI 10.xxxx/... yoki https://doi.org/10.xxxx/... formatida bo‘lishi kerak.');
+
+        $this->assertDatabaseCount('data', 0);
     }
 
     public function test_criterion_four_one_one_accepts_a_file_or_url_for_ai_review(): void
@@ -657,5 +739,20 @@ class DatumSubmissionTest extends TestCase
         ]);
 
         return $year;
+    }
+
+    /** @return array<string, int|string|null> */
+    private function scopusArticle(Language $language, ?string $doi = null): array
+    {
+        return [
+            'name' => 'Scopus maqolasi',
+            'keywords' => 'ilm, ta’lim',
+            'lang' => $language->getKey(),
+            'authors_num' => 1,
+            'authors' => 'Test Muallif',
+            'doi' => $doi,
+            'journal' => 'Test Journal',
+            'params' => '2026, 1-son',
+        ];
     }
 }

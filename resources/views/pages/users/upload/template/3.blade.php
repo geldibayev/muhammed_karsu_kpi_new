@@ -41,7 +41,15 @@
     <div class="form-floating">
         <div class="form-group">
             <label for="doi" class="mb-0 small">DOI</label>
-            <input type="text" name="article[doi]" class="form-control" id="doi">
+            <input type="text" name="article[doi]" class="form-control @error('article.doi') is-invalid @enderror"
+                   id="doi" value="{{ old('article.doi') }}"
+                   placeholder="10.xxxx/... yoki https://doi.org/10.xxxx/...">
+            @if($upload->usesPublicationTierAiHumanReviewScore())
+                <small class="form-text text-muted">Yaroqli DOI kiritsangiz, fayl yuklash majburiy emas.</small>
+            @endif
+            @error('article.doi')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
         </div>
     </div>
 </div>

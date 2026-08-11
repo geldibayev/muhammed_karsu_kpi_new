@@ -80,6 +80,17 @@
                     @endif
                 </div>
                 <div class="card-body p-0">
+                    @if($errors->any())
+                        <div class="alert alert-danger m-3" role="alert">
+                            <div class="font-weight-bold">Resursni yuborishda xatolik:</div>
+                            <ul class="mb-0 pl-3">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     @if($upload->usesHIndexSubmission())
                         <form action="{{ route('upload.store', $upload) }}" method="post" id="hIndexForm">
                             @csrf
@@ -176,7 +187,7 @@
                                                     </label>
                                                     <input type="file" id="uploadResourceFile" name="uploadResourceFile"
                                                            class="d-none"
-                                                           accept=".pdf,.jpg,.jpeg,.png" {{ count($allowedResourceTypes) === 1 ? 'required' : '' }}>
+                                                           accept=".pdf,.jpg,.jpeg,.png" {{ count($allowedResourceTypes) === 1 && !$upload->usesPublicationTierAiHumanReviewScore() ? 'required' : '' }}>
                                                 </div>
                                                 <div class="text-danger small mt-1" id="limit_error"
                                                      style="display: none;">
