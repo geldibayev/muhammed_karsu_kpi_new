@@ -81,7 +81,7 @@ class DuplicateDatumSubmissionTest extends TestCase
         $this->assertSame(2, Datum::query()->distinct()->count('user_id'));
     }
 
-    public function test_cancelled_resource_can_be_corrected_and_uploaded_again(): void
+    public function test_cancelled_resource_cannot_be_uploaded_again(): void
     {
         Queue::fake();
         $teacher = User::factory()->create();
@@ -104,12 +104,13 @@ class DuplicateDatumSubmissionTest extends TestCase
                 ...$payload,
                 'uploadResourceUrl' => 'https://example.com/resource',
             ])
-            ->assertRedirect(route('upload.show', $criterion))
-            ->assertSessionHasNoErrors();
+            ->assertRedirect()
+            ->assertSessionHasErrors([
+                'uploadResourceUrl' => "Ushbu resurs avval qaytarilgan (#{$firstDatum->getKey()}) va uni qayta yuklash mumkin emas.",
+            ]);
 
-        $this->assertDatabaseCount('data', 2);
-        $this->assertDatabaseCount('datum_resource_identifiers', 2);
-        $this->assertSame(1, DB::table('datum_resource_identifiers')->whereNotNull('active_value_hash')->count());
+        $this->assertDatabaseCount('data', 1);
+        $this->assertDatabaseCount('datum_resource_identifiers', 1);
     }
 
     /** @return array{Criterion, Year, Report} */
@@ -123,11 +124,14 @@ class DuplicateDatumSubmissionTest extends TestCase
             'name' => ['uz' => 'Test hisoboti'],
             'status' => '1',
         ]);
-        $year = Year::query()->create([
+        DB::table('years')->insert([
             'id' => 2026,
             'name' => '2026',
             'status' => '1',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
+        $year = Year::query()->findOrFail(2026);
         $criterion = $this->createCriterion($report, $year, $criterionAttributes);
 
         return [$criterion, $year, $report];

@@ -24,6 +24,17 @@ class DatumResourceIdentifierRegistry
         }
 
         $blockingIdentifiers = $this->blockingIdentifiers($identifiers);
+        $returnedDuplicate = $this->findReturnedDuplicate(
+            $reportId,
+            $datum->user_id,
+            $blockingIdentifiers,
+            $datum->getKey(),
+        );
+
+        if ($returnedDuplicate !== null) {
+            throw $this->returnedDuplicateValidation($datum, $returnedDuplicate->datum_id);
+        }
+
         $duplicate = $this->findActiveDuplicate(
             $reportId,
             $datum->user_id,
@@ -186,6 +197,35 @@ class DatumResourceIdentifierRegistry
             ->first(['id', 'datum_id']);
     }
 
+    /**
+     * @param  array<int, array{type: string, value_hash: string}>  $identifiers
+     */
+    private function findReturnedDuplicate(
+        int $reportId,
+        int $userId,
+        array $identifiers,
+        int $exceptDatumId,
+    ): ?DatumResourceIdentifier {
+        if ($identifiers === []) {
+            return null;
+        }
+
+        return DatumResourceIdentifier::query()
+            ->where('report_id', $reportId)
+            ->where('user_id', $userId)
+            ->where('datum_id', '!=', $exceptDatumId)
+            ->whereHas('datum', fn (Builder $query): Builder => $query->where('status', 'cancelled'))
+            ->where(function (Builder $query) use ($identifiers): void {
+                foreach ($identifiers as $identifier) {
+                    $query->orWhere(function (Builder $query) use ($identifier): void {
+                        $query->where('type', $identifier['type'])
+                            ->where('value_hash', $identifier['value_hash']);
+                    });
+                }
+            })
+            ->first(['id', 'datum_id']);
+    }
+
     private function duplicateValidation(Datum $datum, ?int $duplicateDatumId = null): ValidationException
     {
         $input = match (data_get($datum->material, 'type')) {
@@ -197,6 +237,19 @@ class DatumResourceIdentifierRegistry
 
         return ValidationException::withMessages([
             $input => "Ushbu resurs siz tomonidan shu hisobot davrida oldin yuklangan{$reference}.",
+        ]);
+    }
+
+    private function returnedDuplicateValidation(Datum $datum, int $duplicateDatumId): ValidationException
+    {
+        $input = match (data_get($datum->material, 'type')) {
+            'url' => 'uploadResourceUrl',
+            'h_index' => 'h_index',
+            default => 'uploadResourceFile',
+        };
+
+        return ValidationException::withMessages([
+            $input => "Ushbu resurs avval qaytarilgan (#{$duplicateDatumId}) va uni qayta yuklash mumkin emas.",
         ]);
     }
 
