@@ -98,6 +98,42 @@ class ResourceStatusListingTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_cancelled_resource_detail_prominently_shows_latest_rejection_reason_from_history(): void
+    {
+        $owner = User::factory()->create();
+        $datum = $this->createDatum(
+            $owner,
+            $this->createCriterion(),
+            DatumStatus::Cancelled,
+            'Qaytarilgan resurs',
+            ['reason' => 'Eski xulosa'],
+        );
+        $datum->histories()->createMany([
+            [
+                'user_id' => $owner->getKey(),
+                'type' => 'error',
+                'message' => 'Birinchi qaytarilish sababi',
+                'message_type' => 'manual_review_rejected',
+            ],
+            [
+                'user_id' => $owner->getKey(),
+                'type' => 'error',
+                'message' => 'Oxirgi qaytarilish sababi',
+                'message_type' => 'manual_review_rejected',
+            ],
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->get(route('upload.details', $datum))
+            ->assertOk()
+            ->assertSee('alert alert-danger', false)
+            ->assertSee('Resursning qaytarilish sababi')
+            ->assertSee('Oxirgi qaytarilish sababi');
+
+        $this->assertSame(2, substr_count($response->getContent(), 'Oxirgi qaytarilish sababi'));
+        $this->assertSame(1, substr_count($response->getContent(), 'Birinchi qaytarilish sababi'));
+    }
+
     public function test_status_listing_is_paginated_with_bootstrap_markup(): void
     {
         $owner = User::factory()->create();

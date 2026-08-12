@@ -39,6 +39,17 @@
                             </span>
                         </div>
                         <div class="card-body">
+                            @if($status === \App\Enums\DatumStatus::Cancelled)
+                                @php($latestCancellationReason = $datum->histories->firstWhere('type', 'error')?->messageForSubmitter() ?? $datum->reason)
+                                <div class="alert alert-danger" role="alert">
+                                    <h4 class="h6 font-weight-bold">
+                                        <i class="fas fa-exclamation-triangle mr-1" aria-hidden="true"></i>
+                                        Resursning qaytarilish sababi
+                                    </h4>
+                                    <div class="text-break" style="white-space: pre-line;">{{ $latestCancellationReason ?: 'Qaytarilish sababi ko‘rsatilmagan.' }}</div>
+                                </div>
+                            @endif
+
                             @if($status === \App\Enums\DatumStatus::Deleted)
                                 <div class="alert alert-warning">
                                     <h4 class="h6 font-weight-bold">

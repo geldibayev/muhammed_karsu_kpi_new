@@ -100,7 +100,7 @@ class DatumController extends Controller
             'user:id,name,degree',
             'user.ratingWorkplace.department:id,parent_id',
             'year:id,name',
-            'histories' => fn ($query) => $query->latest(),
+            'histories' => fn ($query) => $query->latest('id'),
         ]);
         $datum->setRelation(
             'histories',
