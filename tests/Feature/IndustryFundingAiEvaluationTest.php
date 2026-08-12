@@ -21,6 +21,13 @@ class IndustryFundingAiEvaluationTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_prompt_requires_a_contract_and_the_uploader_in_its_participant_list(): void
+    {
+        $this->assertStringContainsString('shartnomaning o‘zi bo‘lishi shart', IndustryFundingCriterionRule::PROMPT);
+        $this->assertStringContainsString('`author_full_name` tizim bergan ishonchli resurs yuklovchisining ismidir', IndustryFundingCriterionRule::PROMPT);
+        $this->assertStringContainsString('`author_full_name` shartnomadagi loyiha rahbari, ijrochilar yoki ishtirokchilar ro‘yxatida bo‘lmasa cancelled', IndustryFundingCriterionRule::PROMPT);
+    }
+
     public function test_server_calculates_each_million_then_divides_by_coauthors(): void
     {
         $aiResult = AiEvaluationResult::fromPayload([
