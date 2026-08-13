@@ -33,7 +33,8 @@ class AiHumanReviewFilterRequest extends FormRequest
                     $hasPendingResource = Datum::query()
                         ->when(
                             $user->isSuperAdmin(),
-                            fn (Builder $query): Builder => $query->pendingAiHumanReviews(),
+                            fn (Builder $query): Builder => $query
+                                ->pendingAiHumanReviews((int) $user->hemis_id),
                             fn (Builder $query): Builder => $query
                                 ->pendingAiHumanReviewFor((int) $user->hemis_id),
                         )

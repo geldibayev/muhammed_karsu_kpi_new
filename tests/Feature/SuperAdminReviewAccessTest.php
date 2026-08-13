@@ -44,6 +44,14 @@ class SuperAdminReviewAccessTest extends TestCase
         $ordinaryUser = User::factory()->create();
         $manualDatum = $this->datum($owner, $manualCriterion, 'received', 'Boshqa mas’ulning qo‘lda resursi');
         $aiDatum = $this->datum($owner, $aiCriterion, 'checking', 'Boshqa mas’ulning AI resursi');
+        $ownCriterion = $aiCriterion->replicate();
+        $ownCriterion->fill(['code' => 'test.ai.own', 'name' => ['uz' => 'Super admin kriteriyasi']])->save();
+        $otherCriterion = $aiCriterion->replicate();
+        $otherCriterion->fill(['code' => 'test.ai.other', 'name' => ['uz' => 'Boshqa mas’ul kriteriyasi']])->save();
+        $ownAiDatum = $this->datum($owner, $ownCriterion, 'checking', 'Super adminning AI resursi');
+        $ownAiDatum->update(['reviewer_hemis_id' => $superAdmin->hemis_id]);
+        $otherReviewerAiDatum = $this->datum($owner, $otherCriterion, 'checking', 'Boshqa tekshiruvchining AI resursi');
+        $otherReviewerAiDatum->update(['reviewer_hemis_id' => User::factory()->create()->hemis_id]);
 
         $this->actingAs($superAdmin)
             ->get(route('reviews.index'))
@@ -52,14 +60,24 @@ class SuperAdminReviewAccessTest extends TestCase
         $this->actingAs($superAdmin)
             ->get(route('ai-human-reviews.index'))
             ->assertOk()
-            ->assertSee($aiDatum->name);
+            ->assertSee($aiDatum->name)
+            ->assertSee($ownAiDatum->name)
+            ->assertSee('Super admin kriteriyasi')
+            ->assertDontSee($otherReviewerAiDatum->name)
+            ->assertDontSee('Boshqa mas’ul kriteriyasi');
         $this->actingAs($superAdmin)
             ->get(route('ai-human-reviews.index', ['criterion' => $aiCriterion->getKey()]))
             ->assertOk()
             ->assertSee($aiDatum->name)
             ->assertDontSee($manualDatum->name);
+        $this->actingAs($superAdmin)
+            ->from(route('ai-human-reviews.index'))
+            ->get(route('ai-human-reviews.index', ['criterion' => $otherCriterion->getKey()]))
+            ->assertRedirect(route('ai-human-reviews.index'))
+            ->assertSessionHasErrors('criterion');
         $this->actingAs($superAdmin)->get(route('reviews.show', $manualDatum))->assertOk();
         $this->actingAs($superAdmin)->get(route('reviews.show', $aiDatum))->assertOk();
+        $this->actingAs($superAdmin)->get(route('reviews.show', $otherReviewerAiDatum))->assertOk();
 
         $this->actingAs($ordinaryUser)->get(route('reviews.index'))->assertForbidden();
         $this->actingAs($ordinaryUser)->get(route('ai-human-reviews.index'))->assertForbidden();

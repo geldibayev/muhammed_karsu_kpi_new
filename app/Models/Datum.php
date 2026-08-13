@@ -46,9 +46,13 @@ class Datum extends Model
             );
     }
 
-    public function scopePendingAiHumanReviews(Builder $query): Builder
+    public function scopePendingAiHumanReviews(Builder $query, int $reviewerHemisId): Builder
     {
         return $query
+            ->where(function (Builder $query) use ($reviewerHemisId): void {
+                $query->whereNull('reviewer_hemis_id')
+                    ->orWhere('reviewer_hemis_id', $reviewerHemisId);
+            })
             ->whereIn('status', [
                 DatumStatus::Received->value,
                 DatumStatus::Checking->value,

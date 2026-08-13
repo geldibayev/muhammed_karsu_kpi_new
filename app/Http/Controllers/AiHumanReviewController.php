@@ -17,7 +17,7 @@ class AiHumanReviewController extends Controller
         $selectedCriterionId = $request->integer('criterion') ?: null;
 
         $pendingScope = fn (Builder $query): Builder => $isSuperAdmin
-            ? $query->pendingAiHumanReviews()
+            ? $query->pendingAiHumanReviews((int) $user->hemis_id)
             : $query->pendingAiHumanReviewFor((int) $user->hemis_id);
 
         $criteria = Criterion::query()
