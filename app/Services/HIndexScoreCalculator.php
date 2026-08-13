@@ -52,6 +52,7 @@ class HIndexScoreCalculator
     public function score(int $hIndex, float $maximumShare): float
     {
         $percentage = match (true) {
+            $hIndex <= 0 => 0,
             $hIndex >= 5 => 1,
             $hIndex === 4 => 0.75,
             $hIndex === 3 => 0.5,

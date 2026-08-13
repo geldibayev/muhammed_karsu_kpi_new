@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\DatumStatus;
+use App\Models\Criterion;
 use App\Models\CriterionManualScoreOption;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
@@ -65,7 +66,15 @@ class DatumPolicy
     public function updateAcceptedScore(User $user, Datum $datum): bool
     {
         return $datum->status === DatumStatus::Accepted->value
+            && $datum->loadMissing('criterion:id,code')->criterion?->code !== Criterion::H_INDEX_CODE
             && ($user->isSuperAdmin() || $this->canManageAssignedFinalDecision($user, $datum));
+    }
+
+    public function updateHIndexProfile(User $user, Datum $datum): bool
+    {
+        return $user->isSuperAdmin()
+            && $datum->status === DatumStatus::Accepted->value
+            && $datum->loadMissing('criterion:id,code')->criterion?->code === Criterion::H_INDEX_CODE;
     }
 
     public function correctAcceptedScore(User $user, Datum $datum): bool

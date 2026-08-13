@@ -11,6 +11,7 @@ class HIndexScoreCalculatorTest extends TestCase
     {
         $calculator = new HIndexScoreCalculator;
 
+        $this->assertSame(0.0, $calculator->score(0, 3));
         $this->assertSame(0.75, $calculator->score(2, 3));
         $this->assertSame(1.5, $calculator->score(3, 3));
         $this->assertSame(2.25, $calculator->score(4, 3));
@@ -45,6 +46,18 @@ class HIndexScoreCalculatorTest extends TestCase
 
         $this->assertSame(2.25, $result['total']);
         $this->assertStringContainsString('Scopus h=4: 2.25 ball', $result['summary']);
+    }
+
+    public function test_zero_h_index_has_zero_point(): void
+    {
+        $calculator = new HIndexScoreCalculator;
+
+        $result = $calculator->calculate([
+            'web_of_science' => ['link' => 'https://wos.example/profile', 'value' => 0],
+        ], 3);
+
+        $this->assertSame(0.0, $result['total']);
+        $this->assertStringContainsString('Web of Science h=0: 0.00 ball', $result['summary']);
     }
 
     public function test_research_gate_replaces_scopus_only_when_its_score_is_higher(): void

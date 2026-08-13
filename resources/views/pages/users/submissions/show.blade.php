@@ -223,6 +223,61 @@
                             </div>
                         </div>
                     @endif
+
+                    @if($datum->criterion?->isHIndexCriterion())
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title font-weight-bold">H-index ma’lumotlari</h3>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped mb-0">
+                                        <tbody>
+                                        @foreach(\App\Actions\CorrectHIndexProfileValue::PROFILES as $profileKey => $profileLabel)
+                                            @php($profile = data_get($datum->hIndexProfiles(), $profileKey, []))
+                                            <tr>
+                                                <th style="width: 25%;">{{ $profileLabel }}</th>
+                                                <td>
+                                                    @if(filled(data_get($profile, 'link')))
+                                                        <a href="{{ data_get($profile, 'link') }}" target="_blank" rel="noopener noreferrer">Profilni ochish</a>
+                                                    @else
+                                                        <span class="text-muted">Profil kiritilmagan</span>
+                                                    @endif
+                                                </td>
+                                                <td style="width: 40%;">
+                                                    @can('updateHIndexProfile', $datum)
+                                                    @if(is_numeric(data_get($profile, 'value')) && filled(data_get($profile, 'link')))
+                                                        <form method="POST" action="{{ route('submissions.h-index-profile.update', $datum) }}"
+                                                              class="form-inline justify-content-end">
+                                                            @csrf
+                                                            @method('PATCH')
+                                                            <input type="hidden" name="profile" value="{{ $profileKey }}">
+                                                            <input type="hidden" name="expected_value" value="{{ data_get($profile, 'value', 0) }}">
+                                                            <label class="sr-only" for="h-index-{{ $profileKey }}">{{ $profileLabel }} H-index</label>
+                                                            <input id="h-index-{{ $profileKey }}" name="new_value" type="number" min="0" step="1" required
+                                                                   value="{{ old('profile') === $profileKey ? old('new_value') : data_get($profile, 'value') }}"
+                                                                   class="form-control form-control-sm mr-2 @if(old('profile') === $profileKey) @error('new_value') is-invalid @enderror @endif"
+                                                                   style="width: 90px;">
+                                                            <button type="submit" class="btn btn-warning btn-sm">Saqlash</button>
+                                                        </form>
+                                                        @if(old('profile') === $profileKey)
+                                                            @error('new_value')<div class="text-danger small mt-1 text-right">{{ $message }}</div>@enderror
+                                                        @endif
+                                                    @else
+                                                        <span class="text-muted">Tahrirlash uchun profil havolasi va qiymati kerak</span>
+                                                    @endif
+                                                    @else
+                                                        <span>h-index: <strong>{{ data_get($profile, 'value', '—') }}</strong></span>
+                                                    @endcan
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="col-lg-4">
