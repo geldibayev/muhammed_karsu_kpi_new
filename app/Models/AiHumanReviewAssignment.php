@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,18 +38,16 @@ class AiHumanReviewAssignment extends Model
             return (int) $criterionReviewerHemisId;
         }
 
-        if ($criterion->code === FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_ONE_CODE) {
-            $existingReviewerQuery = $criterion->reviewerAssignment();
+        $existingReviewerQuery = $criterion->reviewerAssignment();
 
-            if ($sharedLock) {
-                $existingReviewerQuery->sharedLock();
-            }
+        if ($sharedLock) {
+            $existingReviewerQuery->sharedLock();
+        }
 
-            $existingReviewerHemisId = $existingReviewerQuery->value('hemis_id');
+        $existingReviewerHemisId = $existingReviewerQuery->value('hemis_id');
 
-            if (is_numeric($existingReviewerHemisId) && (int) $existingReviewerHemisId > 0) {
-                return (int) $existingReviewerHemisId;
-            }
+        if (is_numeric($existingReviewerHemisId) && (int) $existingReviewerHemisId > 0) {
+            return (int) $existingReviewerHemisId;
         }
 
         $query = static::query()->active();

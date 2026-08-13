@@ -239,7 +239,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertSame(4.0, $datum->fresh()->point);
     }
 
-    public function test_job_assigns_ai_human_review_result_to_global_reviewer_regardless_of_criterion(): void
+    public function test_job_assigns_ai_human_review_result_to_criterion_reviewer_before_global_reviewer(): void
     {
         $datum = $this->createDatum();
         User::factory()->create(['hemis_id' => 3172011004]);
@@ -248,9 +248,10 @@ class ProcessAiDatumEvaluationTest extends TestCase
             'active_slot' => 1,
             'assigned_at' => now(),
         ]);
+        $criterionReviewer = User::factory()->create();
         CriterionReviewerAssignment::query()->create([
             'criterion_id' => $datum->criterion_id,
-            'hemis_id' => User::factory()->create()->hemis_id,
+            'hemis_id' => $criterionReviewer->hemis_id,
             'criterion_code' => '1/'.$datum->criterion_id,
         ]);
         $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
@@ -265,7 +266,7 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $datum->refresh();
         $this->assertSame('checking', $datum->status);
         $this->assertSame(0.0, $datum->point);
-        $this->assertSame(3172011004, $datum->reviewer_hemis_id);
+        $this->assertSame($criterionReviewer->hemis_id, $datum->reviewer_hemis_id);
         $this->assertSame(Datum::PUBLIC_CHECKING_REASON, $datum->reason);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->id,
