@@ -5,6 +5,7 @@ namespace App\Actions;
 use App\Enums\DatumStatus;
 use App\Enums\RatingMode;
 use App\Models\Report;
+use App\Models\StaffPosition;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -38,6 +39,10 @@ class PaginateRatingUsers
     private function query(?Report $report, array $filters): Builder
     {
         $mode = RatingMode::fromFilters($filters);
+        $positionIds = in_array($mode, [RatingMode::WithDegree, RatingMode::WithoutDegree], true)
+            && ($filters['position'] ?? null)
+                ? $this->positionIds((int) $filters['position'])
+                : [];
 
         return User::query()
             ->select(['id', 'hemis_id', 'name', 'image', 'degree'])
@@ -93,12 +98,10 @@ class PaginateRatingUsers
                 fn (Builder $query): Builder => $query->where('degree', '!=', 'hold_degrees'),
             )
             ->when(
-                in_array($mode, [RatingMode::WithDegree, RatingMode::WithoutDegree], true)
-                    ? ($filters['position'] ?? null)
-                    : null,
-                fn (Builder $query, int $positionId): Builder => $query
+                $positionIds,
+                fn (Builder $query, array $positionIds): Builder => $query
                     ->whereHas('ratingWorkplace', fn (Builder $workplaceQuery): Builder => $workplaceQuery
-                        ->where('staff_position_id', $positionId)),
+                        ->whereIn('staff_position_id', $positionIds)),
             )
             ->when(
                 $filters['search'] ?? null,
@@ -145,6 +148,27 @@ class PaginateRatingUsers
             );
     }
 
+    /** @return list<int> */
+    private function positionIds(int $positionId): array
+    {
+        $position = StaffPosition::query()->find($positionId, ['id', 'name']);
+
+        if ($position === null || ! in_array($this->normalizePositionName($position->name), ['dekanmuovini', 'dekanmuavini'], true)) {
+            return [$positionId];
+        }
+
+        return StaffPosition::query()
+            ->get(['id', 'name'])
+            ->filter(function (StaffPosition $position): bool {
+                $name = $this->normalizePositionName($position->name);
+
+                return in_array($name, ['dekanmuovini', 'dekanmuavini'], true)
+                    || (str_contains($name, 'yoshlarbilanishlash') && str_contains($name, 'dekanorinbosari'));
+            })
+            ->pluck('id')
+            ->all();
+    }
+
     private function applySubmissionReportScope(Builder $query, ?Report $report): Builder
     {
         return $query
@@ -179,5 +203,10 @@ class PaginateRatingUsers
         }
 
         return $query;
+    }
+
+    private function normalizePositionName(string $name): string
+    {
+        return Str::lower(preg_replace('/[^\p{L}\p{N}]+/u', '', $name) ?? '');
     }
 }

@@ -417,6 +417,41 @@ class RatingPageTest extends TestCase
                 && $users->items()[0]->is($professorWithoutDegree));
     }
 
+    public function test_dean_deputy_filter_includes_the_deputy_for_youth_affairs(): void
+    {
+        $viewer = User::factory()->create();
+        $faculty = $this->createDepartment('Dekan muovinlari fakulteti');
+        $department = $this->createDepartment('Dekan muovinlari kafedrasi', $faculty);
+        $deanDeputy = User::factory()->create([
+            'name' => $this->userName('Dekan Muovini'),
+            'degree' => 'hold_degrees',
+        ]);
+        $youthAffairsDeputy = User::factory()->create([
+            'name' => $this->userName('Yoshlar Dekan O‘rinbosari'),
+            'degree' => 'hold_degrees',
+        ]);
+        $deanDeputyWorkplace = $this->createWorkplace($deanDeputy, $department, 'Dekan muovini');
+        $this->createWorkplace(
+            $youthAffairsDeputy,
+            $department,
+            'Yoshlar bilan ishlash bo‘yicha dekan o‘rinbosari',
+        );
+        $report = $this->createReport('Dekan muovinlari hisoboti', '1');
+        $criterion = $this->createCriterion($report, 'Dekan muovinlari mezoni');
+        $this->createPoint($deanDeputy, $criterion, $report, 10);
+        $this->createPoint($youthAffairsDeputy, $criterion, $report, 5);
+
+        $this->actingAs($viewer)
+            ->get(route('ratings.index', [
+                'mode' => 'with_degree',
+                'position' => $deanDeputyWorkplace->staff_position_id,
+            ]))
+            ->assertOk()
+            ->assertSee('Dekan Muovini')
+            ->assertSee('Yoshlar Dekan O‘rinbosari')
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users->total() === 2);
+    }
+
     public function test_invalid_rating_filters_are_rejected(): void
     {
         $viewer = User::factory()->create();
