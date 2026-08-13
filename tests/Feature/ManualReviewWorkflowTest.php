@@ -436,7 +436,7 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertSessionHasErrors('criterion');
     }
 
-    public function test_command_assigns_legacy_ai_human_reviews_but_skips_failures_and_transfers(): void
+    public function test_command_assigns_legacy_ai_human_reviews_and_failures_but_skips_transfers(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
         $oldReviewer = User::factory()->create();
@@ -495,20 +495,24 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
 
         $this->artisan('kpi:ai:assign-human-reviews', ['--dry-run' => true])
-            ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 1')
+            ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 2')
             ->assertSuccessful();
         $this->assertNull($humanReview->fresh()->reviewer_hemis_id);
 
         $this->artisan('kpi:ai:assign-human-reviews')
-            ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 1')
+            ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 2')
             ->assertSuccessful();
 
         $this->assertSame(3172011004, $humanReview->fresh()->reviewer_hemis_id);
         $this->assertSame($oldReviewer->hemis_id, $previouslyAssigned->fresh()->reviewer_hemis_id);
-        $this->assertNull($failed->fresh()->reviewer_hemis_id);
+        $this->assertSame(3172011004, $failed->fresh()->reviewer_hemis_id);
         $this->assertNull($transferred->fresh()->reviewer_hemis_id);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $humanReview->id,
+            'message_type' => 'ai_human_review_assigned',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $failed->id,
             'message_type' => 'ai_human_review_assigned',
         ]);
 

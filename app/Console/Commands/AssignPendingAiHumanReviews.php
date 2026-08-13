@@ -109,7 +109,8 @@ class AssignPendingAiHumanReviews extends Command
             )
             ->whereHas(
                 'histories',
-                fn (Builder $query): Builder => $query->where('message_type', 'ai_evaluation'),
+                fn (Builder $query): Builder => $query
+                    ->whereIn('message_type', ['ai_evaluation', 'ai_failed']),
             );
 
         if (! $reassign) {
@@ -121,12 +122,13 @@ class AssignPendingAiHumanReviews extends Command
 
     private function shouldAssign(Datum $datum, int $reviewerHemisId, bool $reassign): bool
     {
-        return (int) ($datum->last_ai_evaluation_id ?? 0)
-            > (int) ($datum->last_criterion_transfer_id ?? 0)
-            && (int) ($datum->last_ai_evaluation_id ?? 0)
-                > (int) ($datum->last_ai_queue_id ?? 0)
-            && (int) ($datum->last_ai_evaluation_id ?? 0)
-                > (int) ($datum->last_ai_failure_id ?? 0)
+        $lastHumanReviewId = max(
+            (int) ($datum->last_ai_evaluation_id ?? 0),
+            (int) ($datum->last_ai_failure_id ?? 0),
+        );
+
+        return $lastHumanReviewId > (int) ($datum->last_criterion_transfer_id ?? 0)
+            && $lastHumanReviewId > (int) ($datum->last_ai_queue_id ?? 0)
             && ($datum->reviewer_hemis_id === null
                 || ($reassign && (int) $datum->reviewer_hemis_id !== $reviewerHemisId));
     }
@@ -162,9 +164,13 @@ class AssignPendingAiHumanReviews extends Command
                 ->selectRaw("MAX(CASE WHEN message_type = 'ai_failed' THEN id ELSE 0 END) AS last_failure_id")
                 ->first();
 
-            if ((int) $history?->last_evaluation_id <= (int) $history?->last_transfer_id
-                || (int) $history?->last_evaluation_id <= (int) $history?->last_queue_id
-                || (int) $history?->last_evaluation_id <= (int) $history?->last_failure_id) {
+            $lastHumanReviewId = max(
+                (int) $history?->last_evaluation_id,
+                (int) $history?->last_failure_id,
+            );
+
+            if ($lastHumanReviewId <= (int) $history?->last_transfer_id
+                || $lastHumanReviewId <= (int) $history?->last_queue_id) {
                 return false;
             }
 
