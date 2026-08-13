@@ -326,9 +326,16 @@ class ManualReviewWorkflowTest extends TestCase
             'status' => 'checking',
             'reviewer_hemis_id' => $reviewer->hemis_id,
         ]);
+        $humanReview->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'Inson tekshiruvi kerak.',
+            'message_type' => 'ai_evaluation',
+        ]);
         $processing = $this->createDatum($owner, $criterion, [
             'name' => 'AI hali ishlayapti',
             'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
         ]);
         $failed = $this->createDatum($owner, $criterion, [
             'name' => 'AI texnik xatosi',
@@ -356,7 +363,7 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertOk();
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $processing))
-            ->assertForbidden();
+            ->assertOk();
         $this->actingAs($otherUser)
             ->get(route('ai-human-reviews.index'))
             ->assertForbidden();
@@ -397,6 +404,14 @@ class ManualReviewWorkflowTest extends TestCase
             'status' => 'checking',
             'reviewer_hemis_id' => $reviewer->hemis_id,
         ]);
+        foreach ([$firstResource, $secondResource] as $resource) {
+            $resource->histories()->create([
+                'user_id' => $owner->id,
+                'type' => 'warning',
+                'message' => 'Inson tekshiruvi kerak.',
+                'message_type' => 'ai_evaluation',
+            ]);
+        }
         $this->createDatum($owner, $emptyCriterion, [
             'name' => 'Boshqa tekshiruvchidagi resurs',
             'status' => 'checking',
@@ -495,6 +510,7 @@ class ManualReviewWorkflowTest extends TestCase
         ]);
 
         $this->artisan('kpi:ai:assign-human-reviews', ['--dry-run' => true])
+            ->expectsOutput('Mas’ulsiz checking AI resurslar jami: 3')
             ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 2')
             ->assertSuccessful();
         $this->assertNull($humanReview->fresh()->reviewer_hemis_id);

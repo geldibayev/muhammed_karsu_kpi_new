@@ -39,24 +39,29 @@ class Datum extends Model
     {
         return $query
             ->where('reviewer_hemis_id', $reviewerHemisId)
-            ->where('status', DatumStatus::Checking->value)
-            ->whereHas(
-                'criterion',
-                fn (Builder $query): Builder => $query->where('checking', 'ai'),
-            );
+            ->pendingAiHumanReview();
     }
 
     public function scopePendingAiHumanReviews(Builder $query, int $reviewerHemisId): Builder
     {
         return $query
             ->where(function (Builder $query) use ($reviewerHemisId): void {
-                $query->whereNull('reviewer_hemis_id')
-                    ->orWhere('reviewer_hemis_id', $reviewerHemisId);
+                $query->where('reviewer_hemis_id', $reviewerHemisId)
+                    ->orWhereNull('reviewer_hemis_id');
             })
-            ->whereIn('status', [
-                DatumStatus::Received->value,
-                DatumStatus::Checking->value,
-            ])
+            ->pendingAiHumanReview();
+    }
+
+    public function scopePendingAiHumanReview(Builder $query): Builder
+    {
+        $dataTable = $query->getModel()->getTable();
+        $historyTable = (new DatumHistory)->getTable();
+
+        return $query
+            ->where('status', DatumStatus::Checking->value)
+            ->whereRaw(
+                "COALESCE((SELECT MAX(id) FROM {$historyTable} WHERE datum_id = {$dataTable}.id AND message_type IN ('ai_evaluation', 'ai_failed')), 0) > COALESCE((SELECT MAX(id) FROM {$historyTable} WHERE datum_id = {$dataTable}.id AND message_type IN ('submission_created', 'ai_queued', 'criterion_transferred')), 0)",
+            )
             ->whereHas(
                 'criterion',
                 fn (Builder $query): Builder => $query->where('checking', 'ai'),

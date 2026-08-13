@@ -44,12 +44,26 @@ class SuperAdminReviewAccessTest extends TestCase
         $ordinaryUser = User::factory()->create();
         $manualDatum = $this->datum($owner, $manualCriterion, 'received', 'Boshqa mas’ulning qo‘lda resursi');
         $aiDatum = $this->datum($owner, $aiCriterion, 'checking', 'Boshqa mas’ulning AI resursi');
+        $aiDatum->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'Inson tekshiruvi kerak.',
+            'message_type' => 'ai_evaluation',
+        ]);
+        $pendingAiDatum = $this->datum($owner, $aiCriterion, 'checking', 'AI hali tekshirayotgan resurs');
+        $receivedAiDatum = $this->datum($owner, $aiCriterion, 'received', 'AI navbatiga olinmagan resurs');
         $ownCriterion = $aiCriterion->replicate();
         $ownCriterion->fill(['code' => 'test.ai.own', 'name' => ['uz' => 'Super admin kriteriyasi']])->save();
         $otherCriterion = $aiCriterion->replicate();
         $otherCriterion->fill(['code' => 'test.ai.other', 'name' => ['uz' => 'Boshqa mas’ul kriteriyasi']])->save();
         $ownAiDatum = $this->datum($owner, $ownCriterion, 'checking', 'Super adminning AI resursi');
         $ownAiDatum->update(['reviewer_hemis_id' => $superAdmin->hemis_id]);
+        $ownAiDatum->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'Inson tekshiruvi kerak.',
+            'message_type' => 'ai_evaluation',
+        ]);
         $otherReviewerAiDatum = $this->datum($owner, $otherCriterion, 'checking', 'Boshqa tekshiruvchining AI resursi');
         $otherReviewerAiDatum->update(['reviewer_hemis_id' => User::factory()->create()->hemis_id]);
 
@@ -63,6 +77,8 @@ class SuperAdminReviewAccessTest extends TestCase
             ->assertSee($aiDatum->name)
             ->assertSee($ownAiDatum->name)
             ->assertSee('Super admin kriteriyasi')
+            ->assertDontSee($pendingAiDatum->name)
+            ->assertDontSee($receivedAiDatum->name)
             ->assertDontSee($otherReviewerAiDatum->name)
             ->assertDontSee('Boshqa mas’ul kriteriyasi');
         $this->actingAs($superAdmin)

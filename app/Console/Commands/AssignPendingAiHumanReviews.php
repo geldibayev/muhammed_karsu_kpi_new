@@ -25,6 +25,19 @@ class AssignPendingAiHumanReviews extends Command
         $reassign = (bool) $this->option('reassign');
         $dryRun = (bool) $this->option('dry-run');
         $criterionCode = trim((string) $this->option('criterion')) ?: null;
+        $unassignedCheckingCount = Datum::query()
+            ->whereNull('reviewer_hemis_id')
+            ->where('status', 'checking')
+            ->whereHas(
+                'criterion',
+                fn (Builder $query): Builder => $query
+                    ->where('checking', 'ai')
+                    ->when(
+                        $criterionCode !== null,
+                        fn (Builder $query): Builder => $query->where('code', $criterionCode),
+                    ),
+            )
+            ->count();
         $candidateCount = 0;
         $assignedCount = 0;
         $unassignedCount = 0;
@@ -66,7 +79,12 @@ class AssignPendingAiHumanReviews extends Command
         }
 
         if ($dryRun) {
+            $this->line("Mas’ulsiz checking AI resurslar jami: {$unassignedCheckingCount}");
             $this->info("AI inson tekshiruvi uchun biriktiriladigan resurslar: {$candidateCount}");
+
+            if ($unassignedCheckingCount > $candidateCount + $unassignedCount) {
+                $this->warn('Qolgan resurslar AI javobini kutmoqda, qayta navbatga qo‘yilgan yoki kriteriyasi ko‘chirilgan.');
+            }
 
             return self::SUCCESS;
         }
