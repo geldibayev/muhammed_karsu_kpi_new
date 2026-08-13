@@ -27,6 +27,7 @@ use App\Http\Controllers\SyncHemisUserController;
 use App\Http\Controllers\SystemSettingsController;
 use App\Http\Controllers\UpdateAcceptedDatumScoreController;
 use App\Http\Controllers\UpdateHIndexProfileController;
+use App\Http\Controllers\UpdateUserUploadRestrictionController;
 use App\Http\Controllers\UserRoleController;
 use Illuminate\Support\Facades\Route;
 
@@ -84,6 +85,8 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
     Route::delete('/users/external-part-timers/{user}', DeleteExternalPartTimeUserController::class)
         ->name('users.external-part-timers.destroy');
     Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
+    Route::patch('/users/{user}/upload-restriction', UpdateUserUploadRestrictionController::class)
+        ->name('users.upload-restriction.update');
     Route::get('/reviewer-assignments', [ReviewerAssignmentController::class, 'index'])
         ->name('reviewer-assignments.index');
     Route::get('/reviews', [ManualReviewController::class, 'index'])

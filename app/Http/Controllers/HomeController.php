@@ -63,7 +63,9 @@ class HomeController extends Controller
             ],
         ];
         $resourceUploadWindowOpen = $resourceUploadWindow->isOpen();
-        $resourceUploadsEnabled = Option::resourceUploadsEnabled() && $resourceUploadWindowOpen;
+        $resourceUploadsEnabled = Option::resourceUploadsEnabled()
+            && $resourceUploadWindowOpen
+            && ! $request->user()->isUploadBlocked();
 
         return view('home', compact([
             'criteria',

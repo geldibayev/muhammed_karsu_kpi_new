@@ -45,7 +45,10 @@ class PaginateRatingUsers
                 : [];
 
         return User::query()
-            ->select(['id', 'hemis_id', 'name', 'image', 'degree'])
+            ->select([
+                'id', 'hemis_id', 'name', 'image', 'degree', 'rol',
+                'upload_blocked_at', 'upload_block_reason', 'upload_blocked_by_user_id',
+            ])
             ->active()
             ->academicRatingParticipants()
             ->with([

@@ -345,6 +345,15 @@
             :deadline-label="$layoutResourceUploadDeadlineLabel"
             :is-open="$layoutResourceUploadWindowOpen"
         />
+        @if($layoutUser->isUploadBlocked())
+            <div class="alert alert-danger rounded-0 mb-0" role="alert">
+                <div class="container-fluid">
+                    <i class="fas fa-ban mr-1" aria-hidden="true"></i>
+                    <strong>Resurs yuklash bloklangan.</strong>
+                    {{ $layoutUser->upload_block_reason }}
+                </div>
+            </div>
+        @endif
         <section class="content-header">
             <div class="container-fluid">
                 <div class="row mb-2">

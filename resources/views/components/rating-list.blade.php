@@ -374,6 +374,24 @@
                                     @if($showActions)
                                         <td class="text-center align-middle">
                                             <div class="d-inline-flex align-items-center">
+                                                @can('manageUploadRestriction', $user)
+                                                    @if($user->isUploadBlocked())
+                                                        <form method="POST" action="{{ route('users.upload-restriction.update', $user) }}" class="mr-1">
+                                                            @csrf
+                                                            @method('PATCH')
+                                                            <input type="hidden" name="blocked" value="0">
+                                                            <button type="submit" class="btn btn-outline-success btn-xs"
+                                                                    title="{{ $user->upload_block_reason }}">
+                                                                <i class="fas fa-unlock mr-1"></i> Blokdan chiqarish
+                                                            </button>
+                                                        </form>
+                                                    @else
+                                                        <button type="button" class="btn btn-outline-danger btn-xs mr-1"
+                                                                data-toggle="modal" data-target="#upload-restriction-{{ $user->id }}">
+                                                            <i class="fas fa-ban mr-1"></i> Yuklashni bloklash
+                                                        </button>
+                                                    @endif
+                                                @endcan
                                                 @can('syncHemis', $user)
                                                     <form method="POST" action="{{ route('users.hemis-sync.store', $user) }}" class="mr-1">
                                                         @csrf
@@ -389,6 +407,41 @@
                                                     <i class="fas fa-eye mr-1"></i> Ko‘rish
                                                 </a>
                                             </div>
+                                            @can('manageUploadRestriction', $user)
+                                                @unless($user->isUploadBlocked())
+                                                    <div class="modal fade text-left" id="upload-restriction-{{ $user->id }}" tabindex="-1"
+                                                         role="dialog" aria-labelledby="upload-restriction-title-{{ $user->id }}" aria-hidden="true">
+                                                        <div class="modal-dialog" role="document">
+                                                            <form method="POST" action="{{ route('users.upload-restriction.update', $user) }}"
+                                                                  class="modal-content">
+                                                                @csrf
+                                                                @method('PATCH')
+                                                                <input type="hidden" name="blocked" value="1">
+                                                                <div class="modal-header">
+                                                                    <h5 class="modal-title" id="upload-restriction-title-{{ $user->id }}">
+                                                                        {{ $user->short }} uchun yuklashni bloklash
+                                                                    </h5>
+                                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                                                                        <span aria-hidden="true">&times;</span>
+                                                                    </button>
+                                                                </div>
+                                                                <div class="modal-body">
+                                                                    <div class="form-group mb-0">
+                                                                        <label for="upload-block-reason-{{ $user->id }}">Bloklash sababi</label>
+                                                                        <textarea id="upload-block-reason-{{ $user->id }}" name="reason" rows="4" required
+                                                                                  maxlength="5000" class="form-control"
+                                                                                  placeholder="Foydalanuvchiga ko‘rsatiladigan izohni yozing"></textarea>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                                                                    <button type="submit" class="btn btn-danger">Yuklashni bloklash</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                @endunless
+                                            @endcan
                                         </td>
                                     @endif
                                 </tr>

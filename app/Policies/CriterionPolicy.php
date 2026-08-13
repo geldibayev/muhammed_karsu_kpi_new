@@ -15,7 +15,8 @@ class CriterionPolicy
     {
         $hasTeacherRole = $user->hasRole('teacher') || $user->hasRole('user');
 
-        return Option::resourceUploadsEnabled()
+        return ! $user->isUploadBlocked()
+            && Option::resourceUploadsEnabled()
             && $this->resourceUploadWindow->isOpen()
             && ($hasTeacherRole || $user->isSuperAdmin())
             && ($criterion->upload === '1' || $criterion->isHIndexCriterion())

@@ -136,6 +136,32 @@ class RatingPageTest extends TestCase
         $this->assertSame($ranking($loginUsers), $ranking($authenticatedUsers));
     }
 
+    public function test_super_admin_manages_upload_restriction_from_rating_page_not_role_page(): void
+    {
+        $superAdmin = User::factory()->superAdmin()->create();
+        $target = User::factory()->create([
+            'name' => $this->userName('Bloklanadigan Ustoz'),
+            'degree' => 'hold_degrees',
+        ]);
+        $faculty = $this->createDepartment('Bloklash fakulteti');
+        $department = $this->createDepartment('Bloklash kafedrasi', $faculty);
+        $this->createWorkplace($target, $department, 'Dotsent');
+        $this->createReport('Faol hisobot', '1');
+
+        $this->actingAs($superAdmin)
+            ->get(route('ratings.index', ['mode' => 'all_users']))
+            ->assertOk()
+            ->assertSee('Bloklanadigan Ustoz')
+            ->assertSee('Yuklashni bloklash')
+            ->assertSee('data-target="#upload-restriction-'.$target->getKey().'"', false)
+            ->assertSee(route('users.upload-restriction.update', $target));
+
+        $this->actingAs($superAdmin)
+            ->get(route('users.roles.index'))
+            ->assertOk()
+            ->assertDontSee(route('users.upload-restriction.update', $target));
+    }
+
     public function test_users_are_ranked_by_active_report_and_show_hemis_workplace_data(): void
     {
         $viewer = User::factory()->create();

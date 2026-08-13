@@ -7,6 +7,13 @@ use App\Models\User;
 
 class UserPolicy
 {
+    public function manageUploadRestriction(User $user, User $target): bool
+    {
+        return $user->isSuperAdmin()
+            && $user->isNot($target)
+            && ! $target->isSuperAdmin();
+    }
+
     public function syncHemis(User $user, User $target): bool
     {
         return $user->isSuperAdmin();

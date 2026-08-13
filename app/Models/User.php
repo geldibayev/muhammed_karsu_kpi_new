@@ -33,7 +33,10 @@ class User extends Authenticatable
         return "$surname $firstInitial.$patronymicInitial.";
     }
 
-    protected $fillable = ['id', 'name', 'hemis_id', 'image', 'pos', 'rol', 'status', 'degree'];
+    protected $fillable = [
+        'id', 'name', 'hemis_id', 'image', 'pos', 'rol', 'status', 'degree',
+        'upload_blocked_at', 'upload_block_reason', 'upload_blocked_by_user_id',
+    ];
 
     protected $hidden = ['remember_token'];
 
@@ -90,6 +93,8 @@ class User extends Authenticatable
         return [
             'name' => 'json',
             'rol' => 'json',
+            'upload_blocked_at' => 'datetime',
+            'upload_blocked_by_user_id' => 'integer',
         ];
     }
 
@@ -135,6 +140,11 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->status === '1';
+    }
+
+    public function isUploadBlocked(): bool
+    {
+        return $this->upload_blocked_at !== null;
     }
 
     public function scopeActive(Builder $query): Builder
