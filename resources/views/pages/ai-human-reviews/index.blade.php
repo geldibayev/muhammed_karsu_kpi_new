@@ -59,6 +59,7 @@
                                 <th>Resurs</th>
                                 <th>Muallif</th>
                                 <th>Mezon</th>
+                                <th>Mas’ul</th>
                                 <th>AI xulosasi</th>
                                 <th>Yuborilgan vaqt</th>
                                 <th class="text-right">Amal</th>
@@ -76,6 +77,16 @@
                                     <td class="align-middle">
                                         {{ data_get($datum->criterion?->name, 'uz', 'Mezon topilmadi') }}
                                     </td>
+                                    <td class="align-middle">
+                                        @if($datum->reviewer)
+                                            <div>{{ $datum->reviewer->full ?: $datum->reviewer->short }}</div>
+                                            <small class="text-muted">HEMIS ID: {{ $datum->reviewer_hemis_id }}</small>
+                                        @elseif($datum->reviewer_hemis_id)
+                                            HEMIS ID: {{ $datum->reviewer_hemis_id }}
+                                        @else
+                                            <span class="text-muted">Biriktirilmagan</span>
+                                        @endif
+                                    </td>
                                     <td class="align-middle text-break">{{ $datum->reason ?: 'Izoh mavjud emas' }}</td>
                                     <td class="align-middle">{{ $datum->created_at->format('d.m.Y H:i') }}</td>
                                     <td class="align-middle text-right">
@@ -91,7 +102,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted py-5">
+                                    <td colspan="8" class="text-center text-muted py-5">
                                         Inson tekshiruvi uchun AI resurslari yo‘q.
                                     </td>
                                 </tr>

@@ -77,6 +77,11 @@ class Datum extends Model
         return $this->belongsTo(Criterion::class);
     }
 
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewer_hemis_id', 'hemis_id');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -414,6 +414,8 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertSee('Kriteriya bo‘yicha filtr')
             ->assertSee('Birinchi AI kriteriya')
             ->assertSee('Ikkinchi AI kriteriya')
+            ->assertSee('Mas’ul')
+            ->assertSee($reviewer->full)
             ->assertDontSee('Resurssiz AI kriteriya')
             ->assertDontSee('Manual kriteriya')
             ->assertSee($firstResource->name)

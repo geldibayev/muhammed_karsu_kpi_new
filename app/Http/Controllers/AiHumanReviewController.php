@@ -36,7 +36,12 @@ class AiHumanReviewController extends Controller
                 $selectedCriterionId !== null,
                 fn (Builder $query): Builder => $query->where('criterion_id', $selectedCriterionId),
             )
-            ->with(['user:id,name,hemis_id,degree', 'criterion:id,name', 'year:id,name'])
+            ->with([
+                'user:id,name,hemis_id,degree',
+                'criterion:id,name',
+                'reviewer:id,name,hemis_id',
+                'year:id,name',
+            ])
             ->latest()
             ->paginate(20)
             ->withQueryString();
