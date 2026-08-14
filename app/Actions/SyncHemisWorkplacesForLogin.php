@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Report;
 use App\Models\User;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use UnexpectedValueException;
 
@@ -19,8 +20,12 @@ class SyncHemisWorkplacesForLogin
     {
         try {
             $result = $this->syncHemisWorkplaces->handle($user);
-        } catch (UnexpectedValueException $exception) {
-            if ($exception->getMessage() !== SyncHemisWorkplaces::MISSING_WORKPLACE_MESSAGE
+        } catch (RequestException|UnexpectedValueException $exception) {
+            $canSkipWorkplaceSync = $exception instanceof RequestException
+                ? $exception->response->forbidden()
+                : $exception->getMessage() === SyncHemisWorkplaces::MISSING_WORKPLACE_MESSAGE;
+
+            if (! $canSkipWorkplaceSync
                 || ! $allowConfiguredReviewerWithoutWorkplace
                 || ! $this->isConfiguredReviewer($user)) {
                 throw $exception;
@@ -29,7 +34,10 @@ class SyncHemisWorkplacesForLogin
             Log::warning('Configured reviewer logged in without HEMIS workplace sync.', [
                 'user_id' => $user->getKey(),
                 'hemis_id' => $user->hemis_id,
-                'reason' => $exception->getMessage(),
+                'status' => $exception instanceof RequestException ? $exception->response->status() : null,
+                'reason' => $exception instanceof RequestException
+                    ? 'HEMIS workplace access forbidden.'
+                    : $exception->getMessage(),
             ]);
 
             return $user;

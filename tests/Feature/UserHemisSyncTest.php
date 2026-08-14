@@ -8,7 +8,9 @@ use App\Actions\SyncHemisWorkplacesForLogin;
 use App\Enums\RatingMode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Http;
 use Mockery\MockInterface;
 use Tests\TestCase;
 use UnexpectedValueException;
@@ -115,6 +117,93 @@ class UserHemisSyncTest extends TestCase
         );
 
         $this->assertTrue($syncedUser->is($reviewer));
+    }
+
+    public function test_configured_reviewer_can_log_in_when_hemis_forbids_workplace_access(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3111111111]);
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            '3.1.12' => (string) $reviewer->hemis_id,
+        ]);
+        $this->mock(
+            SyncHemisWorkplaces::class,
+            fn (MockInterface $mock) => $mock
+                ->shouldReceive('handle')
+                ->once()
+                ->andThrow(Http::failedRequest([
+                    'success' => false,
+                    'error' => 'Sizga ushbu harakatni bajarishga ruxsat etilmagan',
+                ], 403)),
+        );
+
+        $syncedUser = app(SyncHemisWorkplacesForLogin::class)->handle(
+            $reviewer,
+            allowConfiguredReviewerWithoutWorkplace: true,
+        );
+
+        $this->assertTrue($syncedUser->is($reviewer));
+    }
+
+    public function test_configured_reviewer_cannot_log_in_when_hemis_workplace_service_fails(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3111111111]);
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            '3.1.12' => (string) $reviewer->hemis_id,
+        ]);
+        $this->mock(
+            SyncHemisWorkplaces::class,
+            fn (MockInterface $mock) => $mock
+                ->shouldReceive('handle')
+                ->once()
+                ->andThrow(Http::failedRequest(['error' => 'Server error'], 500)),
+        );
+
+        $this->expectException(RequestException::class);
+
+        app(SyncHemisWorkplacesForLogin::class)->handle(
+            $reviewer,
+            allowConfiguredReviewerWithoutWorkplace: true,
+        );
+    }
+
+    public function test_unconfigured_user_cannot_bypass_forbidden_hemis_workplace_access(): void
+    {
+        $user = User::factory()->create(['hemis_id' => 3111111111]);
+        config()->set('kpi.ai_human_review_criterion_reviewers', []);
+        config()->set('kpi.criterion_reviewers', []);
+        $this->mock(
+            SyncHemisWorkplaces::class,
+            fn (MockInterface $mock) => $mock
+                ->shouldReceive('handle')
+                ->once()
+                ->andThrow(Http::failedRequest(['error' => 'Forbidden'], 403)),
+        );
+
+        $this->expectException(RequestException::class);
+
+        app(SyncHemisWorkplacesForLogin::class)->handle(
+            $user,
+            allowConfiguredReviewerWithoutWorkplace: true,
+        );
+    }
+
+    public function test_configured_reviewer_cannot_bypass_forbidden_access_outside_login(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3111111111]);
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            '3.1.12' => (string) $reviewer->hemis_id,
+        ]);
+        $this->mock(
+            SyncHemisWorkplaces::class,
+            fn (MockInterface $mock) => $mock
+                ->shouldReceive('handle')
+                ->once()
+                ->andThrow(Http::failedRequest(['error' => 'Forbidden'], 403)),
+        );
+
+        $this->expectException(RequestException::class);
+
+        app(SyncHemisWorkplacesForLogin::class)->handle($reviewer);
     }
 
     public function test_configured_reviewer_cannot_log_in_with_an_invalid_hemis_workplace_response(): void
