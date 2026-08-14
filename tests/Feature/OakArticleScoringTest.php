@@ -181,6 +181,73 @@ class OakArticleScoringTest extends TestCase
         $this->assertPointEquals($withoutDegree, $criterion, 3);
     }
 
+    public function test_file_limit_command_keeps_the_four_highest_accepted_resources_and_is_idempotent(): void
+    {
+        $this->createEvaluationCategories();
+        $formula = $this->createMaximumFormula();
+        $report = $this->createReport('Fayl cheklovi hisoboti');
+        $criterion = $this->createOakCriterion($report, $formula);
+        $otherReport = $this->createReport('Boshqa hisobot', '0');
+        $otherCriterion = $this->createOakCriterion($otherReport, $formula);
+        $limitedUser = User::factory()->create(['degree' => 'no_degrees']);
+        $withinLimitUser = User::factory()->create(['degree' => 'hold_degrees']);
+
+        $limitedData = collect([0.75, 0.60, 0.50, 0.40, 0.40, 0.10])
+            ->map(fn (float $point): Datum => $this->createAcceptedDatum(
+                $limitedUser,
+                $criterion,
+                $point,
+                ['article' => ['authors_num' => 1]],
+            ));
+
+        foreach ([0.50, 0.40, 0.30] as $point) {
+            $this->createAcceptedDatum(
+                $withinLimitUser,
+                $criterion,
+                $point,
+                ['article' => ['authors_num' => 1]],
+            );
+        }
+
+        foreach (range(1, 5) as $index) {
+            $this->createAcceptedDatum($limitedUser, $otherCriterion, $index);
+        }
+
+        $this->artisan('kpi:criteria:enforce-3-1-1-file-limit', ['report' => $report->id])
+            ->expectsOutputToContain('DRY RUN')
+            ->assertSuccessful();
+
+        $this->assertSame(6, Datum::query()->whereKey($limitedData->pluck('id'))->where('status', 'accepted')->count());
+
+        $this->artisan('kpi:criteria:enforce-3-1-1-file-limit', [
+            'report' => $report->id,
+            '--apply' => true,
+        ])->expectsOutputToContain('APPLIED')->assertSuccessful();
+
+        $keptIds = $limitedData->sortByDesc('point')->take(4)->pluck('id');
+        $cancelledIds = $limitedData->pluck('id')->diff($keptIds);
+
+        $this->assertSame(4, Datum::query()->whereKey($keptIds)->where('status', 'accepted')->count());
+        $this->assertSame(2, Datum::query()->whereKey($cancelledIds)->where('status', 'cancelled')->where('point', 0)->count());
+        $this->assertSame('accepted', $limitedData[3]->fresh()->status);
+        $this->assertSame('cancelled', $limitedData[4]->fresh()->status);
+        $this->assertSame(3, Datum::query()->where('user_id', $withinLimitUser->id)->where('status', 'accepted')->count());
+        $this->assertSame(5, Datum::query()->where('criterion_id', $otherCriterion->id)->where('status', 'accepted')->count());
+        $this->assertSame(2, DatumHistory::query()->where('message_type', 'oak_article_file_limit_enforced')->count());
+        $this->assertDatabaseHas('criterion_points', [
+            'user_id' => $limitedUser->id,
+            'criterion_id' => $criterion->id,
+            'files' => 4,
+        ]);
+
+        $this->artisan('kpi:criteria:enforce-3-1-1-file-limit', [
+            'report' => $report->id,
+            '--apply' => true,
+        ])->assertSuccessful();
+
+        $this->assertSame(2, DatumHistory::query()->where('message_type', 'oak_article_file_limit_enforced')->count());
+    }
+
     private function createEvaluationCategories(): void
     {
         foreach (['hold_degrees', 'no_degrees'] as $code) {
@@ -216,6 +283,7 @@ class OakArticleScoringTest extends TestCase
             'name' => ['uz' => 'Ilmiy-innovatsion faoliyat'],
             'report_id' => $report->id,
             'formula_id' => $formula->id,
+            'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
             'code' => OakArticleCriterionRule::CODE,
@@ -224,6 +292,7 @@ class OakArticleScoringTest extends TestCase
             'report_id' => $report->id,
             'formula_id' => $formula->id,
             'checking' => 'ai',
+            'file_limit' => 4,
             'upload' => '1',
             'status' => '1',
         ]);
