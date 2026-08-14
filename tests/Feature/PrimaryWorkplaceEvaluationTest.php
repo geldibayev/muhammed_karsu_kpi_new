@@ -19,6 +19,7 @@ use App\Models\User;
 use App\Models\Workplace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Mockery\MockInterface;
 use Tests\TestCase;
@@ -175,6 +176,40 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
         $syncedUser = app(SyncHemisWorkplacesForLogin::class)->handle($user);
 
         $this->assertSame('no_degrees', $syncedUser->degree);
+    }
+
+    public function test_login_uses_stored_workplace_when_hemis_forbids_sync(): void
+    {
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        $workplace = $this->createStoredWorkplace($user, 201, 11, 11, 101);
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response(['error' => 'Forbidden'], 403),
+        ]);
+
+        $syncedUser = app(SyncHemisWorkplacesForLogin::class)->handle(
+            $user,
+            allowConfiguredReviewerWithoutWorkplace: true,
+        );
+
+        $this->assertTrue($syncedUser->is($user));
+        $this->assertSame('hold_degrees', $syncedUser->fresh()->degree);
+        $this->assertTrue($syncedUser->fresh()->workplaces()->whereKey($workplace->getKey())->exists());
+    }
+
+    public function test_inactive_user_cannot_use_stored_workplace_when_hemis_forbids_sync(): void
+    {
+        $user = User::factory()->create(['status' => '0']);
+        $this->createStoredWorkplace($user, 201, 11, 11, 101);
+        Http::fake([
+            'https://hemis.test/employees*' => Http::response(['error' => 'Forbidden'], 403),
+        ]);
+
+        $this->expectException(RequestException::class);
+
+        app(SyncHemisWorkplacesForLogin::class)->handle(
+            $user,
+            allowConfiguredReviewerWithoutWorkplace: true,
+        );
     }
 
     public function test_user_without_primary_workplace_uses_additional_workplace_in_rating(): void

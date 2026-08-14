@@ -21,20 +21,23 @@ class SyncHemisWorkplacesForLogin
         try {
             $result = $this->syncHemisWorkplaces->handle($user);
         } catch (RequestException|UnexpectedValueException $exception) {
-            $canSkipWorkplaceSync = $exception instanceof RequestException
-                ? $exception->response->forbidden()
-                : $exception->getMessage() === SyncHemisWorkplaces::MISSING_WORKPLACE_MESSAGE;
+            $isForbidden = $exception instanceof RequestException && $exception->response->forbidden();
+            $isMissingWorkplace = $exception instanceof UnexpectedValueException
+                && $exception->getMessage() === SyncHemisWorkplaces::MISSING_WORKPLACE_MESSAGE;
+            $canUseStoredWorkplace = $isForbidden && $user->workplaces()->exists();
+            $canBypassAsReviewer = ($isForbidden || $isMissingWorkplace) && $this->isConfiguredReviewer($user);
 
-            if (! $canSkipWorkplaceSync
-                || ! $allowConfiguredReviewerWithoutWorkplace
-                || ! $this->isConfiguredReviewer($user)) {
+            if (! $allowConfiguredReviewerWithoutWorkplace
+                || ! $user->isActive()
+                || (! $canUseStoredWorkplace && ! $canBypassAsReviewer)) {
                 throw $exception;
             }
 
-            Log::warning('Configured reviewer logged in without HEMIS workplace sync.', [
+            Log::warning('HEMIS workplace sync skipped during OAuth login.', [
                 'user_id' => $user->getKey(),
                 'hemis_id' => $user->hemis_id,
                 'status' => $exception instanceof RequestException ? $exception->response->status() : null,
+                'fallback' => $canUseStoredWorkplace ? 'stored_workplace' : 'configured_reviewer',
                 'reason' => $exception instanceof RequestException
                     ? 'HEMIS workplace access forbidden.'
                     : $exception->getMessage(),
