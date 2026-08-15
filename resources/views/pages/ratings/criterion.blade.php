@@ -34,6 +34,8 @@
                                 @php
                                     $workplace = $point->user?->ratingWorkplace;
                                     $department = $workplace?->department;
+                                    $acceptedSubmissions = $point->user?->submissions ?? collect();
+                                    $submissionListId = 'criterion-rating-submissions-'.$criterion->getKey().'-'.$point->user_id;
                                 @endphp
                                 <tr>
                                     <td class="text-center align-middle">
@@ -66,9 +68,22 @@
                                         </div>
                                     </td>
                                     <td class="text-center align-middle">
-                                        <span class="badge badge-success px-3 py-2">
-                                            {{ $point->user?->accepted_submissions_count ?? 0 }} ta
-                                        </span>
+                                        @if($acceptedSubmissions->isNotEmpty())
+                                            <button type="button"
+                                                    class="btn btn-link p-0 text-decoration-none"
+                                                    data-testid="criterion-rating-resources-toggle"
+                                                    data-toggle="collapse"
+                                                    data-target="#{{ $submissionListId }}"
+                                                    aria-controls="{{ $submissionListId }}"
+                                                    aria-expanded="false">
+                                                <span class="badge badge-success px-3 py-2">
+                                                    {{ $acceptedSubmissions->count() }} ta
+                                                </span>
+                                                <span class="sr-only">tasdiqlangan resurslarni ko‘rish</span>
+                                            </button>
+                                        @else
+                                            <span class="badge badge-secondary px-3 py-2">0 ta</span>
+                                        @endif
                                     </td>
                                     <td class="text-center align-middle">
                                         <span class="font-weight-bold text-success">
@@ -76,6 +91,35 @@
                                         </span>
                                     </td>
                                 </tr>
+                                @if($acceptedSubmissions->isNotEmpty())
+                                    <tr>
+                                        <td colspan="5" class="p-0 border-top-0">
+                                            <div id="{{ $submissionListId }}" class="collapse">
+                                                <div class="bg-light border-top px-3 py-2">
+                                                    <div class="list-group list-group-flush border rounded">
+                                                        @foreach($acceptedSubmissions as $submission)
+                                                            <a href="{{ route('upload.details', $submission) }}"
+                                                               class="list-group-item list-group-item-action d-flex flex-column flex-md-row align-items-md-center justify-content-between py-2">
+                                                                <span>
+                                                                    <span class="font-weight-bold text-primary">
+                                                                        <i class="fas fa-file-alt mr-1" aria-hidden="true"></i>
+                                                                        Resurs #{{ $submission->getKey() }}
+                                                                    </span>
+                                                                    @if(filled($submission->name))
+                                                                        <span class="small text-muted ml-md-2">{{ $submission->name }}</span>
+                                                                    @endif
+                                                                </span>
+                                                                <span class="badge badge-success mt-2 mt-md-0 ml-md-3 px-2 py-1 text-nowrap">
+                                                                    {{ number_format($submission->point, 2) }} ball
+                                                                </span>
+                                                            </a>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endif
                             @empty
                                 <tr>
                                     <td colspan="5" class="text-center text-muted py-5">

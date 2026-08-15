@@ -7,6 +7,7 @@ use App\Models\Criterion;
 use App\Models\Point;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class GetCriterionRating
@@ -25,10 +26,12 @@ class GetCriterionRating
             ->with([
                 'user' => function (BelongsTo $query) use ($criterion): void {
                     $query->select(['id', 'hemis_id', 'name', 'image'])
-                        ->withCount([
-                            'submissions as accepted_submissions_count' => fn (Builder $query): Builder => $query
+                        ->with([
+                            'submissions' => fn (HasMany $query): HasMany => $query
+                                ->select(['id', 'name', 'user_id', 'criterion_id', 'status', 'point'])
                                 ->whereBelongsTo($criterion)
-                                ->where('status', DatumStatus::Accepted->value),
+                                ->where('status', DatumStatus::Accepted->value)
+                                ->latest('id'),
                         ]);
                 },
                 'user.ratingWorkplace.position',
