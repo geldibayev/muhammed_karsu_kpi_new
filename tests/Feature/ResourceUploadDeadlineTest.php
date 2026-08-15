@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
+use App\Models\Datum;
 use App\Models\Evaluation;
 use App\Models\Option;
 use App\Models\Report;
@@ -51,6 +52,7 @@ class ResourceUploadDeadlineTest extends TestCase
             ->assertRedirect(route('upload.show', $criterion));
 
         $this->assertDatabaseCount('data', 1);
+        $datum = Datum::query()->firstOrFail();
 
         $this->travelTo(CarbonImmutable::parse('2026-08-16 00:00:00', 'Asia/Tashkent'));
         Option::setResourceUploadsEnabled(true);
@@ -69,7 +71,16 @@ class ResourceUploadDeadlineTest extends TestCase
             ->post(route('upload.store', $criterion), $this->submissionPayload($year))
             ->assertForbidden();
 
+        $this->actingAs($teacher)
+            ->delete(route('upload.destroy', $datum))
+            ->assertForbidden();
+
         $this->assertDatabaseCount('data', 1);
+        $this->assertSame('received', $datum->fresh()->status);
+        $this->assertDatabaseMissing('datum_histories', [
+            'datum_id' => $datum->getKey(),
+            'message_type' => 'submission_deleted',
+        ]);
     }
 
     public function test_super_admin_cannot_bypass_expired_upload_deadline(): void
@@ -78,13 +89,30 @@ class ResourceUploadDeadlineTest extends TestCase
         config()->set('kpi.settings_manager_hemis_id', '3172011004');
         [$criterion, $year] = $this->createUploadableCriterion();
         $superAdmin = User::factory()->superAdmin()->create(['hemis_id' => 3172011004]);
+        $datum = Datum::query()->create([
+            'name' => 'Avval yuklangan resurs',
+            'material' => ['type' => 'url', 'url' => 'https://example.com/existing-resource'],
+            'user_id' => User::factory()->create()->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'year_id' => $year->getKey(),
+            'status' => 'received',
+        ]);
         $this->travelTo(CarbonImmutable::parse('2026-08-16 00:00:00', 'Asia/Tashkent'));
 
         $this->actingAs($superAdmin)
             ->post(route('upload.store', $criterion), $this->submissionPayload($year))
             ->assertForbidden();
 
-        $this->assertDatabaseCount('data', 0);
+        $this->actingAs($superAdmin)
+            ->delete(route('upload.destroy', $datum))
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('data', 1);
+        $this->assertSame('received', $datum->fresh()->status);
+        $this->assertDatabaseMissing('datum_histories', [
+            'datum_id' => $datum->getKey(),
+            'message_type' => 'submission_deleted',
+        ]);
 
         $this->actingAs($superAdmin)
             ->get(route('settings.index'))

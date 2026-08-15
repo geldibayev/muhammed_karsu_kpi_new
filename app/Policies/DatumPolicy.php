@@ -9,11 +9,14 @@ use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\User;
 use App\Support\EducationalContentCriterionRule;
+use App\Support\ResourceUploadWindow;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 
 class DatumPolicy
 {
+    public function __construct(private ResourceUploadWindow $resourceUploadWindow) {}
+
     public function viewAny(User $user): bool
     {
         return $user->isSuperAdmin()
@@ -50,7 +53,8 @@ class DatumPolicy
 
     public function delete(User $user, Datum $datum): bool
     {
-        return $datum->system_key === null
+        return $this->resourceUploadWindow->isOpen()
+            && $datum->system_key === null
             && $datum->status !== 'deleted'
             && $this->ownsDatumOrIsSuperAdmin($user, $datum);
     }

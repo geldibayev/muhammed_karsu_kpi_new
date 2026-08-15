@@ -40,6 +40,7 @@ class AuthorizationBoundariesTest extends TestCase
 
     public function test_submission_download_and_delete_are_limited_to_the_owner(): void
     {
+        config()->set('kpi.resource_upload_deadline', now()->addDay()->toDateTimeString());
         Storage::fake('public');
         Storage::disk('public')->put('uploads/proof.pdf', 'proof');
 
