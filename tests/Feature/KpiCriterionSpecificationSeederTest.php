@@ -150,6 +150,10 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             );
         }
 
+        foreach (['3.1.3', '3.1.11'] as $code) {
+            $this->assertSame(10, Criterion::query()->where('code', $code)->value('file_limit'));
+        }
+
         $hIndexCriterion = Criterion::query()->where('code', '3.1.4')->firstOrFail();
         $this->assertSame('site:profile:index', $hIndexCriterion->checking);
         $this->assertSame('0', $hIndexCriterion->upload);

@@ -20,7 +20,7 @@ class CriterionThreeOneElevenFixedScoringTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_it_is_a_four_file_primary_indicator_with_server_assigned_category_points(): void
+    public function test_it_is_a_ten_file_primary_indicator_with_server_assigned_category_points(): void
     {
         foreach ([
             'hold_degrees' => 3.0,
@@ -46,7 +46,7 @@ class CriterionThreeOneElevenFixedScoringTest extends TestCase
             'code' => FixedPerResourceHumanReviewCriterionRule::THREE_ONE_ELEVEN_CODE,
         ]))->isPrimaryIndicator());
         $this->assertSame(KpiCriterionSpecification::Unlimited, $specification['formula']);
-        $this->assertSame(4, $specification['file_limit']);
+        $this->assertSame(10, $specification['file_limit']);
         $this->assertSame(4.0, $specification['ai_submission_max_point']);
         $this->assertFalse($specification['divide_ai_point_by_authors']);
     }

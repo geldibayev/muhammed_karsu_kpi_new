@@ -109,7 +109,7 @@ class KpiCriterionSpecification
             '3.1.2' => self::rule(self::Maximum, 4, 'current', [2, 3, 3, 3]),
             '3.1.3' => self::rule(
                 self::Unlimited,
-                4,
+                10,
                 'current',
                 [20, 20, 20, 20],
                 ScopusCriterionRule::MAXIMUM_POINT,
@@ -155,7 +155,7 @@ class KpiCriterionSpecification
             ),
             '3.1.11' => self::rule(
                 self::Unlimited,
-                4,
+                10,
                 'current',
                 [3, 4, 4, 4],
                 4,

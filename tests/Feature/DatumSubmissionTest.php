@@ -541,7 +541,7 @@ class DatumSubmissionTest extends TestCase
         $this->assertCriterionAllowsOnlyOneActiveFile('3.1.10');
     }
 
-    public function test_criterion_3_1_11_allows_four_active_files_and_rejects_the_fifth(): void
+    public function test_criterion_3_1_11_allows_ten_active_files_and_rejects_the_eleventh(): void
     {
         Storage::fake('local');
         Queue::fake();
@@ -550,11 +550,11 @@ class DatumSubmissionTest extends TestCase
             'code' => '3.1.11',
             'res_type' => 'file',
             'checking' => 'ai',
-            'file_limit' => 4,
+            'file_limit' => 10,
         ]);
         $year = $this->createActiveYear();
 
-        foreach (range(1, 3) as $index) {
+        foreach (range(1, 9) as $index) {
             Datum::query()->create([
                 'name' => "Old proof {$index}.pdf",
                 'material' => [
@@ -572,23 +572,23 @@ class DatumSubmissionTest extends TestCase
         $this->actingAs($teacher)
             ->post(route('upload.store', $criterion), [
                 'uploadResourceType' => 'file',
-                'uploadResourceFile' => UploadedFile::fake()->create('fourth-proof.pdf', 100, 'application/pdf'),
+                'uploadResourceFile' => UploadedFile::fake()->create('tenth-proof.pdf', 100, 'application/pdf'),
                 'year' => $year->getKey(),
             ])
             ->assertRedirect(route('upload.show', $criterion))
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseCount('data', 4);
+        $this->assertDatabaseCount('data', 10);
 
         $this->actingAs($teacher)
             ->post(route('upload.store', $criterion), [
                 'uploadResourceType' => 'file',
-                'uploadResourceFile' => UploadedFile::fake()->create('fifth-proof.pdf', 100, 'application/pdf'),
+                'uploadResourceFile' => UploadedFile::fake()->create('eleventh-proof.pdf', 100, 'application/pdf'),
                 'year' => $year->getKey(),
             ])
             ->assertSessionHasErrors('uploadResourceFile');
 
-        $this->assertDatabaseCount('data', 4);
+        $this->assertDatabaseCount('data', 10);
     }
 
     public function test_cancelled_submission_does_not_consume_file_limit(): void
