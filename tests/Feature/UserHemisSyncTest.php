@@ -113,7 +113,7 @@ class UserHemisSyncTest extends TestCase
 
         $syncedUser = app(SyncHemisWorkplacesForLogin::class)->handle(
             $reviewer,
-            allowConfiguredReviewerWithoutWorkplace: true,
+            allowLoginFallback: true,
         );
 
         $this->assertTrue($syncedUser->is($reviewer));
@@ -138,7 +138,7 @@ class UserHemisSyncTest extends TestCase
 
         $syncedUser = app(SyncHemisWorkplacesForLogin::class)->handle(
             $reviewer,
-            allowConfiguredReviewerWithoutWorkplace: true,
+            allowLoginFallback: true,
         );
 
         $this->assertTrue($syncedUser->is($reviewer));
@@ -162,11 +162,11 @@ class UserHemisSyncTest extends TestCase
 
         app(SyncHemisWorkplacesForLogin::class)->handle(
             $reviewer,
-            allowConfiguredReviewerWithoutWorkplace: true,
+            allowLoginFallback: true,
         );
     }
 
-    public function test_unconfigured_user_cannot_bypass_forbidden_hemis_workplace_access(): void
+    public function test_active_user_can_log_in_when_hemis_forbids_workplace_access(): void
     {
         $user = User::factory()->create(['hemis_id' => 3111111111]);
         config()->set('kpi.ai_human_review_criterion_reviewers', []);
@@ -179,12 +179,13 @@ class UserHemisSyncTest extends TestCase
                 ->andThrow(Http::failedRequest(['error' => 'Forbidden'], 403)),
         );
 
-        $this->expectException(RequestException::class);
-
-        app(SyncHemisWorkplacesForLogin::class)->handle(
+        $syncedUser = app(SyncHemisWorkplacesForLogin::class)->handle(
             $user,
-            allowConfiguredReviewerWithoutWorkplace: true,
+            allowLoginFallback: true,
         );
+
+        $this->assertTrue($syncedUser->is($user));
+        $this->assertFalse($syncedUser->workplaces()->exists());
     }
 
     public function test_configured_reviewer_cannot_bypass_forbidden_access_outside_login(): void
@@ -224,7 +225,28 @@ class UserHemisSyncTest extends TestCase
 
         app(SyncHemisWorkplacesForLogin::class)->handle(
             $reviewer,
-            allowConfiguredReviewerWithoutWorkplace: true,
+            allowLoginFallback: true,
+        );
+    }
+
+    public function test_unconfigured_user_cannot_log_in_when_hemis_returns_no_workplace(): void
+    {
+        $user = User::factory()->create(['hemis_id' => 3111111111]);
+        config()->set('kpi.ai_human_review_criterion_reviewers', []);
+        config()->set('kpi.criterion_reviewers', []);
+        $this->mock(
+            SyncHemisWorkplaces::class,
+            fn (MockInterface $mock) => $mock
+                ->shouldReceive('handle')
+                ->once()
+                ->andThrow(new UnexpectedValueException(SyncHemisWorkplaces::MISSING_WORKPLACE_MESSAGE)),
+        );
+
+        $this->expectException(UnexpectedValueException::class);
+
+        app(SyncHemisWorkplacesForLogin::class)->handle(
+            $user,
+            allowLoginFallback: true,
         );
     }
 }

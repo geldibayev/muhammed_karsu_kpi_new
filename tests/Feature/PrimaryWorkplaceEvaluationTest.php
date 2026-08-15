@@ -188,7 +188,7 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
 
         $syncedUser = app(SyncHemisWorkplacesForLogin::class)->handle(
             $user,
-            allowConfiguredReviewerWithoutWorkplace: true,
+            allowLoginFallback: true,
         );
 
         $this->assertTrue($syncedUser->is($user));
@@ -208,7 +208,7 @@ class PrimaryWorkplaceEvaluationTest extends TestCase
 
         app(SyncHemisWorkplacesForLogin::class)->handle(
             $user,
-            allowConfiguredReviewerWithoutWorkplace: true,
+            allowLoginFallback: true,
         );
     }
 

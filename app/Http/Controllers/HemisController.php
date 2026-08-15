@@ -54,7 +54,7 @@ class HemisController extends Controller
 
             $user = $syncHemisWorkplacesForLogin->handle(
                 $user,
-                allowConfiguredReviewerWithoutWorkplace: true,
+                allowLoginFallback: true,
             );
 
             Auth::login($user);

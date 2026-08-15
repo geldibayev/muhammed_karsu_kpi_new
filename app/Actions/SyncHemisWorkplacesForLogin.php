@@ -16,7 +16,7 @@ class SyncHemisWorkplacesForLogin
         private AssignDisciplinaryCriterionScore $assignDisciplinaryCriterionScore,
     ) {}
 
-    public function handle(User $user, bool $allowConfiguredReviewerWithoutWorkplace = false): User
+    public function handle(User $user, bool $allowLoginFallback = false): User
     {
         try {
             $result = $this->syncHemisWorkplaces->handle($user);
@@ -24,12 +24,12 @@ class SyncHemisWorkplacesForLogin
             $isForbidden = $exception instanceof RequestException && $exception->response->forbidden();
             $isMissingWorkplace = $exception instanceof UnexpectedValueException
                 && $exception->getMessage() === SyncHemisWorkplaces::MISSING_WORKPLACE_MESSAGE;
-            $canUseStoredWorkplace = $isForbidden && $user->workplaces()->exists();
-            $canBypassAsReviewer = ($isForbidden || $isMissingWorkplace) && $this->isConfiguredReviewer($user);
+            $hasStoredWorkplace = $isForbidden && $user->workplaces()->exists();
+            $isConfiguredReviewer = $this->isConfiguredReviewer($user);
 
-            if (! $allowConfiguredReviewerWithoutWorkplace
+            if (! $allowLoginFallback
                 || ! $user->isActive()
-                || (! $canUseStoredWorkplace && ! $canBypassAsReviewer)) {
+                || (! $isForbidden && (! $isMissingWorkplace || ! $isConfiguredReviewer))) {
                 throw $exception;
             }
 
@@ -37,7 +37,10 @@ class SyncHemisWorkplacesForLogin
                 'user_id' => $user->getKey(),
                 'hemis_id' => $user->hemis_id,
                 'status' => $exception instanceof RequestException ? $exception->response->status() : null,
-                'fallback' => $canUseStoredWorkplace ? 'stored_workplace' : 'configured_reviewer',
+                'degraded_mode' => $isForbidden ? 'oauth_only_403' : null,
+                'fallback' => $hasStoredWorkplace
+                    ? 'stored_workplace'
+                    : ($isConfiguredReviewer ? 'configured_reviewer' : 'oauth_only'),
                 'reason' => $exception instanceof RequestException
                     ? 'HEMIS workplace access forbidden.'
                     : $exception->getMessage(),
