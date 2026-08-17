@@ -18,6 +18,12 @@ class FixedPerResourceHumanReviewCriterionRule
 
     /** @var array<string, array<string, float>> */
     private const POINTS = [
+        '1.9' => [
+            'hold_degrees' => 1.0,
+            'no_degrees' => 1.0,
+            'foreign_lang' => 1.0,
+            'physical' => 1.0,
+        ],
         self::FOUR_ONE_ONE_CODE => [
             'hold_degrees' => 0.75,
             'no_degrees' => 0.75,

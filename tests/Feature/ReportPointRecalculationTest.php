@@ -2,15 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Data\AiEvaluationResult;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\CriterionPoint;
 use App\Models\Datum;
+use App\Models\DatumHistory;
 use App\Models\Evaluation;
 use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
 use App\Models\User;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 use UnexpectedValueException;
@@ -133,10 +136,11 @@ class ReportPointRecalculationTest extends TestCase
         $report = $this->createReport();
         $rootCriterion = $this->createCriterion($report);
         $criterionWithUnknownFormula = $this->createCriterion($report, $rootCriterion);
+        $criterionWithUnknownFormula->update(['code' => Criterion::RESOURCE_COUNT_COMPETITION_CODE]);
         $teacher = User::factory()->create();
         $superAdmin = User::factory()->superAdmin()->create();
 
-        $this->createDatum($teacher, $criterionWithUnknownFormula, 10);
+        $datum = $this->createDatum($teacher, $criterionWithUnknownFormula, 10);
         Point::query()->create([
             'user_id' => $teacher->id,
             'criterion_id' => $criterionWithUnknownFormula->id,
@@ -156,6 +160,11 @@ class ReportPointRecalculationTest extends TestCase
                 'point' => 42,
             ]);
             $this->assertDatabaseCount('criterion_points', 0);
+            $this->assertSame(10.0, $datum->fresh()->point);
+            $this->assertDatabaseMissing('datum_histories', [
+                'datum_id' => $datum->getKey(),
+                'message_type' => 'criterion_1_9_resource_point_normalized',
+            ]);
         }
     }
 
@@ -185,23 +194,52 @@ class ReportPointRecalculationTest extends TestCase
         ]);
 
         foreach ($leaders as $leader) {
-            $this->createDatum($leader, $criterion, 0.1);
-            $this->createDatum($leader, $criterion, 0.1);
-            $this->createDatum($leader, $criterion, 0.1);
+            $this->createDatum($leader, $criterion, 2);
+            $this->createDatum($leader, $criterion, 1);
+            $this->createDatum($leader, $criterion, 2);
         }
 
-        $this->createDatum($otherTeacher, $criterion, 100);
-        $this->createDatum($otherTeacher, $criterion, 100);
-        $this->createDatum($otherTeacher, $criterion, 100, 'checking');
+        $this->createDatum($otherTeacher, $criterion, 1.00001);
+        $this->createDatum($otherTeacher, $criterion, 1);
+        $checking = $this->createDatum($otherTeacher, $criterion, 100, 'checking');
+        $cancelled = $this->createDatum($otherTeacher, $criterion, 2, 'cancelled');
 
         $this->artisan('kpi:criteria:recalculate-1-9-ranking', [
             'report' => $report->getKey(),
         ])->expectsOutput("1.9 raqobat ballari qayta hisoblandi. Hisobot: {$report->getKey()}.")
             ->assertSuccessful();
 
+        $this->assertSame(0, Datum::query()
+            ->where('criterion_id', $criterion->getKey())
+            ->where('status', 'accepted')
+            ->where('point', '!=', 1)
+            ->count());
+        $this->assertSame(100.0, $checking->fresh()->point);
+        $this->assertSame(2.0, $cancelled->fresh()->point);
+        $this->assertSame(5, DatumHistory::query()
+            ->where('message_type', 'criterion_1_9_resource_point_normalized')
+            ->count());
         $this->assertPointEquals($leaders[0], $criterion, 3);
         $this->assertPointEquals($leaders[1], $criterion, 3);
         $this->assertPointEquals($otherTeacher, $criterion, 2);
+
+        $this->artisan('kpi:criteria:recalculate-1-9-ranking', [
+            'report' => $report->getKey(),
+        ])->assertSuccessful();
+        $this->assertDatabaseCount('datum_histories', 5);
+    }
+
+    public function test_criterion_one_nine_accepted_ai_result_is_fixed_to_one_point(): void
+    {
+        foreach (['hold_degrees', 'no_degrees', 'foreign_lang', 'physical'] as $category) {
+            $result = FixedPerResourceHumanReviewCriterionRule::normalizeAiResult(
+                new AiEvaluationResult('accepted', 2, 'Tasdiqlandi.'),
+                Criterion::RESOURCE_COUNT_COMPETITION_CODE,
+                $category,
+            );
+
+            $this->assertSame(1.0, $result->point);
+        }
     }
 
     public function test_criterion_one_nine_recalculation_command_rejects_unknown_report(): void

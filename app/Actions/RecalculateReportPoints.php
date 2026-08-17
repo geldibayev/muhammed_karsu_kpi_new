@@ -39,6 +39,7 @@ class RecalculateReportPoints
                 DB::transaction(function () use ($report): void {
                     Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
 
+                    $this->normalizeCriterionOneNineResourcePoints($report);
                     $this->refreshEducationalContentDatumPoints($report);
                     $this->refreshForeignLanguageCertificateDatumPoints($report);
                     $this->refreshOakArticleDatumPoints($report);
@@ -49,6 +50,33 @@ class RecalculateReportPoints
                     $this->rebuildCriterionPoints($report);
                     $this->rebuildFinalPoints($report);
                 }, attempts: 5);
+            });
+    }
+
+    private function normalizeCriterionOneNineResourcePoints(Report $report): void
+    {
+        Datum::query()
+            ->where('status', 'accepted')
+            ->where('point', '!=', 1)
+            ->whereHas('criterion', fn ($query) => $query
+                ->whereBelongsTo($report)
+                ->where('code', Criterion::RESOURCE_COUNT_COMPETITION_CODE))
+            ->lockForUpdate()
+            ->lazyById(200)
+            ->each(function (Datum $datum): void {
+                if ($datum->point === 1.0) {
+                    return;
+                }
+
+                $oldPoint = $datum->point;
+                $datum->update(['point' => 1]);
+                $datum->histories()->create([
+                    'user_id' => $datum->user_id,
+                    'type' => 'info',
+                    'message' => '1.9 mezoni bo‘yicha accepted resurs balli 1 ballga tenglandi. '
+                    .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'.',
+                    'message_type' => 'criterion_1_9_resource_point_normalized',
+                ]);
             });
     }
 
@@ -410,27 +438,21 @@ class RecalculateReportPoints
     /** @return Collection<int, array<string, int|float|Carbon>> */
     private function pointRows(Report $report, Criterion $criterion): Collection
     {
-        $competitionUsesResourceCount = $criterion->code === Criterion::RESOURCE_COUNT_COMPETITION_CODE
-            && $criterion->usesFormula(Formula::Competition);
-        $highestCompetitionValue = max(0, (float) $criterion->criterionPoints
-            ->max($competitionUsesResourceCount ? 'files' : 'point'));
+        $highestRawPoint = max(0, (float) $criterion->criterionPoints->max('point'));
 
         return $criterion->criterionPoints
             ->filter(fn (CriterionPoint $criterionPoint): bool => $criterionPoint->user !== null)
-            ->map(function (CriterionPoint $criterionPoint) use ($report, $criterion, $competitionUsesResourceCount, $highestCompetitionValue): array {
+            ->map(function (CriterionPoint $criterionPoint) use ($report, $criterion, $highestRawPoint): array {
                 $evaluation = $criterion->criterionEvaluations
                     ->firstWhere('evaluation', $criterionPoint->user->degree);
                 $maximumPoint = $evaluation?->has === '1' ? max(0, (float) $evaluation->score) : 0;
                 $rawPoint = max(0, (float) $criterionPoint->point);
-                $competitionValue = $competitionUsesResourceCount
-                    ? max(0, $criterionPoint->files)
-                    : $rawPoint;
 
                 $calculatedPoint = $criterion->isHIndexCriterion()
                     ? $rawPoint
                     : match (true) {
-                        $criterion->usesFormula(Formula::Competition) => $highestCompetitionValue > 0
-                            ? $maximumPoint * ($competitionValue / $highestCompetitionValue)
+                        $criterion->usesFormula(Formula::Competition) => $highestRawPoint > 0
+                            ? $maximumPoint * ($rawPoint / $highestRawPoint)
                             : 0,
                         $criterion->usesFormula(Formula::Maximum) => min($rawPoint, $maximumPoint),
                         $criterion->usesFormula(Formula::Unlimited) => $rawPoint,

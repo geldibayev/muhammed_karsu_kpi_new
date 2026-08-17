@@ -12,7 +12,7 @@ class RecalculateCriterionOneNineRanking extends Command
     protected $signature = 'kpi:criteria:recalculate-1-9-ranking
                             {report : Hisobot ID raqami}';
 
-    protected $description = '1.9 bo‘yicha oldin tasdiqlangan resurslar sonidan raqobat ballarini qayta hisoblaydi';
+    protected $description = '1.9 accepted resurslarini 1 ballga tenglab, raqobat reytingini qayta hisoblaydi';
 
     public function handle(RecalculateReportPoints $recalculateReportPoints): int
     {
