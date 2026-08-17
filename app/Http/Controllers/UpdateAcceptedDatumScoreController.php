@@ -23,6 +23,7 @@ class UpdateAcceptedDatumScoreController extends Controller
             $request->filled('point') ? $request->float('point') : null,
             $request->validated('score_change_reason'),
             $request->filled('publication_tier') ? $request->string('publication_tier')->toString() : null,
+            $request->filled('author_count') ? $request->integer('author_count') : null,
         );
 
         return redirect()

@@ -111,7 +111,7 @@ class ApproveCancelledAiDatum
                 $point = $this->scientificPublicationScoreCalculator->publicationTierPoint($publicationTier);
             }
 
-            if ($lockedDatum->criterion->isOakArticleCriterion()) {
+            if ($lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore()) {
                 if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
                     throw ValidationException::withMessages([
                         'author_count' => 'Mualliflar soni 1 dan 1000 gacha bo‘lishi kerak.',
@@ -137,7 +137,7 @@ class ApproveCancelledAiDatum
             $point = round($point, 4);
             $aiDecision = $this->latestDecisionWasAi($lockedDatum);
             $scoreDescription = match (true) {
-                $lockedDatum->criterion->isOakArticleCriterion() => 'Bazaviy ball: '
+                $lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore() => 'Bazaviy ball: '
                     .number_format(
                         $this->oakArticleScoreCalculator->basePoint((string) $lockedDatum->user->degree),
                         2,
@@ -163,9 +163,12 @@ class ApproveCancelledAiDatum
                 'status' => 'accepted',
                 'point' => $point,
                 'manual_score_option_id' => $scoreOption?->getKey(),
-                'author_count' => $lockedDatum->criterion->isOakArticleCriterion()
+                'author_count' => $lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore()
                     ? $authorCount
                     : $lockedDatum->author_count,
+                'impact_factor' => $lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore()
+                    ? null
+                    : $lockedDatum->impact_factor,
                 'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
                     ? $publicationTier
                     : $lockedDatum->publication_tier,

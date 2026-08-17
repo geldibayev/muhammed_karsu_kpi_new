@@ -41,10 +41,9 @@ class ApproveDatumRequest extends FormRequest
         $isManualCriterion = $criterion?->checking === 'manual';
         $isEducationalContentCriterion = $criterion?->code === EducationalContentCriterionRule::CODE;
         $isAiCriterion = $criterion?->checking === 'ai';
-        $isOakArticleCriterion = $criterion?->isOakArticleCriterion() === true;
+        $usesDegreeBasedArticleScore = $criterion?->usesDegreeBasedAuthorDividedArticleScore() === true;
         $isPrintedLiteratureCriterion = $criterion?->isPrintedEducationalLiteratureCriterion() === true;
         $usesAutomaticAiHumanReviewScore = $criterion?->usesAutomaticAiHumanReviewScore() === true;
-        $usesImpactFactorScore = $criterion?->usesImpactFactorAiHumanReviewScore() === true;
         $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesAuthorDividedScore = $criterion?->usesAuthorDividedAiHumanReviewScore() === true;
         $usesUniversityTierScore = $criterion?->usesUniversityTierAiHumanReviewScore() === true;
@@ -74,19 +73,17 @@ class ApproveDatumRequest extends FormRequest
             ],
             'point' => [
                 Rule::requiredIf($isAiCriterion
-                    && ! $isOakArticleCriterion
+                    && ! $usesDegreeBasedArticleScore
                     && ! $isPrintedLiteratureCriterion
                     && ! $usesAutomaticAiHumanReviewScore
-                    && ! $usesImpactFactorScore
                     && ! $usesPublicationTierScore
                     && ! $usesAuthorDividedScore
                     && ! $usesUniversityTierScore
                     && ! $isIndustryFundingCriterion),
                 Rule::prohibitedIf(! $isAiCriterion
-                    || $isOakArticleCriterion
+                    || $usesDegreeBasedArticleScore
                     || $isPrintedLiteratureCriterion
                     || $usesAutomaticAiHumanReviewScore
-                    || $usesImpactFactorScore
                     || $usesPublicationTierScore
                     || $usesAuthorDividedScore
                     || $usesUniversityTierScore
@@ -98,12 +95,12 @@ class ApproveDatumRequest extends FormRequest
             ],
             'author_count' => [
                 Rule::requiredIf($isAiCriterion
-                    && ($isOakArticleCriterion
+                    && ($usesDegreeBasedArticleScore
                         || $isPrintedLiteratureCriterion
                         || $usesAuthorDividedScore
                         || $isIndustryFundingCriterion)),
                 Rule::prohibitedIf(! $isAiCriterion
-                    || (! $isOakArticleCriterion
+                    || (! $usesDegreeBasedArticleScore
                         && ! $isPrintedLiteratureCriterion
                         && ! $usesAuthorDividedScore
                         && ! $isIndustryFundingCriterion)),
@@ -121,8 +118,7 @@ class ApproveDatumRequest extends FormRequest
                 'max:100000',
             ],
             'impact_factor' => [
-                Rule::requiredIf($usesImpactFactorScore),
-                Rule::prohibitedIf(! $usesImpactFactorScore),
+                'prohibited',
                 'nullable',
                 'integer',
                 'min:1',

@@ -42,10 +42,10 @@ class ApproveCancelledAiDatumRequest extends FormRequest
             : null;
         $isEducationalContentCriterion = $criterion?->code === EducationalContentCriterionRule::CODE;
         $isForeignLanguageCertificateCriterion = $criterion?->code === ForeignLanguageCertificateCriterionRule::CODE;
-        $isOakArticleCriterion = $criterion?->isOakArticleCriterion() === true;
+        $usesDegreeBasedArticleScore = $criterion?->usesDegreeBasedAuthorDividedArticleScore() === true;
         $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesScoreOption = $isEducationalContentCriterion || $isForeignLanguageCertificateCriterion;
-        $usesAutomaticPoint = $usesScoreOption || $usesPublicationTierScore || $isOakArticleCriterion;
+        $usesAutomaticPoint = $usesScoreOption || $usesPublicationTierScore || $usesDegreeBasedArticleScore;
 
         return [
             'point' => [
@@ -57,8 +57,8 @@ class ApproveCancelledAiDatumRequest extends FormRequest
                 'max:'.($maximumPoint ?? 0),
             ],
             'author_count' => [
-                Rule::requiredIf($isOakArticleCriterion),
-                Rule::prohibitedIf(! $isOakArticleCriterion),
+                Rule::requiredIf($usesDegreeBasedArticleScore),
+                Rule::prohibitedIf(! $usesDegreeBasedArticleScore),
                 'nullable',
                 'integer',
                 'min:1',

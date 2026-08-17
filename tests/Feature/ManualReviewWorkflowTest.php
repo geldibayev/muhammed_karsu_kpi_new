@@ -1755,15 +1755,16 @@ class ManualReviewWorkflowTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $impactDatum))
             ->assertOk()
-            ->assertSee('Impakt faktor bilan tasdiqlash')
-            ->assertSee('name="impact_factor"', false)
+            ->assertSee('Mualliflar soni bilan tasdiqlash')
+            ->assertSee('name="author_count"', false)
+            ->assertDontSee('name="impact_factor"', false)
             ->assertDontSee('name="point"', false);
         $this->actingAs($reviewer)
             ->from(route('reviews.show', $impactDatum))
-            ->patch(route('reviews.approve', $impactDatum), ['impact_factor' => 1.5])
-            ->assertSessionHasErrors('impact_factor');
+            ->patch(route('reviews.approve', $impactDatum), ['point' => 1])
+            ->assertSessionHasErrors('point');
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $impactDatum), ['impact_factor' => 2])
+            ->patch(route('reviews.approve', $impactDatum), ['author_count' => 3])
             ->assertRedirect(route('ai-human-reviews.index'));
 
         $this->actingAs($reviewer)
@@ -1793,15 +1794,16 @@ class ManualReviewWorkflowTest extends TestCase
         $patentWithDegreeDatum->refresh();
         $patentWithoutDegreeDatum->refresh();
 
-        $this->assertSame(0.6, $impactDatum->point);
-        $this->assertSame(2, $impactDatum->impact_factor);
+        $this->assertSame(0.25, $impactDatum->point);
+        $this->assertSame(3, $impactDatum->author_count);
+        $this->assertNull($impactDatum->impact_factor);
         $this->assertSame(5.0, $tierDatum->point);
         $this->assertSame('conference', $tierDatum->publication_tier);
         $this->assertSame(3.0, $patentWithDegreeDatum->point);
         $this->assertSame(4.0, $patentWithoutDegreeDatum->point);
         $this->assertNull($patentWithDegreeDatum->author_count);
         $this->assertNull($patentWithoutDegreeDatum->author_count);
-        $this->assertSame(0.6, (float) Point::query()
+        $this->assertSame(0.25, (float) Point::query()
             ->where('user_id', $withoutDegreeOwner->id)
             ->where('criterion_id', $criteria->get('3.1.2')->id)
             ->value('point'));

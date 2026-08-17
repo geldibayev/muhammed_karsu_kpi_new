@@ -40,6 +40,11 @@ class Criterion extends Model
 
     public const PRINTED_EDUCATIONAL_LITERATURE_CODES = ['1.2', '1.3', '1.4'];
 
+    public const SHARED_RESOURCE_MATCHING_CODES = [
+        '1.2', '1.3', '1.4', '1.8',
+        '3.1.1', '3.1.2', '3.1.3', '3.1.5', '3.1.9', '3.1.13',
+    ];
+
     protected $fillable = [
         'id', 'code', 'name', 'desc', 'parent_id', 'sort_order', 'template',
         'upload', 'file_limit', 'observation', 'report_id', 'res_type',
@@ -132,6 +137,14 @@ class Criterion extends Model
         return $this->code === OakArticleCriterionRule::CODE;
     }
 
+    public function usesDegreeBasedAuthorDividedArticleScore(): bool
+    {
+        return in_array($this->code, [
+            OakArticleCriterionRule::CODE,
+            self::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE,
+        ], true);
+    }
+
     public function isForeignLanguageCertificateCriterion(): bool
     {
         return $this->checking === 'manual'
@@ -169,16 +182,16 @@ class Criterion extends Model
         return in_array($this->code, self::PRINTED_EDUCATIONAL_LITERATURE_CODES, true);
     }
 
+    public function supportsSharedResourceMatching(): bool
+    {
+        return in_array($this->code, self::SHARED_RESOURCE_MATCHING_CODES, true);
+    }
+
     public function usesAutomaticAiHumanReviewScore(): bool
     {
         return $this->checking === 'ai'
             && (in_array($this->code, self::AUTOMATIC_AI_HUMAN_REVIEW_SCORE_CODES, true)
                 || FixedPerResourceHumanReviewCriterionRule::supports($this->code));
-    }
-
-    public function usesImpactFactorAiHumanReviewScore(): bool
-    {
-        return $this->checking === 'ai' && $this->code === self::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE;
     }
 
     public function usesPublicationTierAiHumanReviewScore(): bool

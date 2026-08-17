@@ -21,11 +21,10 @@
         $criterionDescription = trim(strip_tags($criterionDescription));
         $isManualCriterion = $datum->criterion?->checking === 'manual';
         $isAiCriterion = $datum->criterion?->checking === 'ai';
-        $isOakArticleCriterion = $datum->criterion?->isOakArticleCriterion() === true;
+        $usesDegreeBasedArticleScore = $datum->criterion?->usesDegreeBasedAuthorDividedArticleScore() === true;
         $isLaboratoryWorkCriterion = $datum->criterion?->isLaboratoryWorkCriterion() === true;
         $isPrintedLiteratureCriterion = $datum->criterion?->isPrintedEducationalLiteratureCriterion() === true;
         $usesAutomaticAiHumanReviewScore = $datum->criterion?->usesAutomaticAiHumanReviewScore() === true;
-        $usesImpactFactorScore = $datum->criterion?->usesImpactFactorAiHumanReviewScore() === true;
         $usesPublicationTierScore = $datum->criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesAuthorDividedScore = $datum->criterion?->usesAuthorDividedAiHumanReviewScore() === true;
         $usesUniversityTierScore = $datum->criterion?->usesUniversityTierAiHumanReviewScore() === true;
@@ -143,10 +142,8 @@
                                         Sahifa va mualliflar bilan tasdiqlash
                                     @elseif($isIndustryFundingCriterion)
                                         Summa va hammualliflar bilan tasdiqlash
-                                    @elseif($isOakArticleCriterion || $usesAuthorDividedScore)
+                                    @elseif($usesDegreeBasedArticleScore || $usesAuthorDividedScore)
                                         Mualliflar soni bilan tasdiqlash
-                                    @elseif($usesImpactFactorScore)
-                                        Impakt faktor bilan tasdiqlash
                                     @elseif($usesPublicationTierScore)
                                         Kvartil bilan tasdiqlash
                                     @elseif($usesUniversityTierScore)
@@ -186,12 +183,12 @@
                         </div>
                     </div>
 
-                    @if($isIndustryFundingCriterion && $matchingIndustryFundingSubmissions->isNotEmpty())
+                    @if($datum->criterion?->supportsSharedResourceMatching() && $matchingSharedResourceSubmissions->isNotEmpty())
                         <div class="card card-outline card-warning">
                             <div class="card-header">
                                 <h3 class="card-title font-weight-bold">
                                     Boshqa foydalanuvchilar yuklagan ayni resurslar
-                                    <span class="badge badge-warning ml-1">{{ $matchingIndustryFundingSubmissions->count() }}</span>
+                                    <span class="badge badge-warning ml-1">{{ $matchingSharedResourceSubmissions->count() }}</span>
                                 </h3>
                             </div>
                             <div class="card-body p-0 table-responsive">
@@ -207,7 +204,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($matchingIndustryFundingSubmissions as $matchingDatum)
+                                        @foreach($matchingSharedResourceSubmissions as $matchingDatum)
                                             @php
                                                 $matchingStatus = \App\Enums\DatumStatus::from($matchingDatum->status);
                                             @endphp
@@ -438,7 +435,7 @@
                             <div class="small text-muted mt-2">
                                 Ball serverda: tushgan summa / 1 000 000 / hammualliflar soni.
                             </div>
-                        @elseif($isOakArticleCriterion)
+                        @elseif($usesDegreeBasedArticleScore)
                             <label for="author-count">Maqoladagi jami mualliflar soni</label>
                             <input id="author-count" name="author_count" type="number" min="1" max="1000"
                                    step="1" required value="{{ old('author_count', data_get($datum->material, 'article.authors_num')) }}"
@@ -459,17 +456,6 @@
                             @enderror
                             <div class="small text-muted mt-2">
                                 Bazaviy {{ number_format($isLaboratoryWorkCriterion ? \App\Support\LaboratoryWorkCriterionRule::BASE_POINT : $evaluationMaximum, 2) }} ball mualliflar soniga avtomatik bo‘linadi.
-                            </div>
-                        @elseif($usesImpactFactorScore)
-                            <label for="impact-factor">Jurnalning impakt faktori</label>
-                            <input id="impact-factor" name="impact_factor" type="number" min="1" max="1000"
-                                   step="1" required value="{{ old('impact_factor', $datum->impact_factor) }}"
-                                   class="form-control @error('impact_factor') is-invalid @enderror">
-                            @error('impact_factor')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <div class="small text-muted mt-2">
-                                Har bir birlik uchun maksimal ballning 10 foizi, 10 va undan yuqori qiymatda to‘liq ball beriladi.
                             </div>
                         @elseif($usesPublicationTierScore)
                             <label for="publication-tier">Jurnal kvartili yoki nashr turi</label>

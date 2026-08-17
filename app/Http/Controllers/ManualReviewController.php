@@ -84,7 +84,7 @@ class ManualReviewController extends Controller
             'year:id,name',
             'histories' => fn ($query) => $query->with('user:id,name')->latest(),
         ]);
-        $matchingIndustryFundingSubmissions = $datum->matchingIndustryFundingSubmissions();
+        $matchingSharedResourceSubmissions = $datum->matchingSharedResourceSubmissions();
         $status = DatumStatus::from($datum->status);
         $scoreOptions = $datum->criterion?->manualScoreOptions ?? collect();
         if ($datum->criterion?->code === EducationalContentCriterionRule::CODE) {
@@ -133,7 +133,7 @@ class ManualReviewController extends Controller
                 ])->all(),
             ]
             : null;
-        $oakArticleBasePoint = $datum->criterion?->isOakArticleCriterion() === true
+        $oakArticleBasePoint = $datum->criterion?->usesDegreeBasedAuthorDividedArticleScore() === true
             ? $oakArticleScoreCalculator->basePoint($datum->user?->degree ?? '')
             : null;
         $transferCriteria = $isAcceptedScoreCorrection
@@ -162,7 +162,7 @@ class ManualReviewController extends Controller
             'reviewReturnUrl',
             'reviewActionParameters',
             'foreignLanguageCertificateScoring',
-            'matchingIndustryFundingSubmissions',
+            'matchingSharedResourceSubmissions',
         ));
     }
 
@@ -182,7 +182,6 @@ class ManualReviewController extends Controller
             $request->filled('point') ? $request->float('point') : null,
             $request->filled('author_count') ? $request->integer('author_count') : null,
             $request->filled('page_count') ? $request->integer('page_count') : null,
-            $request->filled('impact_factor') ? $request->integer('impact_factor') : null,
             $request->filled('publication_tier') ? $request->string('publication_tier')->toString() : null,
             $request->filled('university_tier') ? $request->string('university_tier')->toString() : null,
             $request->filled('received_amount') ? $request->float('received_amount') : null,

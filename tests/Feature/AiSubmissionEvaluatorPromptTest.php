@@ -38,6 +38,75 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_three_one_two_ai_point_is_calculated_from_degree_and_author_count(): void
+    {
+        Storage::fake('local');
+        $image = UploadedFile::fake()->image('article.jpg', 10, 10);
+        Storage::disk('local')->put('article.jpg', $image->getContent());
+        $user = User::factory()->create(['degree' => 'hold_degrees']);
+        Evaluation::query()->create([
+            'code' => 'hold_degrees',
+            'name' => ['uz' => 'Ilmiy darajali'],
+            'status' => '1',
+        ]);
+        $report = Report::query()->create([
+            'name' => ['uz' => 'KPI hisoboti'],
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'code' => Criterion::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE,
+            'name' => ['uz' => 'Impakt faktorli maqola'],
+            'report_id' => $report->getKey(),
+            'upload' => '1',
+            'status' => '1',
+            'checking' => 'ai',
+            'ai_prompt' => 'Maqoladagi author_count qiymatini aniqlang.',
+            'ai_model' => 'gemini-test',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'hold_degrees',
+            'has' => '1',
+            'score' => 2,
+        ]);
+        $datum = Datum::query()->create([
+            'name' => 'article.jpg',
+            'material' => [
+                'type' => 'file',
+                'disk' => 'local',
+                'path' => 'article.jpg',
+                'mime' => 'image/jpeg',
+            ],
+            'user_id' => $user->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'checking',
+        ]);
+
+        Gemini::fake([
+            GenerateContentResponse::fake([
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [[
+                            'text' => json_encode([
+                                'status' => 'accepted',
+                                'point' => 1,
+                                'author_count' => 4,
+                                'resource_date' => '2026-01-10',
+                                'reason' => 'Impakt faktor va 4 muallif tasdiqlandi.',
+                            ], JSON_THROW_ON_ERROR),
+                        ]],
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $result = app(AiSubmissionEvaluator::class)->evaluate($datum);
+
+        $this->assertSame('accepted', $result->status);
+        $this->assertSame(0.125, $result->point);
+        $this->assertSame(4, $result->authorCount);
+    }
+
     public function test_professional_development_point_is_calculated_from_category_maximum_and_top_tier(): void
     {
         Storage::fake('local');

@@ -115,9 +115,9 @@ class Datum extends Model
     }
 
     /** @return Collection<int, self> */
-    public function matchingIndustryFundingSubmissions(): Collection
+    public function matchingSharedResourceSubmissions(): Collection
     {
-        if ($this->loadMissing('criterion:id,code')->criterion?->isIndustryFundingCriterion() !== true) {
+        if ($this->loadMissing('criterion:id,code')->criterion?->supportsSharedResourceMatching() !== true) {
             return new Collection;
         }
 

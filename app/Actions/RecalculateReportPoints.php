@@ -42,7 +42,7 @@ class RecalculateReportPoints
                     $this->normalizeCriterionOneNineResourcePoints($report);
                     $this->refreshEducationalContentDatumPoints($report);
                     $this->refreshForeignLanguageCertificateDatumPoints($report);
-                    $this->refreshOakArticleDatumPoints($report);
+                    $this->refreshDegreeBasedArticleDatumPoints($report);
                     $this->refreshPrintedLiteratureDatumPoints($report);
                     $this->refreshIndustryFundingDatumPoints($report);
                     $this->refreshLaboratoryWorkDatumPoints($report);
@@ -330,16 +330,18 @@ class RecalculateReportPoints
             });
     }
 
-    private function refreshOakArticleDatumPoints(Report $report): void
+    private function refreshDegreeBasedArticleDatumPoints(Report $report): void
     {
         Datum::query()
             ->where('status', 'accepted')
-            ->whereHas('user', fn ($query) => $query->active())
-            ->whereNotNull('author_count')
+            ->whereBetween('author_count', [1, 1000])
             ->whereHas('criterion', fn ($query) => $query
                 ->whereBelongsTo($report)
-                ->where('code', OakArticleCriterionRule::CODE))
-            ->with('user:id,degree')
+                ->whereIn('code', [
+                    OakArticleCriterionRule::CODE,
+                    Criterion::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE,
+                ]))
+            ->with(['criterion:id,code', 'user:id,degree'])
             ->lockForUpdate()
             ->get()
             ->each(function (Datum $datum): void {
@@ -361,11 +363,13 @@ class RecalculateReportPoints
                 $datum->histories()->create([
                     'user_id' => $datum->user_id,
                     'type' => 'info',
-                    'message' => '3.1.1 balli foydalanuvchi ilmiy darajasi o‘zgarishi sabab qayta hisoblandi. '
+                    'message' => $datum->criterion->code.' balli saqlangan mualliflar soni va foydalanuvchining ilmiy darajasi bo‘yicha qayta hisoblandi. '
                         .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
                         .'Yangi ball: '.number_format($point, 4, '.', '').'. '
                         .'Mualliflar soni: '.$datum->author_count.'.',
-                    'message_type' => 'oak_article_point_recalculated',
+                    'message_type' => $datum->criterion->isOakArticleCriterion()
+                        ? 'oak_article_point_recalculated'
+                        : 'criterion_3_1_2_point_recalculated',
                 ]);
             });
     }

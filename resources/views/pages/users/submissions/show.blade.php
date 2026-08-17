@@ -156,13 +156,13 @@
                                     Tasdiqlangan resursni rad etish
                                 </button>
 
-                                @if($datum->criterion?->isIndustryFundingCriterion())
+                                @if($datum->criterion?->supportsSharedResourceMatching())
                                     <button type="button" class="btn btn-info btn-sm ml-2"
-                                            data-toggle="collapse" data-target="#matching-industry-funding-submissions"
-                                            aria-expanded="false" aria-controls="matching-industry-funding-submissions">
+                                            data-toggle="collapse" data-target="#matching-shared-resource-submissions"
+                                            aria-expanded="false" aria-controls="matching-shared-resource-submissions">
                                         <i class="fas fa-users mr-1" aria-hidden="true"></i>
                                         Boshqa yuklamalar
-                                        <span class="badge badge-light ml-1">{{ $matchingIndustryFundingSubmissions->count() }}</span>
+                                        <span class="badge badge-light ml-1">{{ $matchingSharedResourceSubmissions->count() }}</span>
                                     </button>
                                 @endif
                             @endcan
@@ -212,10 +212,10 @@
                         </div>
 
                         @can('overrideAcceptance', $datum)
-                            @if($datum->criterion?->isIndustryFundingCriterion())
-                                <div class="collapse border-top" id="matching-industry-funding-submissions">
+                            @if($datum->criterion?->supportsSharedResourceMatching())
+                                <div class="collapse border-top" id="matching-shared-resource-submissions">
                                     <div class="card-body">
-                                        @forelse($matchingIndustryFundingSubmissions as $matchingDatum)
+                                        @forelse($matchingSharedResourceSubmissions as $matchingDatum)
                                             <div class="border-bottom pb-2 mb-2">
                                                 <div class="d-flex flex-wrap align-items-center justify-content-between">
                                                     <div>
@@ -384,6 +384,18 @@
                                             <small class="form-text text-muted">Ball tanlangan kvartil bo‘yicha serverda hisoblanadi.</small>
                                             @error('publication_tier')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         </div>
+                                    @elseif($datum->criterion?->usesDegreeBasedAuthorDividedArticleScore())
+                                    <div class="form-group">
+                                        <label for="updated-author-count">Maqoladagi jami mualliflar soni</label>
+                                        <input id="updated-author-count" name="author_count" type="number" min="1"
+                                               max="1000" step="1" required
+                                               value="{{ old('author_count', $datum->author_count) }}"
+                                               class="form-control @error('author_count') is-invalid @enderror">
+                                        <small class="form-text text-muted">
+                                            Ball ilmiy darajaga qarab 0.5 yoki 0.75 ni mualliflar soniga bo‘lib hisoblanadi.
+                                        </small>
+                                        @error('author_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
                                     @else
                                     <div class="form-group">
                                         <label for="updated-point">Yangi ball</label>
@@ -574,7 +586,7 @@
                                     @error('publication_tier')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                @elseif($datum->criterion?->isOakArticleCriterion())
+                                @elseif($datum->criterion?->usesDegreeBasedAuthorDividedArticleScore())
                                     <div class="alert alert-info py-2">
                                         {{ \App\Support\OakArticleCriterionRule::DESCRIPTION_UZ }}
                                     </div>
@@ -615,7 +627,7 @@
 @endsection
 
 @section('script')
-    @if(($errors->has('point') || $errors->has('publication_tier') || $errors->has('score_change_reason'))
+    @if(($errors->has('point') || $errors->has('author_count') || $errors->has('publication_tier') || $errors->has('score_change_reason'))
         && $status === \App\Enums\DatumStatus::Accepted
         && auth()->user()?->can('updateAcceptedScore', $datum))
         <script>$('#update-accepted-score-modal').modal('show');</script>

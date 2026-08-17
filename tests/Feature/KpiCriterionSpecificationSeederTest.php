@@ -187,6 +187,11 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             OakArticleCriterionRule::PROMPT,
             Criterion::query()->where('code', OakArticleCriterionRule::CODE)->value('ai_prompt'),
         );
+        $criterionThreeOneTwo = Criterion::query()
+            ->where('code', Criterion::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE)
+            ->firstOrFail();
+        $this->assertSame(4, $criterionThreeOneTwo->file_limit);
+        $this->assertTrue($criterionThreeOneTwo->divide_ai_point_by_authors);
 
         $criterionTwoOneFive = Criterion::query()->where('code', '2.1.5')->firstOrFail();
         $this->assertSame(

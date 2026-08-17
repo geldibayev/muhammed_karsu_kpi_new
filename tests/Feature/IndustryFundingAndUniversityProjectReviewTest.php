@@ -211,7 +211,7 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('reviews.show', $current))
             ->assertOk()
-            ->assertViewHas('matchingIndustryFundingSubmissions', fn ($submissions): bool => $submissions->pluck('id')->all() === [$matching->getKey()])
+            ->assertViewHas('matchingSharedResourceSubmissions', fn ($submissions): bool => $submissions->pluck('id')->all() === [$matching->getKey()])
             ->assertSeeText('Boshqa foydalanuvchilar yuklagan ayni resurslar')
             ->assertSeeText('Mos resurs muallifi')
             ->assertSeeText('Boshqa nomdagi ayni shartnoma.pdf')
@@ -222,7 +222,7 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
             ->assertOk()
             ->assertSeeText('Boshqa yuklamalar')
             ->assertSeeText('Ko‘rilayotgan shartnoma.pdf')
-            ->assertSee('data-target="#matching-industry-funding-submissions"', false);
+            ->assertSee('data-target="#matching-shared-resource-submissions"', false);
 
         $this->actingAs($reviewer)
             ->get(route('upload.details', $unrelated))
@@ -233,5 +233,22 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get(route('reviews.show', $current))
             ->assertForbidden();
+    }
+
+    public function test_all_coauthored_criteria_support_shared_resource_matching(): void
+    {
+        foreach (Criterion::SHARED_RESOURCE_MATCHING_CODES as $criterionCode) {
+            $this->assertTrue(
+                (new Criterion(['code' => $criterionCode]))->supportsSharedResourceMatching(),
+                "{$criterionCode} mezoni bir xil resurslarni ko‘rsatishi kerak.",
+            );
+        }
+
+        foreach (['3.1.8', '3.1.14', '4.1.1'] as $criterionCode) {
+            $this->assertFalse(
+                (new Criterion(['code' => $criterionCode]))->supportsSharedResourceMatching(),
+                "{$criterionCode} mezoni bu ro‘yxatga kirmasligi kerak.",
+            );
+        }
     }
 }

@@ -106,7 +106,13 @@ class KpiCriterionSpecification
                 descriptionUz: OakArticleCriterionRule::DESCRIPTION_UZ,
                 aiPrompt: OakArticleCriterionRule::PROMPT,
             ),
-            '3.1.2' => self::rule(self::Maximum, 4, 'current', [2, 3, 3, 3]),
+            '3.1.2' => self::rule(
+                self::Maximum,
+                4,
+                'current',
+                [2, 3, 3, 3],
+                divideAiPointByAuthors: true,
+            ),
             '3.1.3' => self::rule(
                 self::Unlimited,
                 10,

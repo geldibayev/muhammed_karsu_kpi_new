@@ -236,7 +236,7 @@ PROMPT;
                 return ScopusCriterionRule::apply($result);
             }
 
-            if ($criterion->isOakArticleCriterion()) {
+            if ($criterion->usesDegreeBasedAuthorDividedArticleScore()) {
                 return $this->oakArticleScoreCalculator->apply($result, $user->degree);
             }
 

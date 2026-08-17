@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\RecalculateReportPoints;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Datum;
@@ -84,6 +85,48 @@ class OakArticleScoringTest extends TestCase
 
         $this->assertSame(3, $this->recalculationHistoryCount());
         $this->assertPointEquals($withoutDegree, $criterion, 0.625);
+    }
+
+    public function test_report_recalculation_updates_known_three_one_two_author_shares_only(): void
+    {
+        $this->createEvaluationCategories();
+        $formula = $this->createMaximumFormula();
+        $report = $this->createReport('3.1.2 hisoboti');
+        $criterion = $this->createOakCriterion(
+            $report,
+            $formula,
+            Criterion::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE,
+        );
+        $otherReport = $this->createReport('Boshqa hisobot');
+        $otherCriterion = $this->createOakCriterion(
+            $otherReport,
+            $formula,
+            Criterion::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE,
+        );
+        $withDegree = User::factory()->create(['degree' => 'hold_degrees']);
+        $withoutDegree = User::factory()->create(['degree' => 'no_degrees']);
+
+        $degreeDatum = $this->createAcceptedDatum($withDegree, $criterion, 2);
+        $degreeDatum->update(['author_count' => 2]);
+        $withoutDegreeDatum = $this->createAcceptedDatum($withoutDegree, $criterion, 2);
+        $withoutDegreeDatum->update(['author_count' => 3]);
+        $unknownDatum = $this->createAcceptedDatum($withoutDegree, $criterion, 2);
+        $checkingDatum = $this->createAcceptedDatum($withoutDegree, $criterion, 2);
+        $checkingDatum->update(['status' => 'checking', 'author_count' => 2]);
+        $otherReportDatum = $this->createAcceptedDatum($withoutDegree, $otherCriterion, 2);
+        $otherReportDatum->update(['author_count' => 2]);
+
+        app(RecalculateReportPoints::class)->handle($report);
+        app(RecalculateReportPoints::class)->handle($report);
+
+        $this->assertDatumScore($degreeDatum, 2, 0.25);
+        $this->assertDatumScore($withoutDegreeDatum, 3, 0.25);
+        $this->assertDatumScore($unknownDatum, null, 2);
+        $this->assertDatumScore($checkingDatum, 2, 2);
+        $this->assertDatumScore($otherReportDatum, 2, 2);
+        $this->assertSame(2, DatumHistory::query()
+            ->where('message_type', 'criterion_3_1_2_point_recalculated')
+            ->count());
     }
 
     public function test_human_review_requires_author_count_and_calculates_point_on_server(): void
@@ -188,6 +231,51 @@ class OakArticleScoringTest extends TestCase
             ]);
             $this->assertPointEquals($owner, $criterion, $expectedPoint);
         }
+    }
+
+    public function test_three_one_two_finalized_overrides_use_author_count_and_server_score(): void
+    {
+        $this->createEvaluationCategories();
+        $formula = $this->createMaximumFormula();
+        $report = $this->createReport('3.1.2 yakuniy qarorlar');
+        $criterion = $this->createOakCriterion(
+            $report,
+            $formula,
+            Criterion::IMPACT_FACTOR_AI_HUMAN_REVIEW_CODE,
+        );
+        $superAdmin = User::factory()->superAdmin()->create();
+        $owner = User::factory()->create(['degree' => 'no_degrees']);
+        $accepted = $this->createAcceptedDatum($owner, $criterion, 2);
+        $accepted->update(['author_count' => 1]);
+        $cancelled = $this->createAcceptedDatum($owner, $criterion, 0);
+        $cancelled->update(['status' => 'cancelled']);
+
+        $this->actingAs($superAdmin)
+            ->get(route('upload.details', $accepted))
+            ->assertOk()
+            ->assertSee('name="author_count"', false)
+            ->assertDontSee('name="point"', false);
+        $this->actingAs($superAdmin)
+            ->patch(route('submissions.accepted-score.update', $accepted), [
+                'point' => 1,
+                'score_change_reason' => 'Mualliflar soni tekshirildi.',
+            ])
+            ->assertSessionHasErrors('point');
+        $this->actingAs($superAdmin)
+            ->patch(route('submissions.accepted-score.update', $accepted), [
+                'author_count' => 3,
+                'score_change_reason' => 'Mualliflar soni tekshirildi.',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($superAdmin)
+            ->patch(route('ai-human-reviews.approve-cancelled', $cancelled), [
+                'author_count' => 2,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatumScore($accepted, 3, 0.25);
+        $this->assertDatumScore($cancelled, 2, 0.375);
     }
 
     public function test_apply_stops_without_partial_changes_when_author_count_is_unknown(): void
@@ -340,8 +428,11 @@ class OakArticleScoringTest extends TestCase
         ]);
     }
 
-    private function createOakCriterion(Report $report, Formula $formula): Criterion
-    {
+    private function createOakCriterion(
+        Report $report,
+        Formula $formula,
+        string $code = OakArticleCriterionRule::CODE,
+    ): Criterion {
         $parent = Criterion::query()->create([
             'code' => '3',
             'name' => ['uz' => 'Ilmiy-innovatsion faoliyat'],
@@ -350,7 +441,7 @@ class OakArticleScoringTest extends TestCase
             'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
-            'code' => OakArticleCriterionRule::CODE,
+            'code' => $code,
             'name' => ['uz' => 'OAK maqolasi'],
             'parent_id' => $parent->id,
             'report_id' => $report->id,

@@ -39,7 +39,6 @@ class ReviewDatumSubmission
         ?float $reviewerPoint = null,
         ?int $authorCount = null,
         ?int $pageCount = null,
-        ?int $impactFactor = null,
         ?string $publicationTier = null,
         ?string $universityTier = null,
         ?float $receivedAmount = null,
@@ -51,7 +50,6 @@ class ReviewDatumSubmission
             $reviewerPoint,
             $authorCount,
             $pageCount,
-            $impactFactor,
             $publicationTier,
             $universityTier,
             $receivedAmount,
@@ -120,7 +118,6 @@ class ReviewDatumSubmission
                 $reviewerPoint,
                 $authorCount,
                 $pageCount,
-                $impactFactor,
                 $publicationTier,
                 $universityTier,
                 $receivedAmount,
@@ -132,7 +129,7 @@ class ReviewDatumSubmission
                 .'Qoida: '.$rule
                 .'. Hisoblangan ball: '.number_format(
                     $point,
-                    ($lockedDatum->criterion->isOakArticleCriterion()
+                    ($lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore()
                         || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()
                         || $lockedDatum->criterion->isIndustryFundingCriterion()
                         || $lockedDatum->criterion->usesAuthorDividedAiHumanReviewScore()) ? 4 : 2,
@@ -149,14 +146,12 @@ class ReviewDatumSubmission
                 ], true)
                     ? $scoreOptionId
                     : null,
-                'author_count' => ($lockedDatum->criterion->isOakArticleCriterion()
+                'author_count' => ($lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore()
                     || $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion()
                     || $lockedDatum->criterion->isIndustryFundingCriterion()
                     || $lockedDatum->criterion->usesAuthorDividedAiHumanReviewScore()) ? $authorCount : null,
                 'page_count' => $lockedDatum->criterion->isPrintedEducationalLiteratureCriterion() ? $pageCount : null,
-                'impact_factor' => $lockedDatum->criterion->usesImpactFactorAiHumanReviewScore()
-                    ? $impactFactor
-                    : null,
+                'impact_factor' => null,
                 'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
                     ? $publicationTier
                     : null,
@@ -194,7 +189,6 @@ class ReviewDatumSubmission
         ?float $reviewerPoint,
         ?int $authorCount,
         ?int $pageCount,
-        ?int $impactFactor,
         ?string $publicationTier,
         ?string $universityTier,
         ?float $receivedAmount,
@@ -202,7 +196,7 @@ class ReviewDatumSubmission
         $maximumPoint = max(0, (float) $evaluation->score);
 
         if ($datum->criterion->checking === 'ai') {
-            if ($datum->criterion->isOakArticleCriterion()) {
+            if ($datum->criterion->usesDegreeBasedAuthorDividedArticleScore()) {
                 if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
                     throw ValidationException::withMessages([
                         'author_count' => 'Mualliflar soni 1 dan 1000 gacha bo‘lishi kerak.',
@@ -254,26 +248,6 @@ class ReviewDatumSubmission
                     'rule' => $fixedPerResourcePoint === null
                         ? 'foydalanuvchining baholash toifasi bo‘yicha avtomatik ball'
                         : 'foydalanuvchining baholash toifasi bo‘yicha har bir tasdiqlangan resurs uchun qat’iy ball',
-                ];
-            }
-
-            if ($datum->criterion->usesImpactFactorAiHumanReviewScore()) {
-                if ($impactFactor === null || $impactFactor < 1 || $impactFactor > 1000) {
-                    throw ValidationException::withMessages([
-                        'impact_factor' => 'Impakt faktor 1 dan 1000 gacha bo‘lgan butun son bo‘lishi kerak.',
-                    ]);
-                }
-
-                $point = $this->scientificPublicationScoreCalculator->impactFactorPoint(
-                    $maximumPoint,
-                    $impactFactor,
-                );
-                $percentage = min($impactFactor, 10) * 10;
-
-                return [
-                    'point' => $point,
-                    'rule' => $impactFactor.' impakt faktor — '.$percentage.'% × '
-                        .number_format($maximumPoint, 2, '.', '').' maksimal ball',
                 ];
             }
 

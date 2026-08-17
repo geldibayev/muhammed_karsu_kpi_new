@@ -31,13 +31,14 @@ class UpdateAcceptedDatumScoreRequest extends FormRequest
     {
         $datum = $this->route('datum');
         $maximumPoint = $datum instanceof Datum ? $maximumResolver->handle($datum) : 0;
-        $usesPublicationTierScore = $datum instanceof Datum
-            && $datum->loadMissing('criterion')->criterion?->usesPublicationTierAiHumanReviewScore() === true;
+        $criterion = $datum instanceof Datum ? $datum->load('criterion')->criterion : null;
+        $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
+        $usesDegreeBasedArticleScore = $criterion?->usesDegreeBasedAuthorDividedArticleScore() === true;
 
         return [
             'point' => [
-                Rule::requiredIf(! $usesPublicationTierScore),
-                Rule::prohibitedIf($usesPublicationTierScore),
+                Rule::requiredIf(! $usesPublicationTierScore && ! $usesDegreeBasedArticleScore),
+                Rule::prohibitedIf($usesPublicationTierScore || $usesDegreeBasedArticleScore),
                 'nullable',
                 'numeric',
                 'min:0',
@@ -49,6 +50,14 @@ class UpdateAcceptedDatumScoreRequest extends FormRequest
                 'nullable',
                 'string',
                 Rule::in(array_keys(ScientificPublicationHumanReviewScoreCalculator::PUBLICATION_TIER_POINTS)),
+            ],
+            'author_count' => [
+                Rule::requiredIf($usesDegreeBasedArticleScore),
+                Rule::prohibitedIf(! $usesDegreeBasedArticleScore),
+                'nullable',
+                'integer',
+                'min:1',
+                'max:1000',
             ],
             'score_change_reason' => ['required', 'string', 'max:5000'],
         ];
@@ -69,10 +78,15 @@ class UpdateAcceptedDatumScoreRequest extends FormRequest
             'point.numeric' => 'Ball raqam bo‘lishi kerak.',
             'point.min' => 'Ball 0 dan kam bo‘lishi mumkin emas.',
             'point.max' => 'Ball belgilangan maksimal chegaradan oshmasligi kerak.',
-            'point.prohibited' => 'Bu mezon uchun ball serverda kvartil bo‘yicha hisoblanadi.',
+            'point.prohibited' => 'Bu mezon uchun ball serverda avtomatik hisoblanadi.',
             'publication_tier.required' => 'Jurnal kvartili yoki nashr turini tanlang.',
             'publication_tier.prohibited' => 'Bu mezon uchun kvartil yoki nashr turi yuborilmaydi.',
             'publication_tier.in' => 'Tanlangan jurnal kvartili yoki nashr turi noto‘g‘ri.',
+            'author_count.required' => 'Maqoladagi jami mualliflar sonini kiriting.',
+            'author_count.prohibited' => 'Bu mezon uchun mualliflar soni yuborilmaydi.',
+            'author_count.integer' => 'Mualliflar soni butun son bo‘lishi kerak.',
+            'author_count.min' => 'Mualliflar soni kamida 1 bo‘lishi kerak.',
+            'author_count.max' => 'Mualliflar soni 1000 dan oshmasligi kerak.',
             'score_change_reason.required' => 'Ballni o‘zgartirish sababini yozing.',
             'score_change_reason.max' => 'Sabab 5000 belgidan oshmasligi kerak.',
         ];
