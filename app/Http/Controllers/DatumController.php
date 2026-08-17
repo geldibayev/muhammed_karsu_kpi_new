@@ -108,6 +108,9 @@ class DatumController extends Controller
                 ->filter(fn ($history): bool => $history->isVisibleToSubmitter())
                 ->values(),
         );
+        $matchingIndustryFundingSubmissions = auth()->user()?->can('overrideAcceptance', $datum) === true
+            ? $datum->matchingIndustryFundingSubmissions()
+            : collect();
         $status = DatumStatus::from($datum->status);
         $educationalContentTypeOptions = collect();
         $educationalContentTypeDuplicate = false;
@@ -178,6 +181,7 @@ class DatumController extends Controller
             'educationalContentMaximum',
             'foreignLanguageCertificateOptions',
             'foreignLanguageCertificatePoints',
+            'matchingIndustryFundingSubmissions',
         ));
     }
 

@@ -155,6 +155,16 @@
                                     <i class="fas fa-user-times mr-1"></i>
                                     Tasdiqlangan resursni rad etish
                                 </button>
+
+                                @if($datum->criterion?->isIndustryFundingCriterion())
+                                    <button type="button" class="btn btn-info btn-sm ml-2"
+                                            data-toggle="collapse" data-target="#matching-industry-funding-submissions"
+                                            aria-expanded="false" aria-controls="matching-industry-funding-submissions">
+                                        <i class="fas fa-users mr-1" aria-hidden="true"></i>
+                                        Boshqa yuklamalar
+                                        <span class="badge badge-light ml-1">{{ $matchingIndustryFundingSubmissions->count() }}</span>
+                                    </button>
+                                @endif
                             @endcan
 
                             @can('changeEducationalContentType', $datum)
@@ -200,6 +210,42 @@
                                 @endif
                             @endcan
                         </div>
+
+                        @can('overrideAcceptance', $datum)
+                            @if($datum->criterion?->isIndustryFundingCriterion())
+                                <div class="collapse border-top" id="matching-industry-funding-submissions">
+                                    <div class="card-body">
+                                        @forelse($matchingIndustryFundingSubmissions as $matchingDatum)
+                                            <div class="border-bottom pb-2 mb-2">
+                                                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                                                    <div>
+                                                        <strong>#{{ $matchingDatum->id }} — {{ $matchingDatum->name }}</strong>
+                                                        <span class="badge {{ \App\Enums\DatumStatus::from($matchingDatum->status)->badgeClass() }} ml-1">
+                                                            {{ \App\Enums\DatumStatus::from($matchingDatum->status)->label() }}
+                                                        </span>
+                                                        <div class="small text-muted">
+                                                            {{ $matchingDatum->user?->full ?: $matchingDatum->user?->short ?: 'Noma’lum' }}
+                                                            ({{ $matchingDatum->user?->hemis_id ?? 'HEMIS ID yo‘q' }})
+                                                            · {{ number_format((float) $matchingDatum->point, 2) }} ball
+                                                        </div>
+                                                    </div>
+                                                    @can('view', $matchingDatum)
+                                                        <a href="{{ route('upload.details', $matchingDatum) }}"
+                                                           class="btn btn-outline-primary btn-sm">
+                                                            Ko‘rish
+                                                        </a>
+                                                    @endcan
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="alert alert-info mb-0">
+                                                Bu resursni boshqa foydalanuvchilar yuklamagan.
+                                            </div>
+                                        @endforelse
+                                    </div>
+                                </div>
+                            @endif
+                        @endcan
                     </div>
 
                     @if($datum->submissionMetadata() !== [])

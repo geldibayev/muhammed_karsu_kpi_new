@@ -188,7 +188,7 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
             'name' => 'Boshqa shartnoma.pdf',
             'user_id' => $unrelatedOwner->getKey(),
             'criterion_id' => $criterion->getKey(),
-            'status' => 'checking',
+            'status' => 'accepted',
         ]);
 
         foreach ([$current, $matching] as $datum) {
@@ -216,6 +216,19 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
             ->assertSeeText('Mos resurs muallifi')
             ->assertSeeText('Boshqa nomdagi ayni shartnoma.pdf')
             ->assertDontSeeText('Boshqa shartnoma.pdf');
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $matching))
+            ->assertOk()
+            ->assertSeeText('Boshqa yuklamalar')
+            ->assertSeeText('Ko‘rilayotgan shartnoma.pdf')
+            ->assertSee('data-target="#matching-industry-funding-submissions"', false);
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $unrelated))
+            ->assertOk()
+            ->assertSeeText('Boshqa yuklamalar')
+            ->assertSeeText('Bu resursni boshqa foydalanuvchilar yuklamagan.');
 
         $this->actingAs(User::factory()->create())
             ->get(route('reviews.show', $current))

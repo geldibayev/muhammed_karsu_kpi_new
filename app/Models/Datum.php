@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\DatumStatus;
+use App\Services\DatumResourceFingerprintGenerator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -110,6 +112,44 @@ class Datum extends Model
     public function resourceIdentifiers(): HasMany
     {
         return $this->hasMany(DatumResourceIdentifier::class);
+    }
+
+    /** @return Collection<int, self> */
+    public function matchingIndustryFundingSubmissions(): Collection
+    {
+        if ($this->loadMissing('criterion:id,code')->criterion?->isIndustryFundingCriterion() !== true) {
+            return new Collection;
+        }
+
+        $identifiers = $this->resourceIdentifiers()
+            ->whereIn('type', DatumResourceFingerprintGenerator::BLOCKING_TYPES)
+            ->get(['type', 'value_hash']);
+
+        if ($identifiers->isEmpty()) {
+            return new Collection;
+        }
+
+        return self::query()
+            ->select([
+                'id', 'name', 'material', 'user_id', 'criterion_id', 'reviewer_hemis_id',
+                'status', 'point', 'received_amount', 'author_count', 'created_at',
+            ])
+            ->where('id', '!=', $this->getKey())
+            ->where('criterion_id', $this->criterion_id)
+            ->where('user_id', '!=', $this->user_id)
+            ->where('status', '!=', DatumStatus::Deleted->value)
+            ->whereHas('resourceIdentifiers', function (Builder $query) use ($identifiers): void {
+                $query->where(function (Builder $query) use ($identifiers): void {
+                    foreach ($identifiers as $identifier) {
+                        $query->orWhere(fn (Builder $query): Builder => $query
+                            ->where('type', $identifier->type)
+                            ->where('value_hash', $identifier->value_hash));
+                    }
+                });
+            })
+            ->with('user:id,name,hemis_id')
+            ->latest()
+            ->get();
     }
 
     public function duplicateOf(): BelongsTo

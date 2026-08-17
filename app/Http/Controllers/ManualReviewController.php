@@ -10,7 +10,6 @@ use App\Http\Requests\RejectDatumRequest;
 use App\Http\Requests\TransferDatumCriterionRequest;
 use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
-use App\Services\DatumResourceFingerprintGenerator;
 use App\Services\OakArticleScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
 use App\Support\ForeignLanguageCertificateCriterionRule;
@@ -85,33 +84,7 @@ class ManualReviewController extends Controller
             'year:id,name',
             'histories' => fn ($query) => $query->with('user:id,name')->latest(),
         ]);
-        $matchingIndustryFundingSubmissions = collect();
-
-        if ($datum->criterion?->isIndustryFundingCriterion() === true) {
-            $identifiers = $datum->resourceIdentifiers()
-                ->whereIn('type', DatumResourceFingerprintGenerator::BLOCKING_TYPES)
-                ->get(['type', 'value_hash']);
-
-            if ($identifiers->isNotEmpty()) {
-                $matchingIndustryFundingSubmissions = Datum::query()
-                    ->where('id', '!=', $datum->getKey())
-                    ->where('criterion_id', $datum->criterion_id)
-                    ->where('user_id', '!=', $datum->user_id)
-                    ->where('status', '!=', DatumStatus::Deleted->value)
-                    ->whereHas('resourceIdentifiers', function (Builder $query) use ($identifiers): void {
-                        $query->where(function (Builder $query) use ($identifiers): void {
-                            foreach ($identifiers as $identifier) {
-                                $query->orWhere(fn (Builder $query): Builder => $query
-                                    ->where('type', $identifier->type)
-                                    ->where('value_hash', $identifier->value_hash));
-                            }
-                        });
-                    })
-                    ->with('user:id,name,hemis_id')
-                    ->latest()
-                    ->get();
-            }
-        }
+        $matchingIndustryFundingSubmissions = $datum->matchingIndustryFundingSubmissions();
         $status = DatumStatus::from($datum->status);
         $scoreOptions = $datum->criterion?->manualScoreOptions ?? collect();
         if ($datum->criterion?->code === EducationalContentCriterionRule::CODE) {
