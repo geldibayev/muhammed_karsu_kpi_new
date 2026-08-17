@@ -410,21 +410,27 @@ class RecalculateReportPoints
     /** @return Collection<int, array<string, int|float|Carbon>> */
     private function pointRows(Report $report, Criterion $criterion): Collection
     {
-        $highestRawPoint = max(0, (float) $criterion->criterionPoints->max('point'));
+        $competitionUsesResourceCount = $criterion->code === Criterion::RESOURCE_COUNT_COMPETITION_CODE
+            && $criterion->usesFormula(Formula::Competition);
+        $highestCompetitionValue = max(0, (float) $criterion->criterionPoints
+            ->max($competitionUsesResourceCount ? 'files' : 'point'));
 
         return $criterion->criterionPoints
             ->filter(fn (CriterionPoint $criterionPoint): bool => $criterionPoint->user !== null)
-            ->map(function (CriterionPoint $criterionPoint) use ($report, $criterion, $highestRawPoint): array {
+            ->map(function (CriterionPoint $criterionPoint) use ($report, $criterion, $competitionUsesResourceCount, $highestCompetitionValue): array {
                 $evaluation = $criterion->criterionEvaluations
                     ->firstWhere('evaluation', $criterionPoint->user->degree);
                 $maximumPoint = $evaluation?->has === '1' ? max(0, (float) $evaluation->score) : 0;
                 $rawPoint = max(0, (float) $criterionPoint->point);
+                $competitionValue = $competitionUsesResourceCount
+                    ? max(0, $criterionPoint->files)
+                    : $rawPoint;
 
                 $calculatedPoint = $criterion->isHIndexCriterion()
                     ? $rawPoint
                     : match (true) {
-                        $criterion->usesFormula(Formula::Competition) => $highestRawPoint > 0
-                            ? $maximumPoint * ($rawPoint / $highestRawPoint)
+                        $criterion->usesFormula(Formula::Competition) => $highestCompetitionValue > 0
+                            ? $maximumPoint * ($competitionValue / $highestCompetitionValue)
                             : 0,
                         $criterion->usesFormula(Formula::Maximum) => min($rawPoint, $maximumPoint),
                         $criterion->usesFormula(Formula::Unlimited) => $rawPoint,

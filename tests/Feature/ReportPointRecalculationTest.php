@@ -159,6 +159,58 @@ class ReportPointRecalculationTest extends TestCase
         }
     }
 
+    public function test_criterion_one_nine_competition_uses_accepted_resource_counts(): void
+    {
+        Evaluation::query()->create([
+            'code' => 'test_degree',
+            'name' => ['uz' => 'Test daraja'],
+            'status' => '1',
+        ]);
+        $report = $this->createReport();
+        $rootCriterion = $this->createCriterion($report);
+        $formula = Formula::query()->create([
+            'code' => Formula::Competition,
+            'name' => ['uz' => 'Raqobat'],
+            'status' => '1',
+        ]);
+        $criterion = $this->createCriterion($report, $rootCriterion, $formula);
+        $criterion->update(['code' => Criterion::RESOURCE_COUNT_COMPETITION_CODE]);
+        $leaders = User::factory()->count(2)->create(['degree' => 'test_degree']);
+        $otherTeacher = User::factory()->create(['degree' => 'test_degree']);
+
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->id,
+            'evaluation' => 'test_degree',
+            'score' => 3,
+        ]);
+
+        foreach ($leaders as $leader) {
+            $this->createDatum($leader, $criterion, 0.1);
+            $this->createDatum($leader, $criterion, 0.1);
+            $this->createDatum($leader, $criterion, 0.1);
+        }
+
+        $this->createDatum($otherTeacher, $criterion, 100);
+        $this->createDatum($otherTeacher, $criterion, 100);
+        $this->createDatum($otherTeacher, $criterion, 100, 'checking');
+
+        $this->artisan('kpi:criteria:recalculate-1-9-ranking', [
+            'report' => $report->getKey(),
+        ])->expectsOutput("1.9 raqobat ballari qayta hisoblandi. Hisobot: {$report->getKey()}.")
+            ->assertSuccessful();
+
+        $this->assertPointEquals($leaders[0], $criterion, 3);
+        $this->assertPointEquals($leaders[1], $criterion, 3);
+        $this->assertPointEquals($otherTeacher, $criterion, 2);
+    }
+
+    public function test_criterion_one_nine_recalculation_command_rejects_unknown_report(): void
+    {
+        $this->artisan('kpi:criteria:recalculate-1-9-ranking', ['report' => 999999])
+            ->expectsOutput('Hisobot topilmadi: 999999.')
+            ->assertFailed();
+    }
+
     private function createReport(string $name = 'Test hisoboti'): Report
     {
         return Report::query()->create([
