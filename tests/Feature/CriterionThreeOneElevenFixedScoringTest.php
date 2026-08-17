@@ -38,7 +38,7 @@ class CriterionThreeOneElevenFixedScoringTest extends TestCase
             $this->assertSame($expectedPoint, $result->point);
         }
 
-        $specification = KpiCriterionSpecification::criteria()[
+        $specification = KpiCriterionSpecification::currentCriteria()[
             FixedPerResourceHumanReviewCriterionRule::THREE_ONE_ELEVEN_CODE
         ];
 

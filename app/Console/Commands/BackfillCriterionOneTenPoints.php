@@ -6,6 +6,7 @@ use App\Actions\RecalculateReportPoints;
 use App\Models\Datum;
 use App\Models\Report;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\MasterClassCriterionRule;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,7 @@ class BackfillCriterionOneTenPoints extends Command
      *
      * @var string
      */
-    protected $signature = 'kpi:criteria:backfill-1-10-points
+    protected $signature = 'kpi:criteria:backfill-1-8-points
                             {report : Hisobot ID raqami}
                             {--apply : O‘zgarishlarni bazaga yozish va hisobot ballarini qayta hisoblash}';
 
@@ -26,7 +27,7 @@ class BackfillCriterionOneTenPoints extends Command
      *
      * @var string
      */
-    protected $description = '1.10 bo‘yicha kam berilgan accepted resurs ballarini foydalanuvchi toifasiga moslaydi';
+    protected $description = '1.8 bo‘yicha kam berilgan accepted resurs ballarini foydalanuvchi toifasiga moslaydi';
 
     /**
      * Execute the console command.
@@ -52,7 +53,7 @@ class BackfillCriterionOneTenPoints extends Command
         }
 
         if (! $this->acceptedDataQuery($report)->exists()) {
-            $this->info('1.10 bo‘yicha tekshiriladigan accepted resurs topilmadi.');
+            $this->info('1.8 bo‘yicha tekshiriladigan accepted resurs topilmadi.');
 
             if ((bool) $this->option('apply')) {
                 $recalculateReportPoints->handle($report);
@@ -67,7 +68,7 @@ class BackfillCriterionOneTenPoints extends Command
             ->modelKeys();
 
         $candidateCount = count($candidateIds);
-        $this->info("1.10 bo‘yicha toifa balliga yangilanadigan resurslar: {$candidateCount}");
+        $this->info("1.8 bo‘yicha toifa balliga yangilanadigan resurslar: {$candidateCount}");
 
         if (! (bool) $this->option('apply')) {
             $this->warn('Dry-run: o‘zgarish kiritilmadi. Yozish uchun --apply parametridan foydalaning.');
@@ -84,7 +85,7 @@ class BackfillCriterionOneTenPoints extends Command
         }
 
         $recalculateReportPoints->handle($report);
-        $this->info("1.10 bo‘yicha toifa balliga yangilandi: {$updatedCount}");
+        $this->info("1.8 bo‘yicha toifa balliga yangilandi: {$updatedCount}");
 
         return self::SUCCESS;
     }
@@ -95,7 +96,7 @@ class BackfillCriterionOneTenPoints extends Command
             ->where('status', 'accepted')
             ->whereHas('criterion', fn (Builder $query): Builder => $query
                 ->whereBelongsTo($report)
-                ->where('code', '1.10'))
+                ->where('code', MasterClassCriterionRule::CURRENT_CODE))
             ->with(['criterion:id,code', 'user:id,degree'])
             ->orderBy('id');
     }
@@ -136,10 +137,10 @@ class BackfillCriterionOneTenPoints extends Command
             $datum->histories()->create([
                 'user_id' => $datum->user_id,
                 'type' => 'info',
-                'message' => '1.10 mezoni bo‘yicha ball foydalanuvchi toifasiga moslandi. '
+                'message' => '1.8 mezoni bo‘yicha ball foydalanuvchi toifasiga moslandi. '
                     .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
                     .'Yangi ball: '.number_format($targetPoint, 4, '.', '').'.',
-                'message_type' => 'criterion_1_10_point_corrected',
+                'message_type' => 'criterion_1_8_point_corrected',
             ]);
 
             return true;

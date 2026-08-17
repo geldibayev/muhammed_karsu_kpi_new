@@ -52,7 +52,7 @@ class CriterionThreeOneTenFixedScoringTest extends TestCase
         $this->assertSame(0.0, $cancelled->point);
         $this->assertSame(0.0, $checking->point);
 
-        $specification = KpiCriterionSpecification::criteria()[
+        $specification = KpiCriterionSpecification::currentCriteria()[
             FixedPerResourceHumanReviewCriterionRule::THREE_ONE_TEN_CODE
         ];
 

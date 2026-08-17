@@ -1373,6 +1373,8 @@ class CriterionSeeder extends Seeder
             ],
         ];
 
+        array_splice($criteria[0]['children'], 4, 2);
+
         $report = Report::query()->where('status', '1')->latest('id')->firstOrFail();
         $formulaIdsByLegacyPosition = [
             1 => Formula::query()->where('code', Formula::Competition)->value('id'),

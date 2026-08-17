@@ -18,7 +18,7 @@ class FixedPerResourceHumanReviewCriterionRule
 
     /** @var array<string, array<string, float>> */
     private const POINTS = [
-        '1.9' => [
+        '1.7' => [
             'hold_degrees' => 1.0,
             'no_degrees' => 1.0,
             'foreign_lang' => 1.0,
@@ -53,7 +53,7 @@ class FixedPerResourceHumanReviewCriterionRule
             'foreign_lang' => 2.0,
             'physical' => 2.0,
         ],
-        '1.10' => [
+        MasterClassCriterionRule::CURRENT_CODE => [
             'hold_degrees' => 2.0,
             'no_degrees' => 2.0,
             'foreign_lang' => 3.0,

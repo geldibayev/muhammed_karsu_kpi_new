@@ -11,12 +11,12 @@ use Throwable;
 
 class RecalculateLaboratoryWorkEvaluationsCommand extends Command
 {
-    protected $signature = 'kpi:recalculate-criterion-1-8
+    protected $signature = 'kpi:recalculate-criterion-1-6
                             {report : Qayta hisoblanadigan hisobot IDsi}
                             {--limit= : O\'zgartiriladigan resurslar sonini cheklash}
                             {--apply : Ballarni yangilash va noaniq resurslarni AI navbatiga qo\'yish}';
 
-    protected $description = '1.8 mezonidagi eski tasdiqlangan resurslar ballini mualliflar soni bo\'yicha yangilaydi';
+    protected $description = '1.6 mezonidagi eski tasdiqlangan resurslar ballini mualliflar soni bo\'yicha yangilaydi';
 
     public function handle(
         RecalculateLaboratoryWorkEvaluations $evaluations,
@@ -47,7 +47,7 @@ class RecalculateLaboratoryWorkEvaluationsCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info("1.8 tasdiqlangan resurslari: {$analysis['total']}");
+        $this->info("1.6 tasdiqlangan resurslari: {$analysis['total']}");
         $this->info("Qayta hisoblanadi: {$analysis['recalculations']}; AI tekshiruviga yuboriladi: {$analysis['rechecks']}; o'zgarishsiz: {$analysis['unchanged']}.");
 
         if (! $this->option('apply')) {
@@ -95,7 +95,7 @@ class RecalculateLaboratoryWorkEvaluationsCommand extends Command
                 $result['datum']->histories()->create([
                     'user_id' => $result['datum']->user_id,
                     'type' => 'warning',
-                    'message' => '1.8 resursini AI navbatiga yuborishda xatolik yuz berdi.',
+                    'message' => '1.6 resursini AI navbatiga yuborishda xatolik yuz berdi.',
                     'message_type' => 'ai_failed',
                 ]);
             }

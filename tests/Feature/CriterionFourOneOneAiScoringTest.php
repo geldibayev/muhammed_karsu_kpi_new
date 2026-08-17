@@ -65,7 +65,7 @@ class CriterionFourOneOneAiScoringTest extends TestCase
         $this->assertSame(0.0, $checking->point);
         $this->assertSame(0.0, $cancelled->point);
 
-        $specification = KpiCriterionSpecification::criteria()[
+        $specification = KpiCriterionSpecification::currentCriteria()[
             FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_ONE_CODE
         ];
 

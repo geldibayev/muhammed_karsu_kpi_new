@@ -60,7 +60,7 @@ class PatentCriterionScoringTest extends TestCase
         $this->assertSame(0.0, $cancelled->point);
         $this->assertSame(0.0, $checking->point);
 
-        $specification = KpiCriterionSpecification::criteria()[PatentCriterionRule::CODE];
+        $specification = KpiCriterionSpecification::currentCriteria()[PatentCriterionRule::CODE];
 
         $this->assertSame(KpiCriterionSpecification::Unlimited, $specification['formula']);
         $this->assertSame(4, $specification['file_limit']);

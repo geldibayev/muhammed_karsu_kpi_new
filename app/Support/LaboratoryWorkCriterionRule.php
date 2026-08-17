@@ -8,12 +8,14 @@ class LaboratoryWorkCriterionRule
 {
     public const CODE = '1.8';
 
+    public const CURRENT_CODE = '1.6';
+
     public const BASE_POINT = 0.5;
 
     public const DESCRIPTION_UZ = 'Ko‘pi bilan 4 ta resurs yuklanadi. Yangi yoki virtual laboratoriya ishini tayyorlash va joriy etish, yoxud laboratoriya va amaliy mashg‘ulotlar uchun uslubiy ko‘rsatma tasdiqlansa, har bir resurs uchun 0,5 ball beriladi. Resurs balli jami mualliflar soniga bo‘linadi.';
 
     public const PROMPT = <<<'PROMPT'
-Siz qat'iy AI tekshiruvchisiz. Taqdim etilgan bitta resursni 1.8 mezoni bo'yicha tekshiring.
+Siz qat'iy AI tekshiruvchisiz. Taqdim etilgan bitta resursni 1.6 mezoni bo'yicha tekshiring.
 
 Mos resurs turlari:
 1. Tayyorlangan va amalda joriy etilgan yangi laboratoriya ishi yoki virtual laboratoriya ishi.
@@ -32,7 +34,7 @@ PROMPT;
 
     public static function supports(?string $criterionCode): bool
     {
-        return $criterionCode === self::CODE;
+        return $criterionCode === self::CURRENT_CODE;
     }
 
     public static function pointForAuthorCount(int $authorCount): float
@@ -52,7 +54,7 @@ PROMPT;
 
         if ($result->authorCount === null || $result->authorCount < 1 || $result->authorCount > 1000) {
             return AiEvaluationResult::checking(
-                'AI 1.8 resursidagi jami mualliflar sonini ishonchli aniqlamadi. Inson tekshiruvi zarur.',
+                'AI 1.6 resursidagi jami mualliflar sonini ishonchli aniqlamadi. Inson tekshiruvi zarur.',
             );
         }
 

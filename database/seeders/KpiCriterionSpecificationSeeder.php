@@ -34,15 +34,15 @@ class KpiCriterionSpecificationSeeder extends Seeder
                 ->pluck('id', 'code');
             $criteria = Criterion::query()
                 ->whereBelongsTo($report)
-                ->whereIn('code', array_keys(KpiCriterionSpecification::criteria()))
+                ->whereIn('code', array_keys(KpiCriterionSpecification::currentCriteria()))
                 ->get()
                 ->keyBy('code');
 
-            if ($criteria->count() !== count(KpiCriterionSpecification::criteria())) {
-                throw new RuntimeException('PDF spetsifikatsiyasidagi 37 ta mezonning barchasi faol hisobotdan topilmadi.');
+            if ($criteria->count() !== count(KpiCriterionSpecification::currentCriteria())) {
+                throw new RuntimeException('PDF spetsifikatsiyasidagi 35 ta mezonning barchasi faol hisobotdan topilmadi.');
             }
 
-            foreach (KpiCriterionSpecification::criteria() as $code => $rule) {
+            foreach (KpiCriterionSpecification::currentCriteria() as $code => $rule) {
                 $criterion = $criteria->get($code);
                 $formulaId = $formulaIds->get($rule['formula']);
 
@@ -83,17 +83,6 @@ class KpiCriterionSpecificationSeeder extends Seeder
                     );
                 }
             }
-
-            $retiredCriterionIds = $criteria
-                ->whereIn('code', KpiCriterionSpecification::RetiredCodes)
-                ->pluck('id');
-
-            Criterion::query()
-                ->whereIn('id', $retiredCriterionIds)
-                ->update(['status' => '0', 'upload' => '0']);
-            CriterionReviewerAssignment::query()
-                ->whereIn('criterion_id', $retiredCriterionIds)
-                ->delete();
 
             $criteria->get('3.1.4')?->update([
                 'checking' => 'site:profile:index',

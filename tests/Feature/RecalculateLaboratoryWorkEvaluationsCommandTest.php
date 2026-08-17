@@ -25,7 +25,7 @@ class RecalculateLaboratoryWorkEvaluationsCommandTest extends TestCase
         $known = $this->acceptedDatum($criterion, ['author_count' => 2, 'point' => 1]);
         $unknown = $this->acceptedDatum($criterion, ['author_count' => null, 'reason' => 'Eski tasdiq.']);
 
-        $this->artisan('kpi:recalculate-criterion-1-8', ['report' => $report->id])
+        $this->artisan('kpi:recalculate-criterion-1-6', ['report' => $report->id])
             ->expectsOutputToContain('Qayta hisoblanadi: 1')
             ->expectsOutputToContain('Dry-run')
             ->assertSuccessful();
@@ -53,7 +53,7 @@ class RecalculateLaboratoryWorkEvaluationsCommandTest extends TestCase
         ]);
         $unchanged = $this->acceptedDatum($criterion, ['author_count' => 1, 'point' => 0.5]);
 
-        $this->artisan('kpi:recalculate-criterion-1-8', [
+        $this->artisan('kpi:recalculate-criterion-1-6', [
             'report' => $report->id,
             '--apply' => true,
         ])
@@ -83,7 +83,7 @@ class RecalculateLaboratoryWorkEvaluationsCommandTest extends TestCase
         ]);
         Queue::assertPushed(ProcessAiDatumEvaluation::class, 2);
 
-        $this->artisan('kpi:recalculate-criterion-1-8', [
+        $this->artisan('kpi:recalculate-criterion-1-6', [
             'report' => $report->id,
             '--apply' => true,
         ])->assertSuccessful();
@@ -93,13 +93,13 @@ class RecalculateLaboratoryWorkEvaluationsCommandTest extends TestCase
 
     public function test_command_rejects_unknown_report_and_invalid_limit(): void
     {
-        $this->artisan('kpi:recalculate-criterion-1-8', ['report' => 999999])
+        $this->artisan('kpi:recalculate-criterion-1-6', ['report' => 999999])
             ->expectsOutputToContain('Hisobot topilmadi')
             ->assertFailed();
 
         [$report] = $this->context();
 
-        $this->artisan('kpi:recalculate-criterion-1-8', [
+        $this->artisan('kpi:recalculate-criterion-1-6', [
             'report' => $report->id,
             '--limit' => 0,
         ])
@@ -116,7 +116,7 @@ class RecalculateLaboratoryWorkEvaluationsCommandTest extends TestCase
         );
         $report = Report::query()->create(['name' => ['uz' => 'Hisobot'], 'status' => '1']);
         $criterion = Criterion::query()->create([
-            'code' => LaboratoryWorkCriterionRule::CODE,
+            'code' => LaboratoryWorkCriterionRule::CURRENT_CODE,
             'name' => ['uz' => 'Laboratoriya ishlari'],
             'report_id' => $report->id,
             'formula_id' => $formula->id,

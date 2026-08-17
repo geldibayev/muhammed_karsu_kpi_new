@@ -44,7 +44,7 @@ class LaboratoryWorkCriterionScoringTest extends TestCase
 
     public function test_specification_uses_four_resources_and_maximum_formula_without_generic_ai_division(): void
     {
-        $rule = KpiCriterionSpecification::criteria()[LaboratoryWorkCriterionRule::CODE];
+        $rule = KpiCriterionSpecification::currentCriteria()[LaboratoryWorkCriterionRule::CURRENT_CODE];
 
         $this->assertSame(KpiCriterionSpecification::Maximum, $rule['formula']);
         $this->assertSame(4, $rule['file_limit']);
@@ -59,7 +59,7 @@ class LaboratoryWorkCriterionScoringTest extends TestCase
         $owner = User::factory()->create(['degree' => 'hold_degrees']);
         $report = Report::query()->create(['name' => ['uz' => 'Hisobot'], 'status' => '1']);
         $criterion = Criterion::query()->create([
-            'code' => LaboratoryWorkCriterionRule::CODE,
+            'code' => LaboratoryWorkCriterionRule::CURRENT_CODE,
             'name' => ['uz' => 'Laboratoriya ishlari'],
             'report_id' => $report->id,
             'checking' => 'ai',

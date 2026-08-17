@@ -38,7 +38,7 @@ class ManualReviewWorkflowTest extends TestCase
 
         $criterionCodes = [
             2 => '1.1',
-            8 => '1.7',
+            8 => '1.5',
             15 => '2.1.3',
             16 => '2.1.4',
             23 => '3.1.4',
@@ -611,7 +611,7 @@ class ManualReviewWorkflowTest extends TestCase
         $oldReviewer = User::factory()->create();
         $owner = User::factory()->create();
         $baseCriterion = $this->createCriterion();
-        $data = collect(['1.2', '1.3', '1.4', '1.10'])->mapWithKeys(function (string $code) use (
+        $data = collect(['1.2', '1.3', '1.4', '1.8'])->mapWithKeys(function (string $code) use (
             $baseCriterion,
             $oldReviewer,
             $owner,
@@ -1630,12 +1630,12 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertSame(0.75, $criterionOneFourWithoutDegreeDatum->fresh()->point);
     }
 
-    public function test_criterion_1_10_human_approval_uses_the_evaluation_category_score(): void
+    public function test_criterion_1_8_human_approval_uses_the_evaluation_category_score(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3862011037]);
         $baseCriterion = $this->createCriterion();
-        $criterion = $this->createSiblingCriterion($baseCriterion, '1.10 AI kriteriya', [
-            'code' => '1.10',
+        $criterion = $this->createSiblingCriterion($baseCriterion, '1.8 AI kriteriya', [
+            'code' => '1.8',
             'checking' => 'ai',
             'file_limit' => 1,
         ]);

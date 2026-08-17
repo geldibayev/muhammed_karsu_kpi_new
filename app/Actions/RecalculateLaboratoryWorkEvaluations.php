@@ -13,9 +13,9 @@ use RuntimeException;
 
 class RecalculateLaboratoryWorkEvaluations
 {
-    public const RECALCULATED_HISTORY_TYPE = 'criterion_1_8_legacy_point_recalculated';
+    public const RECALCULATED_HISTORY_TYPE = 'criterion_1_6_legacy_point_recalculated';
 
-    public const RECHECK_HISTORY_TYPE = 'criterion_1_8_author_recheck_queued';
+    public const RECHECK_HISTORY_TYPE = 'criterion_1_6_author_recheck_queued';
 
     /** @return Builder<Datum> */
     public function candidates(Report $report): Builder
@@ -33,7 +33,7 @@ class RecalculateLaboratoryWorkEvaluations
             ->where('data.status', 'accepted')
             ->whereHas('criterion', fn (Builder $query): Builder => $query
                 ->whereBelongsTo($report)
-                ->where('code', LaboratoryWorkCriterionRule::CODE)
+                ->where('code', LaboratoryWorkCriterionRule::CURRENT_CODE)
                 ->where('checking', 'ai'));
     }
 
@@ -73,7 +73,7 @@ class RecalculateLaboratoryWorkEvaluations
             if ($datum === null
                 || $datum->status !== 'accepted'
                 || $datum->criterion?->report_id !== $report->getKey()
-                || $datum->criterion->code !== LaboratoryWorkCriterionRule::CODE
+                || $datum->criterion->code !== LaboratoryWorkCriterionRule::CURRENT_CODE
                 || $datum->criterion->checking !== 'ai') {
                 return null;
             }
@@ -95,7 +95,7 @@ class RecalculateLaboratoryWorkEvaluations
                 $datum->histories()->create([
                     'user_id' => $datum->user_id,
                     'type' => 'info',
-                    'message' => '1.8 balli eski ma\'lumotdagi aniq mualliflar soni bo\'yicha qayta hisoblandi. '
+                    'message' => '1.6 balli eski ma\'lumotdagi aniq mualliflar soni bo\'yicha qayta hisoblandi. '
                         .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. Hisob: 0.5 / '
                         .$resolution['value'].' = '.number_format($point, 4, '.', '').' ball. '
                         .'Mualliflar soni manbasi: '.$resolution['source'].'.',
@@ -122,7 +122,7 @@ class RecalculateLaboratoryWorkEvaluations
                 [
                     'user_id' => $datum->user_id,
                     'type' => 'info',
-                    'message' => '1.8 resursida mualliflar soni '.($resolution === null ? 'topilmadi' : 'manbalar orasida zid chiqdi')
+                    'message' => '1.6 resursida mualliflar soni '.($resolution === null ? 'topilmadi' : 'manbalar orasida zid chiqdi')
                         .'. Resurs AI tekshiruviga qaytarildi. Oldingi ball: '
                         .number_format($oldPoint, 4, '.', '').'.',
                     'message_type' => self::RECHECK_HISTORY_TYPE,
@@ -143,16 +143,16 @@ class RecalculateLaboratoryWorkEvaluations
     {
         $criterion = Criterion::query()
             ->whereBelongsTo($report)
-            ->where('code', LaboratoryWorkCriterionRule::CODE)
+            ->where('code', LaboratoryWorkCriterionRule::CURRENT_CODE)
             ->with('formula:id,code')
             ->first();
 
         if ($criterion === null) {
-            throw new RuntimeException('Tanlangan hisobotda 1.8 kriteriyasi topilmadi.');
+            throw new RuntimeException('Tanlangan hisobotda 1.6 kriteriyasi topilmadi.');
         }
 
         if (! $criterion->usesFormula(Formula::Maximum)) {
-            throw new RuntimeException('1.8 kriteriyasi uchun maksimal ball formulasi sozlanmagan. Migratsiyalarni bajaring.');
+            throw new RuntimeException('1.6 kriteriyasi uchun maksimal ball formulasi sozlanmagan. Migratsiyalarni bajaring.');
         }
 
         return $criterion;

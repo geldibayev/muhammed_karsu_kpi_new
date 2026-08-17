@@ -526,9 +526,9 @@ class DatumSubmissionTest extends TestCase
         $this->assertCriterionAllowsOnlyOneActiveFile('1.4');
     }
 
-    public function test_criterion_1_10_allows_only_one_active_file_per_user(): void
+    public function test_criterion_1_8_allows_only_one_active_file_per_user(): void
     {
-        $this->assertCriterionAllowsOnlyOneActiveFile('1.10');
+        $this->assertCriterionAllowsOnlyOneActiveFile('1.8');
     }
 
     public function test_criterion_4_1_2_allows_only_one_active_file_per_user(): void

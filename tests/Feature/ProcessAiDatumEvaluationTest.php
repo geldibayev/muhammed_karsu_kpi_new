@@ -219,10 +219,10 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertSame('q2', $datum->fresh()->publication_tier);
     }
 
-    public function test_job_assigns_criterion_one_ten_point_from_user_category(): void
+    public function test_job_assigns_criterion_one_eight_point_from_user_category(): void
     {
         $datum = $this->createDatum();
-        $datum->criterion->update(['code' => '1.10']);
+        $datum->criterion->update(['code' => '1.8']);
         $datum->user->update(['degree' => 'physical']);
         $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
         $evaluator->shouldReceive('evaluate')
@@ -284,10 +284,10 @@ class ProcessAiDatumEvaluationTest extends TestCase
     public function test_job_assigns_criterion_specific_ai_human_reviewer_before_global_reviewer(): void
     {
         config()->set('kpi.ai_human_review_criterion_reviewers', [
-            '1.10' => 3862011037,
+            '1.8' => 3862011037,
         ]);
         $datum = $this->createDatum();
-        $datum->criterion->update(['code' => '1.10']);
+        $datum->criterion->update(['code' => '1.8']);
         AiHumanReviewAssignment::query()->create([
             'hemis_id' => 3172011004,
             'active_slot' => 1,

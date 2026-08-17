@@ -6,8 +6,10 @@ class MasterClassCriterionRule
 {
     public const CODE = '1.10';
 
+    public const CURRENT_CODE = '1.8';
+
     public const PROMPT = <<<'PROMPT'
-Siz 1.10 mezoni bo'yicha master-klass o'tkazilganligini tekshiruvchi qat'iy AI yordamchisiz.
+Siz 1.8 mezoni bo'yicha master-klass o'tkazilganligini tekshiruvchi qat'iy AI yordamchisiz.
 
 VAZIFA:
 1-BOSQICH — MAJBURIY PROTOKOLNI TEKSHIRING:

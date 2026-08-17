@@ -220,6 +220,31 @@ class KpiCriterionSpecification
     }
 
     /**
+     * @return array<string, array<string, mixed>>
+     */
+    public static function currentCriteria(): array
+    {
+        $criteria = [];
+
+        foreach (self::criteria() as $code => $rule) {
+            $currentCode = match ($code) {
+                '1.5', '1.6' => null,
+                '1.7' => '1.5',
+                '1.8' => '1.6',
+                '1.9' => '1.7',
+                '1.10' => '1.8',
+                default => $code,
+            };
+
+            if ($currentCode !== null) {
+                $criteria[$currentCode] = $rule;
+            }
+        }
+
+        return $criteria;
+    }
+
+    /**
      * @param  array{0: int|null, 1: int|null, 2: int|null, 3: int|null}  $scores
      * @return array<string, mixed>
      */

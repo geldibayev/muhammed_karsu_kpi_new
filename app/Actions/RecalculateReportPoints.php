@@ -39,7 +39,7 @@ class RecalculateReportPoints
                 DB::transaction(function () use ($report): void {
                     Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
 
-                    $this->normalizeCriterionOneNineResourcePoints($report);
+                    $this->normalizeCriterionOneSevenResourcePoints($report);
                     $this->refreshEducationalContentDatumPoints($report);
                     $this->refreshForeignLanguageCertificateDatumPoints($report);
                     $this->refreshDegreeBasedArticleDatumPoints($report);
@@ -53,7 +53,7 @@ class RecalculateReportPoints
             });
     }
 
-    private function normalizeCriterionOneNineResourcePoints(Report $report): void
+    private function normalizeCriterionOneSevenResourcePoints(Report $report): void
     {
         Datum::query()
             ->where('status', 'accepted')
@@ -73,9 +73,9 @@ class RecalculateReportPoints
                 $datum->histories()->create([
                     'user_id' => $datum->user_id,
                     'type' => 'info',
-                    'message' => '1.9 mezoni bo‘yicha accepted resurs balli 1 ballga tenglandi. '
+                    'message' => '1.7 mezoni bo‘yicha accepted resurs balli 1 ballga tenglandi. '
                     .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'.',
-                    'message_type' => 'criterion_1_9_resource_point_normalized',
+                    'message_type' => 'criterion_1_7_resource_point_normalized',
                 ]);
             });
     }
@@ -132,7 +132,7 @@ class RecalculateReportPoints
             ->whereHas('user', fn ($query) => $query->active())
             ->whereHas('criterion', fn ($query) => $query
                 ->whereBelongsTo($report)
-                ->where('code', LaboratoryWorkCriterionRule::CODE))
+                ->where('code', LaboratoryWorkCriterionRule::CURRENT_CODE))
             ->lockForUpdate()
             ->get()
             ->each(function (Datum $datum): void {
@@ -151,11 +151,11 @@ class RecalculateReportPoints
                 $datum->histories()->create([
                     'user_id' => $datum->user_id,
                     'type' => 'info',
-                    'message' => '1.8 balli saqlangan mualliflar soni bo‘yicha qayta hisoblandi. '
+                    'message' => '1.6 balli saqlangan mualliflar soni bo‘yicha qayta hisoblandi. '
                         .'Oldingi ball: '.number_format($oldPoint, 4, '.', '').'. '
                         .'Hisob: 0.5 / '.$datum->author_count.' muallif = '
                         .number_format($point, 4, '.', '').' ball.',
-                    'message_type' => 'criterion_1_8_point_recalculated',
+                    'message_type' => 'criterion_1_6_point_recalculated',
                 ]);
             });
     }

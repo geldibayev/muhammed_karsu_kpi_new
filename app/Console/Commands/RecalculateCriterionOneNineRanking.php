@@ -9,10 +9,10 @@ use Illuminate\Console\Command;
 
 class RecalculateCriterionOneNineRanking extends Command
 {
-    protected $signature = 'kpi:criteria:recalculate-1-9-ranking
+    protected $signature = 'kpi:criteria:recalculate-1-7-ranking
                             {report : Hisobot ID raqami}';
 
-    protected $description = '1.9 accepted resurslarini 1 ballga tenglab, raqobat reytingini qayta hisoblaydi';
+    protected $description = '1.7 accepted resurslarini 1 ballga tenglab, raqobat reytingini qayta hisoblaydi';
 
     public function handle(RecalculateReportPoints $recalculateReportPoints): int
     {
@@ -38,13 +38,13 @@ class RecalculateCriterionOneNineRanking extends Command
             ->whereBelongsTo($report)
             ->where('code', Criterion::RESOURCE_COUNT_COMPETITION_CODE)
             ->exists()) {
-            $this->error("Hisobotda 1.9 kriteriyasi topilmadi: {$reportId}.");
+            $this->error("Hisobotda 1.7 kriteriyasi topilmadi: {$reportId}.");
 
             return self::FAILURE;
         }
 
         $recalculateReportPoints->handle($report);
-        $this->info("1.9 raqobat ballari qayta hisoblandi. Hisobot: {$reportId}.");
+        $this->info("1.7 raqobat ballari qayta hisoblandi. Hisobot: {$reportId}.");
 
         return self::SUCCESS;
     }

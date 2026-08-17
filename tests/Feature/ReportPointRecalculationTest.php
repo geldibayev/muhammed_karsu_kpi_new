@@ -163,7 +163,7 @@ class ReportPointRecalculationTest extends TestCase
             $this->assertSame(10.0, $datum->fresh()->point);
             $this->assertDatabaseMissing('datum_histories', [
                 'datum_id' => $datum->getKey(),
-                'message_type' => 'criterion_1_9_resource_point_normalized',
+                'message_type' => 'criterion_1_7_resource_point_normalized',
             ]);
         }
     }
@@ -204,9 +204,9 @@ class ReportPointRecalculationTest extends TestCase
         $checking = $this->createDatum($otherTeacher, $criterion, 100, 'checking');
         $cancelled = $this->createDatum($otherTeacher, $criterion, 2, 'cancelled');
 
-        $this->artisan('kpi:criteria:recalculate-1-9-ranking', [
+        $this->artisan('kpi:criteria:recalculate-1-7-ranking', [
             'report' => $report->getKey(),
-        ])->expectsOutput("1.9 raqobat ballari qayta hisoblandi. Hisobot: {$report->getKey()}.")
+        ])->expectsOutput("1.7 raqobat ballari qayta hisoblandi. Hisobot: {$report->getKey()}.")
             ->assertSuccessful();
 
         $this->assertSame(0, Datum::query()
@@ -217,13 +217,13 @@ class ReportPointRecalculationTest extends TestCase
         $this->assertSame(100.0, $checking->fresh()->point);
         $this->assertSame(2.0, $cancelled->fresh()->point);
         $this->assertSame(5, DatumHistory::query()
-            ->where('message_type', 'criterion_1_9_resource_point_normalized')
+            ->where('message_type', 'criterion_1_7_resource_point_normalized')
             ->count());
         $this->assertPointEquals($leaders[0], $criterion, 3);
         $this->assertPointEquals($leaders[1], $criterion, 3);
         $this->assertPointEquals($otherTeacher, $criterion, 2);
 
-        $this->artisan('kpi:criteria:recalculate-1-9-ranking', [
+        $this->artisan('kpi:criteria:recalculate-1-7-ranking', [
             'report' => $report->getKey(),
         ])->assertSuccessful();
         $this->assertDatabaseCount('datum_histories', 5);
@@ -244,7 +244,7 @@ class ReportPointRecalculationTest extends TestCase
 
     public function test_criterion_one_nine_recalculation_command_rejects_unknown_report(): void
     {
-        $this->artisan('kpi:criteria:recalculate-1-9-ranking', ['report' => 999999])
+        $this->artisan('kpi:criteria:recalculate-1-7-ranking', ['report' => 999999])
             ->expectsOutput('Hisobot topilmadi: 999999.')
             ->assertFailed();
     }

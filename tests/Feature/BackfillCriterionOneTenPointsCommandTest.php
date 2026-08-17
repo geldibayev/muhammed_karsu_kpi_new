@@ -40,13 +40,13 @@ class BackfillCriterionOneTenPointsCommandTest extends TestCase
         $cancelled = $this->createDatum($foreign, $criterion, 'cancelled', 1);
         $otherReportDatum = $this->createDatum($foreign, $otherCriterion, 'accepted', 1);
 
-        $this->artisan('kpi:criteria:backfill-1-10-points', ['report' => $report->getKey()])
-            ->expectsOutput('1.10 bo‘yicha toifa balliga yangilanadigan resurslar: 4')
+        $this->artisan('kpi:criteria:backfill-1-8-points', ['report' => $report->getKey()])
+            ->expectsOutput('1.8 bo‘yicha toifa balliga yangilanadigan resurslar: 4')
             ->expectsOutput('Dry-run: o‘zgarish kiritilmadi. Yozish uchun --apply parametridan foydalaning.')
             ->assertSuccessful();
         $this->assertSame(1.0, $holdLow->fresh()->point);
 
-        $this->artisan('kpi:criteria:backfill-1-10-points', [
+        $this->artisan('kpi:criteria:backfill-1-8-points', [
             'report' => $report->getKey(),
             '--apply' => true,
         ])->assertSuccessful();
@@ -61,7 +61,7 @@ class BackfillCriterionOneTenPointsCommandTest extends TestCase
         $this->assertDatabaseCount('datum_histories', 4);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $foreignLow->getKey(),
-            'message_type' => 'criterion_1_10_point_corrected',
+            'message_type' => 'criterion_1_8_point_corrected',
         ]);
 
         foreach ([$hold->id => 2.0, $withoutDegree->id => 2.0, $foreign->id => 3.0, $physical->id => 4.0] as $userId => $point) {
@@ -72,7 +72,7 @@ class BackfillCriterionOneTenPointsCommandTest extends TestCase
                 ->value('point'));
         }
 
-        $this->artisan('kpi:criteria:backfill-1-10-points', [
+        $this->artisan('kpi:criteria:backfill-1-8-points', [
             'report' => $report->getKey(),
             '--apply' => true,
         ])->assertSuccessful();
@@ -81,7 +81,7 @@ class BackfillCriterionOneTenPointsCommandTest extends TestCase
 
     public function test_command_rejects_unknown_report(): void
     {
-        $this->artisan('kpi:criteria:backfill-1-10-points', ['report' => 999999])
+        $this->artisan('kpi:criteria:backfill-1-8-points', ['report' => 999999])
             ->expectsOutput('Hisobot topilmadi: 999999.')
             ->assertFailed();
     }
@@ -100,7 +100,7 @@ class BackfillCriterionOneTenPointsCommandTest extends TestCase
             'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
-            'code' => '1.10',
+            'code' => '1.8',
             'name' => ['uz' => 'Master-klass'],
             'parent_id' => $parent->getKey(),
             'report_id' => $report->getKey(),

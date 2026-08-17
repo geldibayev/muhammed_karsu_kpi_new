@@ -52,7 +52,7 @@ class CriterionFourOneTwoFixedScoringTest extends TestCase
         $this->assertSame(0.0, $cancelled->point);
         $this->assertSame(0.0, $checking->point);
 
-        $specification = KpiCriterionSpecification::criteria()[
+        $specification = KpiCriterionSpecification::currentCriteria()[
             FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_TWO_CODE
         ];
 

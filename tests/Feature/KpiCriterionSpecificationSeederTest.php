@@ -36,10 +36,10 @@ class KpiCriterionSpecificationSeederTest extends TestCase
 
         $this->assertDatabaseCount('reports', 1);
         $this->assertDatabaseCount('formulas', 3);
-        $this->assertDatabaseCount('criteria', 41);
-        $this->assertDatabaseCount('criterion_evaluations', 148);
-        $this->assertDatabaseCount('criterion_years', 37);
-        $this->assertSame(36, Criterion::query()->where('ai_model', 'gemini-3.5-flash-lite')->count());
+        $this->assertDatabaseCount('criteria', 39);
+        $this->assertDatabaseCount('criterion_evaluations', 140);
+        $this->assertDatabaseCount('criterion_years', 35);
+        $this->assertSame(34, Criterion::query()->where('ai_model', 'gemini-3.5-flash-lite')->count());
         $this->assertSame(5, Criterion::query()->where('ai_model', 'gemini-3.5-flash')->count());
         $this->assertFalse(
             Criterion::query()
@@ -107,7 +107,7 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         });
         $defaultFormula = Formula::query()->where('code', Formula::Competition)->firstOrFail();
 
-        foreach (KpiCriterionSpecification::criteria() as $code => $rule) {
+        foreach (KpiCriterionSpecification::currentCriteria() as $code => $rule) {
             Criterion::query()->create([
                 'code' => $code,
                 'name' => ['uz' => "{$code} mezoni"],
@@ -131,16 +131,8 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $this->seed(KpiCriterionSpecificationSeeder::class);
         $this->seed(KpiCriterionSpecificationSeeder::class);
 
-        $this->assertDatabaseCount('criterion_evaluations', 148);
-        foreach (KpiCriterionSpecification::RetiredCodes as $code) {
-            $this->assertDatabaseHas('criteria', [
-                'code' => $code,
-                'report_id' => $report->getKey(),
-                'status' => '0',
-                'upload' => '0',
-            ]);
-        }
-        foreach (KpiCriterionSpecification::criteria() as $code => $rule) {
+        $this->assertDatabaseCount('criterion_evaluations', 140);
+        foreach (KpiCriterionSpecification::currentCriteria() as $code => $rule) {
             $this->assertCriterion(
                 $code,
                 $rule['formula'],
@@ -239,17 +231,17 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             ->firstWhere('evaluation', 'no_degrees')?->score);
         $this->assertSame(1, Criterion::query()->where('code', '1.4')->value('file_limit'));
 
-        $criterionOneTen = Criterion::query()
+        $masterClassCriterion = Criterion::query()
             ->with('criterionEvaluations')
-            ->where('code', '1.10')
+            ->where('code', MasterClassCriterionRule::CURRENT_CODE)
             ->firstOrFail();
-        $this->assertSame(1, $criterionOneTen->file_limit);
-        $this->assertSame(Formula::Maximum, $criterionOneTen->formula->code);
-        $this->assertSame(MasterClassCriterionRule::PROMPT, $criterionOneTen->ai_prompt);
+        $this->assertSame(1, $masterClassCriterion->file_limit);
+        $this->assertSame(Formula::Maximum, $masterClassCriterion->formula->code);
+        $this->assertSame(MasterClassCriterionRule::PROMPT, $masterClassCriterion->ai_prompt);
         foreach (['hold_degrees' => 2, 'no_degrees' => 2, 'foreign_lang' => 3, 'physical' => 4] as $evaluation => $score) {
             $this->assertSame(
                 $score,
-                $criterionOneTen->criterionEvaluations->firstWhere('evaluation', $evaluation)?->score,
+                $masterClassCriterion->criterionEvaluations->firstWhere('evaluation', $evaluation)?->score,
             );
         }
 

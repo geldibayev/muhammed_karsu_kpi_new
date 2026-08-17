@@ -41,7 +41,7 @@ class CriterionTwoOneTwoFixedScoringTest extends TestCase
         $this->assertSame('checking', $foreignResult->status);
         $this->assertSame(0.0, $foreignResult->point);
 
-        $specification = KpiCriterionSpecification::criteria()[FixedPerResourceHumanReviewCriterionRule::TWO_ONE_TWO_CODE];
+        $specification = KpiCriterionSpecification::currentCriteria()[FixedPerResourceHumanReviewCriterionRule::TWO_ONE_TWO_CODE];
         $this->assertSame(KpiCriterionSpecification::Maximum, $specification['formula']);
         $this->assertSame([
             'hold_degrees' => 2,
