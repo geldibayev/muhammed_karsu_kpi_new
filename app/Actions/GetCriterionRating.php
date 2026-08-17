@@ -31,6 +31,7 @@ class GetCriterionRating
                                 ->select(['id', 'name', 'user_id', 'criterion_id', 'status', 'point'])
                                 ->whereBelongsTo($criterion)
                                 ->where('status', DatumStatus::Accepted->value)
+                                ->with('latestHistory.user:id,name')
                                 ->latest('id'),
                         ]);
                 },

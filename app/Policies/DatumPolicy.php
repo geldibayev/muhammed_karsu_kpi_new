@@ -102,6 +102,15 @@ class DatumPolicy
             && $this->canOverrideFinalDecision($user, $datum);
     }
 
+    public function confirmFinalReview(User $user, Datum $datum): bool
+    {
+        return $datum->status === DatumStatus::Accepted->value
+            && ! $datum->isFinalReviewConfirmed()
+            && ($user->isSuperAdmin()
+                || $this->isAssignedReviewer($user, $datum)
+                || $this->isCriterionReviewer($user, $datum));
+    }
+
     public function overrideAiAcceptance(User $user, Datum $datum): bool
     {
         return $this->overrideAcceptance($user, $datum);

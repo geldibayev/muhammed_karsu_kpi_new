@@ -48,6 +48,10 @@ class DatumHistoryController extends Controller
             'year:id,name',
         ];
 
+        if ($status === DatumStatus::Accepted) {
+            $relations[] = 'latestHistory.user:id,name';
+        }
+
         if ($request->user()->isSuperAdmin()) {
             $relations[] = 'user:id,hemis_id,name';
             $relations[] = 'histories:id,datum_id,message_type';

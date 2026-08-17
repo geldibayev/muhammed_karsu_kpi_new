@@ -282,6 +282,7 @@ class GetUserRatingDetails
             ->whereBelongsTo($user)
             ->where('status', '!=', 'deleted')
             ->whereHas('criterion', fn (Builder $query): Builder => $query->whereBelongsTo($report))
+            ->with('latestHistory.user:id,name')
             ->get()
             ->groupBy('criterion_id');
     }

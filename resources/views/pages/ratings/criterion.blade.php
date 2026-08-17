@@ -104,6 +104,11 @@
                                                                     <span class="font-weight-bold text-primary">
                                                                         <i class="fas fa-file-alt mr-1" aria-hidden="true"></i>
                                                                         Resurs #{{ $submission->getKey() }}
+                                                                        @if($submission->isFinalReviewConfirmed())
+                                                                            <i class="fas fa-star text-warning ml-1"
+                                                                               title="Yakuniy tekshiruv tasdiqlangan"
+                                                                               aria-label="Yakuniy tekshiruv tasdiqlangan"></i>
+                                                                        @endif
                                                                     </span>
                                                                     @if(filled($submission->name))
                                                                         <span class="small text-muted ml-md-2">{{ $submission->name }}</span>

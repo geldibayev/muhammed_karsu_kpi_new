@@ -216,6 +216,11 @@
                                                         <span class="text-primary text-nowrap">
                                                             <i class="fas fa-file-alt mr-2" aria-hidden="true"></i>
                                                             Resurs #{{ $submission->id }}
+                                                            @if($submission->isFinalReviewConfirmed())
+                                                                <i class="fas fa-star text-warning ml-1"
+                                                                   title="Yakuniy tekshiruv tasdiqlangan"
+                                                                   aria-label="Yakuniy tekshiruv tasdiqlangan"></i>
+                                                            @endif
                                                         </span>
                                                         <span class="badge badge-success px-2 py-1 ml-3 text-nowrap">
                                                             {{ number_format($submission->point, 2) }} ball

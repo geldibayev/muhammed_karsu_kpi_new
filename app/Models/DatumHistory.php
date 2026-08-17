@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DatumHistory extends Model
 {
+    public const FINAL_REVIEW_CONFIRMED = 'final_review_confirmed';
+
     protected $fillable = [
         'datum_id', 'user_id', 'type', 'message', 'message_type',
     ];

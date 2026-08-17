@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Datum extends Model
 {
@@ -107,6 +108,31 @@ class Datum extends Model
     public function histories(): HasMany
     {
         return $this->hasMany(DatumHistory::class);
+    }
+
+    public function latestHistory(): HasOne
+    {
+        return $this->hasOne(DatumHistory::class)->latestOfMany();
+    }
+
+    public function currentFinalConfirmation(): ?DatumHistory
+    {
+        if ($this->status !== DatumStatus::Accepted->value) {
+            return null;
+        }
+
+        $latestHistory = $this->relationLoaded('latestHistory')
+            ? $this->latestHistory
+            : $this->latestHistory()->with('user:id,name')->first();
+
+        return $latestHistory?->message_type === DatumHistory::FINAL_REVIEW_CONFIRMED
+            ? $latestHistory
+            : null;
+    }
+
+    public function isFinalReviewConfirmed(): bool
+    {
+        return $this->currentFinalConfirmation() !== null;
     }
 
     public function resourceIdentifiers(): HasMany

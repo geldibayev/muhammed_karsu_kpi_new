@@ -34,11 +34,35 @@
                     <div class="card">
                         <div class="card-header d-flex align-items-center justify-content-between">
                             <h3 class="card-title font-weight-bold">Resurs #{{ $datum->id }}</h3>
-                            <span class="badge {{ $status->badgeClass() }} px-3 py-2">
-                                {{ $status->label() }}
-                            </span>
+                            <div class="d-flex align-items-center">
+                                @if($finalConfirmation !== null)
+                                    <span class="badge badge-warning px-3 py-2 mr-2"
+                                          title="Yakuniy tekshiruv tasdiqlangan">
+                                        <i class="fas fa-star mr-1" aria-hidden="true"></i>
+                                        Yakuniy tasdiq
+                                    </span>
+                                @endif
+                                <span class="badge {{ $status->badgeClass() }} px-3 py-2">
+                                    {{ $status->label() }}
+                                </span>
+                            </div>
                         </div>
                         <div class="card-body">
+                            @if($finalConfirmation !== null)
+                                <div class="alert alert-warning" role="status">
+                                    <div class="font-weight-bold">
+                                        <i class="fas fa-star mr-1" aria-hidden="true"></i>
+                                        Yakuniy tekshiruv tasdiqlangan
+                                    </div>
+                                    <div class="small mt-1">
+                                        Mas’ul:
+                                        <strong>{{ $finalConfirmation->user?->full ?: ($finalConfirmation->user?->short ?: 'Noma’lum mas’ul') }}</strong>
+                                        · Tasdiqlangan vaqt:
+                                        <strong>{{ $finalConfirmation->created_at->format('d.m.Y H:i:s') }}</strong>
+                                    </div>
+                                </div>
+                            @endif
+
                             @if($status === \App\Enums\DatumStatus::Cancelled)
                                 @php($latestCancellationReason = $datum->histories->firstWhere('type', 'error')?->messageForSubmitter() ?? $datum->reason)
                                 <div class="alert alert-danger" role="alert">
@@ -147,6 +171,19 @@
                                     <i class="fas fa-calculator mr-1" aria-hidden="true"></i>
                                     Ballni o‘zgartirish
                                 </button>
+                            @endcan
+
+                            @can('confirmFinalReview', $datum)
+                                <form method="POST" action="{{ route('submissions.final-confirmation.update', $datum) }}"
+                                      class="d-inline-block ml-2">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-warning btn-sm"
+                                            onclick="return confirm('Resurs yakuniy tekshiruvdan o‘tganini tasdiqlaysizmi?')">
+                                        <i class="fas fa-star mr-1" aria-hidden="true"></i>
+                                        Yakuniy tekshiruvni tasdiqlash
+                                    </button>
+                                </form>
                             @endcan
 
                             @can('overrideAcceptance', $datum)

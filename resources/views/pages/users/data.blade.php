@@ -43,6 +43,13 @@
                                     <td class="text-center align-middle font-weight-bold">#{{ $datum->id }}</td>
                                     <td class="align-middle">
                                         <div class="font-weight-bold text-break">{{ $datum->name }}</div>
+                                        @if($datum->isFinalReviewConfirmed())
+                                            <span class="badge badge-warning mt-1"
+                                                  title="Yakuniy tekshiruv tasdiqlangan">
+                                                <i class="fas fa-star mr-1" aria-hidden="true"></i>
+                                                Yakuniy tasdiq
+                                            </span>
+                                        @endif
                                         <div class="text-muted text-break">
                                             {{ data_get($datum->criterion?->name, 'uz', 'Mezon topilmadi') }}
                                         </div>

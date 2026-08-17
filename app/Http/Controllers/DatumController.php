@@ -101,6 +101,7 @@ class DatumController extends Controller
             'user.ratingWorkplace.department:id,parent_id',
             'year:id,name',
             'histories' => fn ($query) => $query->latest('id'),
+            'latestHistory.user:id,name',
         ]);
         $datum->setRelation(
             'histories',
@@ -111,6 +112,7 @@ class DatumController extends Controller
         $matchingSharedResourceSubmissions = auth()->user()?->can('overrideAcceptance', $datum) === true
             ? $datum->matchingSharedResourceSubmissions()
             : collect();
+        $finalConfirmation = $datum->currentFinalConfirmation();
         $status = DatumStatus::from($datum->status);
         $educationalContentTypeOptions = collect();
         $educationalContentTypeDuplicate = false;
@@ -182,6 +184,7 @@ class DatumController extends Controller
             'foreignLanguageCertificateOptions',
             'foreignLanguageCertificatePoints',
             'matchingSharedResourceSubmissions',
+            'finalConfirmation',
         ));
     }
 

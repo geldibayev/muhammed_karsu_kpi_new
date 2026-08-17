@@ -5,6 +5,7 @@ use App\Http\Controllers\AiHumanReviewerStatisticsController;
 use App\Http\Controllers\AiReviewerStatusController;
 use App\Http\Controllers\ApproveCancelledAiDatumController;
 use App\Http\Controllers\ChangeEducationalContentTypeController;
+use App\Http\Controllers\ConfirmDatumFinalReviewController;
 use App\Http\Controllers\CriterionController;
 use App\Http\Controllers\CriterionPointController;
 use App\Http\Controllers\CriterionRatingController;
@@ -104,6 +105,8 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
         ->name('ai-human-reviews.approve-cancelled');
     Route::patch('/submissions/{datum}/accepted-score', UpdateAcceptedDatumScoreController::class)
         ->name('submissions.accepted-score.update');
+    Route::patch('/submissions/{datum}/final-confirmation', ConfirmDatumFinalReviewController::class)
+        ->name('submissions.final-confirmation.update');
     Route::patch('/submissions/{datum}/h-index-profile', UpdateHIndexProfileController::class)
         ->name('submissions.h-index-profile.update');
     Route::get('/reviews/{datum}', [ManualReviewController::class, 'show'])->name('reviews.show');
