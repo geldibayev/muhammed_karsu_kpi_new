@@ -528,6 +528,18 @@
                                     @error('publication_tier')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                @elseif($datum->criterion?->isOakArticleCriterion())
+                                    <div class="alert alert-info py-2">
+                                        {{ \App\Support\OakArticleCriterionRule::DESCRIPTION_UZ }}
+                                    </div>
+                                    <label for="cancelled-oak-author-count">Jami mualliflar soni</label>
+                                    <input id="cancelled-oak-author-count" type="number" name="author_count"
+                                           min="1" max="1000" step="1" required
+                                           value="{{ old('author_count', $datum->author_count ?? data_get($datum->material, 'article.authors_num')) }}"
+                                           class="form-control @error('author_count') is-invalid @enderror">
+                                    @error('author_count')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 @else
                                 <div class="alert alert-info py-2">
                                     Ruxsat etilgan ball oralig‘i:
@@ -563,7 +575,7 @@
         <script>$('#update-accepted-score-modal').modal('show');</script>
     @elseif($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Accepted)
         <script>$('#change-educational-content-type-modal').modal('show');</script>
-    @elseif($errors->has('point') || $errors->has('publication_tier') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
+    @elseif($errors->has('point') || $errors->has('author_count') || $errors->has('publication_tier') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
         <script>$('#approve-cancelled-ai-modal').modal('show');</script>
     @elseif($errors->has('reason'))
         <script>$('#reject-accepted-ai-modal').modal('show');</script>

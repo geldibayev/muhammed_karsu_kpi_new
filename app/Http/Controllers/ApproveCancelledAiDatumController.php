@@ -23,6 +23,7 @@ class ApproveCancelledAiDatumController extends Controller
             $request->filled('point') ? $request->float('point') : null,
             $request->filled('score_option_id') ? $request->integer('score_option_id') : null,
             $request->filled('publication_tier') ? $request->string('publication_tier')->toString() : null,
+            $request->filled('author_count') ? $request->integer('author_count') : null,
         );
 
         return redirect()

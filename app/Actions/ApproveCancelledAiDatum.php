@@ -6,6 +6,7 @@ use App\Models\CriterionManualScoreOption;
 use App\Models\Datum;
 use App\Models\User;
 use App\Services\DatumResourceFingerprintGenerator;
+use App\Services\OakArticleScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
 use App\Support\ForeignLanguageCertificateCriterionRule;
@@ -21,6 +22,7 @@ class ApproveCancelledAiDatum
         private DatumResourceIdentifierRegistry $identifierRegistry,
         private RecalculateReportPoints $recalculateReportPoints,
         private ScientificPublicationHumanReviewScoreCalculator $scientificPublicationScoreCalculator,
+        private OakArticleScoreCalculator $oakArticleScoreCalculator,
     ) {}
 
     public function handle(
@@ -29,8 +31,9 @@ class ApproveCancelledAiDatum
         ?float $point,
         ?int $scoreOptionId = null,
         ?string $publicationTier = null,
+        ?int $authorCount = null,
     ): Datum {
-        $approvedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $scoreOptionId, $publicationTier): Datum {
+        $approvedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $scoreOptionId, $publicationTier, $authorCount): Datum {
             $lockedDatum = Datum::query()
                 ->with([
                     'criterion.report',
@@ -108,6 +111,19 @@ class ApproveCancelledAiDatum
                 $point = $this->scientificPublicationScoreCalculator->publicationTierPoint($publicationTier);
             }
 
+            if ($lockedDatum->criterion->isOakArticleCriterion()) {
+                if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
+                    throw ValidationException::withMessages([
+                        'author_count' => 'Mualliflar soni 1 dan 1000 gacha bo‘lishi kerak.',
+                    ]);
+                }
+
+                $point = $this->oakArticleScoreCalculator->calculate(
+                    (string) $lockedDatum->user->degree,
+                    $authorCount,
+                );
+            }
+
             if ($maximumPoint === null
                 || $point === null
                 || ! is_finite($point)
@@ -121,6 +137,14 @@ class ApproveCancelledAiDatum
             $point = round($point, 4);
             $aiDecision = $this->latestDecisionWasAi($lockedDatum);
             $scoreDescription = match (true) {
+                $lockedDatum->criterion->isOakArticleCriterion() => 'Bazaviy ball: '
+                    .number_format(
+                        $this->oakArticleScoreCalculator->basePoint((string) $lockedDatum->user->degree),
+                        2,
+                        '.',
+                        '',
+                    )
+                    .' / '.$authorCount.' muallif. Hisoblangan ball: ',
                 $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore() => 'Tanlangan kvartil yoki nashr turi: '
                     .mb_strtoupper((string) $publicationTier).'. Hisoblangan ball: ',
                 $scoreOption === null => 'Qo‘lda kiritilgan ball: ',
@@ -139,6 +163,9 @@ class ApproveCancelledAiDatum
                 'status' => 'accepted',
                 'point' => $point,
                 'manual_score_option_id' => $scoreOption?->getKey(),
+                'author_count' => $lockedDatum->criterion->isOakArticleCriterion()
+                    ? $authorCount
+                    : $lockedDatum->author_count,
                 'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
                     ? $publicationTier
                     : $lockedDatum->publication_tier,

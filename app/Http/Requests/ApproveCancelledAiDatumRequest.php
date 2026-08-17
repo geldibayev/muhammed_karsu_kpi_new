@@ -37,22 +37,32 @@ class ApproveCancelledAiDatumRequest extends FormRequest
         $maximumPoint = $datum instanceof Datum
             ? $maximumResolver->handle($datum)
             : null;
-        $isEducationalContentCriterion = $datum instanceof Datum
-            && $datum->criterion()->where('code', EducationalContentCriterionRule::CODE)->exists();
-        $isForeignLanguageCertificateCriterion = $datum instanceof Datum
-            && $datum->criterion()->where('code', ForeignLanguageCertificateCriterionRule::CODE)->exists();
-        $usesPublicationTierScore = $datum instanceof Datum
-            && $datum->loadMissing('criterion')->criterion?->usesPublicationTierAiHumanReviewScore() === true;
+        $criterion = $datum instanceof Datum
+            ? $datum->loadMissing('criterion')->criterion
+            : null;
+        $isEducationalContentCriterion = $criterion?->code === EducationalContentCriterionRule::CODE;
+        $isForeignLanguageCertificateCriterion = $criterion?->code === ForeignLanguageCertificateCriterionRule::CODE;
+        $isOakArticleCriterion = $criterion?->isOakArticleCriterion() === true;
+        $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesScoreOption = $isEducationalContentCriterion || $isForeignLanguageCertificateCriterion;
+        $usesAutomaticPoint = $usesScoreOption || $usesPublicationTierScore || $isOakArticleCriterion;
 
         return [
             'point' => [
-                Rule::requiredIf(! $usesScoreOption && ! $usesPublicationTierScore),
-                Rule::prohibitedIf($usesScoreOption || $usesPublicationTierScore),
+                Rule::requiredIf(! $usesAutomaticPoint),
+                Rule::prohibitedIf($usesAutomaticPoint),
                 'nullable',
                 'numeric',
                 'min:0',
                 'max:'.($maximumPoint ?? 0),
+            ],
+            'author_count' => [
+                Rule::requiredIf($isOakArticleCriterion),
+                Rule::prohibitedIf(! $isOakArticleCriterion),
+                'nullable',
+                'integer',
+                'min:1',
+                'max:1000',
             ],
             'score_option_id' => [
                 Rule::requiredIf($usesScoreOption),
@@ -82,7 +92,12 @@ class ApproveCancelledAiDatumRequest extends FormRequest
             'point.numeric' => 'Ball raqam bo‘lishi kerak.',
             'point.min' => 'Ball 0 dan kam bo‘lishi mumkin emas.',
             'point.max' => 'Kiritilgan ball foydalanuvchi uchun belgilangan maksimal chegaradan oshdi.',
-            'point.prohibited' => 'Bu mezon uchun ball serverda kvartil bo‘yicha hisoblanadi.',
+            'point.prohibited' => 'Bu mezon uchun ball serverda avtomatik hisoblanadi.',
+            'author_count.required' => 'Tasdiqlash uchun maqoladagi jami mualliflar sonini kiriting.',
+            'author_count.integer' => 'Mualliflar soni butun son bo‘lishi kerak.',
+            'author_count.min' => 'Mualliflar soni kamida 1 bo‘lishi kerak.',
+            'author_count.max' => 'Mualliflar soni 1000 dan oshmasligi kerak.',
+            'author_count.prohibited' => 'Bu mezon uchun mualliflar soni yuborilmaydi.',
             'score_option_id.required' => 'Tasdiqlash uchun bo‘sh resurs turini tanlang.',
             'score_option_id.exists' => 'Tanlangan resurs turi ushbu mezonga tegishli emas.',
             'publication_tier.required' => 'Jurnal kvartili yoki nashr turini tanlang.',

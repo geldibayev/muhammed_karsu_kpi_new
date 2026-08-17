@@ -126,6 +126,70 @@ class OakArticleScoringTest extends TestCase
         $this->assertPointEquals($owner, $criterion, 0.25);
     }
 
+    public function test_cancelled_reapproval_only_accepts_author_count_and_calculates_point_on_server(): void
+    {
+        $this->createEvaluationCategories();
+        $formula = $this->createMaximumFormula();
+        $report = $this->createReport('Qayta tasdiqlash hisoboti');
+        $criterion = $this->createOakCriterion($report, $formula);
+        $reviewer = User::factory()->create();
+        config()->set('kpi.super_admin_hemis_ids', []);
+        config()->set('kpi.accepted_ai_reviewer_hemis_id', 9999999998);
+        config()->set('kpi.assigned_final_decision_reviewer_hemis_id', 9999999997);
+
+        foreach (['hold_degrees' => 0.25, 'no_degrees' => 0.375] as $degree => $expectedPoint) {
+            $owner = User::factory()->create(['degree' => $degree]);
+            $datum = Datum::query()->create([
+                'name' => 'Qayta tasdiqlanadigan OAK maqolasi',
+                'user_id' => $owner->id,
+                'criterion_id' => $criterion->id,
+                'reviewer_hemis_id' => $reviewer->hemis_id,
+                'status' => 'cancelled',
+                'point' => 0,
+            ]);
+
+            $this->actingAs($reviewer)
+                ->get(route('upload.details', $datum))
+                ->assertOk()
+                ->assertSee('name="author_count"', false)
+                ->assertDontSee('name="point"', false);
+
+            $this->actingAs($reviewer)
+                ->patch(route('ai-human-reviews.approve-cancelled', $datum))
+                ->assertSessionHasErrors('author_count');
+            foreach ([0, 1001] as $invalidAuthorCount) {
+                $this->actingAs($reviewer)
+                    ->patch(route('ai-human-reviews.approve-cancelled', $datum), [
+                        'author_count' => $invalidAuthorCount,
+                    ])
+                    ->assertSessionHasErrors('author_count');
+            }
+            $this->actingAs($reviewer)
+                ->patch(route('ai-human-reviews.approve-cancelled', $datum), [
+                    'author_count' => 2,
+                    'point' => 99,
+                ])
+                ->assertSessionHasErrors('point');
+            $this->actingAs($reviewer)
+                ->patch(route('ai-human-reviews.approve-cancelled', $datum), ['author_count' => 2])
+                ->assertRedirect(route('upload.details', $datum))
+                ->assertSessionHasNoErrors();
+
+            $this->assertDatabaseHas('data', [
+                'id' => $datum->id,
+                'status' => 'accepted',
+                'author_count' => 2,
+                'point' => $expectedPoint,
+            ]);
+            $this->assertDatabaseHas('datum_histories', [
+                'datum_id' => $datum->id,
+                'user_id' => $reviewer->id,
+                'message_type' => 'human_override_approved',
+            ]);
+            $this->assertPointEquals($owner, $criterion, $expectedPoint);
+        }
+    }
+
     public function test_apply_stops_without_partial_changes_when_author_count_is_unknown(): void
     {
         $this->createEvaluationCategories();
