@@ -141,4 +141,84 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
             $this->assertSame($expectedPoint, $datum->fresh()->point);
         }
     }
+
+    public function test_industry_funding_reviewer_sees_the_same_resource_uploaded_by_other_users(): void
+    {
+        $reviewer = User::factory()->create(['hemis_id' => 3462011188]);
+        $owner = User::factory()->create();
+        $coauthor = User::factory()->create([
+            'name' => [
+                'full' => 'Mos resurs muallifi',
+                'first' => 'Mos',
+                'last' => 'Muallif',
+                'third' => '',
+                'short' => 'Muallif M.',
+            ],
+        ]);
+        $unrelatedOwner = User::factory()->create();
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Joriy KPI hisoboti'],
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'code' => '3.1.13',
+            'name' => ['uz' => 'Xo‘jalik shartnomasi'],
+            'report_id' => $report->getKey(),
+            'checking' => 'ai',
+            'upload' => '1',
+            'status' => '1',
+        ]);
+        $current = Datum::query()->create([
+            'name' => 'Ko‘rilayotgan shartnoma.pdf',
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+        ]);
+        $matching = Datum::query()->create([
+            'name' => 'Boshqa nomdagi ayni shartnoma.pdf',
+            'user_id' => $coauthor->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'accepted',
+            'point' => 5,
+            'received_amount' => 10_000_000,
+            'author_count' => 2,
+        ]);
+        $unrelated = Datum::query()->create([
+            'name' => 'Boshqa shartnoma.pdf',
+            'user_id' => $unrelatedOwner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'checking',
+        ]);
+
+        foreach ([$current, $matching] as $datum) {
+            $datum->resourceIdentifiers()->create([
+                'report_id' => $report->getKey(),
+                'user_id' => $datum->user_id,
+                'type' => 'file_sha256',
+                'value_hash' => str_repeat('a', 64),
+                'active_value_hash' => str_repeat('a', 64),
+            ]);
+        }
+        $unrelated->resourceIdentifiers()->create([
+            'report_id' => $report->getKey(),
+            'user_id' => $unrelated->user_id,
+            'type' => 'file_sha256',
+            'value_hash' => str_repeat('b', 64),
+            'active_value_hash' => str_repeat('b', 64),
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('reviews.show', $current))
+            ->assertOk()
+            ->assertViewHas('matchingIndustryFundingSubmissions', fn ($submissions): bool => $submissions->pluck('id')->all() === [$matching->getKey()])
+            ->assertSeeText('Boshqa foydalanuvchilar yuklagan ayni resurslar')
+            ->assertSeeText('Mos resurs muallifi')
+            ->assertSeeText('Boshqa nomdagi ayni shartnoma.pdf')
+            ->assertDontSeeText('Boshqa shartnoma.pdf');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('reviews.show', $current))
+            ->assertForbidden();
+    }
 }

@@ -186,6 +186,66 @@
                         </div>
                     </div>
 
+                    @if($isIndustryFundingCriterion && $matchingIndustryFundingSubmissions->isNotEmpty())
+                        <div class="card card-outline card-warning">
+                            <div class="card-header">
+                                <h3 class="card-title font-weight-bold">
+                                    Boshqa foydalanuvchilar yuklagan ayni resurslar
+                                    <span class="badge badge-warning ml-1">{{ $matchingIndustryFundingSubmissions->count() }}</span>
+                                </h3>
+                            </div>
+                            <div class="card-body p-0 table-responsive">
+                                <table class="table table-sm table-striped mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Resurs</th>
+                                            <th>Muallif</th>
+                                            <th>Holati</th>
+                                            <th>Summa</th>
+                                            <th>Hammualliflar</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($matchingIndustryFundingSubmissions as $matchingDatum)
+                                            @php
+                                                $matchingStatus = \App\Enums\DatumStatus::from($matchingDatum->status);
+                                            @endphp
+                                            <tr>
+                                                <td>#{{ $matchingDatum->id }} — {{ $matchingDatum->name }}</td>
+                                                <td>
+                                                    {{ $matchingDatum->user?->full ?: $matchingDatum->user?->short ?: 'Noma’lum' }}
+                                                    <span class="d-block text-muted small">{{ $matchingDatum->user?->hemis_id }}</span>
+                                                </td>
+                                                <td><span class="badge {{ $matchingStatus->badgeClass() }}">{{ $matchingStatus->label() }}</span></td>
+                                                <td>
+                                                    {{ $matchingDatum->received_amount !== null
+                                                        ? number_format((float) $matchingDatum->received_amount, 2, '.', ' ').' so‘m'
+                                                        : '—' }}
+                                                </td>
+                                                <td>{{ $matchingDatum->author_count ?? '—' }}</td>
+                                                <td class="text-nowrap">
+                                                    @can('view', $matchingDatum)
+                                                        <a href="{{ route('upload.details', $matchingDatum) }}" class="btn btn-outline-primary btn-xs">
+                                                            Ko‘rish
+                                                        </a>
+                                                    @endcan
+                                                    @can('download', $matchingDatum)
+                                                        @if($matchingDatum->storagePath() !== null)
+                                                            <a href="{{ route('upload.file.download', $matchingDatum) }}" class="btn btn-outline-secondary btn-xs">
+                                                                Yuklab olish
+                                                            </a>
+                                                        @endif
+                                                    @endcan
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endif
+
                     @if($datum->submissionMetadata() !== [])
                         <div class="card">
                             <div class="card-header"><h3 class="card-title font-weight-bold">Qo‘shimcha ma’lumotlar</h3></div>
