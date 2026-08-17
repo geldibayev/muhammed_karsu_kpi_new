@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Enums\DatumStatus;
+use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\CriterionManualScoreOption;
 use App\Models\CriterionReviewerAssignment;
@@ -160,15 +161,14 @@ class DatumPolicy
 
     private function canOverrideFinalDecision(User $user, Datum $datum): bool
     {
-        if ($user->isSuperAdmin()) {
+        if ($user->isSuperAdmin()
+            || $this->isAssignedReviewer($user, $datum)
+            || $this->isCriterionReviewer($user, $datum)) {
             return true;
         }
 
-        if ($this->isAssignedFinalDecisionReviewer($user)) {
-            return $this->isCriterionReviewer($user, $datum);
-        }
-
-        return (string) config('kpi.accepted_ai_reviewer_hemis_id') === (string) $user->hemis_id;
+        return ! $this->isAssignedFinalDecisionReviewer($user)
+            && (string) config('kpi.accepted_ai_reviewer_hemis_id') === (string) $user->hemis_id;
     }
 
     private function canManageAssignedFinalDecision(User $user, Datum $datum): bool
@@ -184,13 +184,13 @@ class DatumPolicy
 
     private function isCriterionReviewer(User $user, Datum $datum): bool
     {
-        $criterion = $datum->loadMissing('criterion:id,code,checking')->criterion;
+        $criterion = $datum->criterion()->first(['id', 'code', 'checking']);
 
         if ($criterion?->checking === 'ai') {
-            $reviewers = config('kpi.ai_human_review_criterion_reviewers', []);
+            $reviewerHemisId = AiHumanReviewAssignment::reviewerHemisIdFor($criterion);
 
-            return is_array($reviewers)
-                && (string) ($reviewers[$criterion->code] ?? '') === (string) $user->hemis_id;
+            return $reviewerHemisId !== null
+                && (string) $reviewerHemisId === (string) $user->hemis_id;
         }
 
         return CriterionReviewerAssignment::query()

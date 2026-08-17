@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\CriterionReviewerAssignment;
@@ -17,6 +18,64 @@ use Tests\TestCase;
 class FinalizedDatumDecisionOverrideTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    #[DataProvider('assignedReviewerModes')]
+    public function test_assigned_reviewers_can_reverse_final_decisions_without_special_access(string $checking): void
+    {
+        [$reviewer, $owner, $criterion] = $this->context($checking);
+        config()->set('kpi.super_admin_hemis_ids', []);
+        config()->set('kpi.accepted_ai_reviewer_hemis_id', 9999999998);
+        config()->set('kpi.assigned_final_decision_reviewer_hemis_id', 9999999997);
+
+        if ($checking === 'ai') {
+            config()->set('kpi.ai_human_review_criterion_reviewers', []);
+            AiHumanReviewAssignment::query()->create([
+                'hemis_id' => $reviewer->hemis_id,
+                'active_slot' => 1,
+                'assigned_at' => now(),
+            ]);
+        } else {
+            CriterionReviewerAssignment::query()->create([
+                'criterion_id' => $criterion->getKey(),
+                'criterion_code' => $criterion->code,
+                'hemis_id' => $reviewer->hemis_id,
+            ]);
+        }
+
+        $accepted = $this->datum($owner, $criterion, 'accepted', 2, 'Tasdiqlangan.');
+        $cancelled = $this->datum($owner, $criterion, 'cancelled', 0, 'Rad etilgan.');
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $accepted))
+            ->assertOk()
+            ->assertSee('Tasdiqlangan resursni rad etish');
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $cancelled))
+            ->assertOk()
+            ->assertSee('Rad etilgan resursni tasdiqlash');
+
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.reject-accepted', $accepted), [
+                'reason' => 'Mas\'ul qarorni qayta ko\'rib chiqdi.',
+            ])
+            ->assertRedirect(route('upload.details', $accepted));
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.approve-cancelled', $cancelled), ['point' => 3.5])
+            ->assertRedirect(route('upload.details', $cancelled));
+
+        $this->assertSame('cancelled', $accepted->fresh()->status);
+        $this->assertSame('accepted', $cancelled->fresh()->status);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $accepted->getKey(),
+            'user_id' => $reviewer->getKey(),
+            'message_type' => 'human_override_rejected',
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $cancelled->getKey(),
+            'user_id' => $reviewer->getKey(),
+            'message_type' => 'human_override_approved',
+        ]);
+    }
 
     public function test_configured_reviewer_manages_final_decisions_only_for_assigned_criteria(): void
     {
@@ -216,6 +275,15 @@ class FinalizedDatumDecisionOverrideTest extends TestCase
             'department' => ['department'],
             'HEMIS' => ['hemis:employee'],
             'site' => ['site:publication'],
+        ];
+    }
+
+    /** @return array<string, array{string}> */
+    public static function assignedReviewerModes(): array
+    {
+        return [
+            'manual criterion reviewer' => ['manual'],
+            'AI human reviewer' => ['ai'],
         ];
     }
 
