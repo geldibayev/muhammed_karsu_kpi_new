@@ -6,7 +6,7 @@ class PatentCriterionRule
 {
     public const CODE = '3.1.8';
 
-    public const DESCRIPTION_UZ = 'Faqat rasmiy patent hujjati qabul qilinadi. DGU, EHM dasturi yoki ma’lumotlar bazasini ro‘yxatdan o‘tkazish guvohnomasi, mualliflik guvohnomasi, patent arizasi va boshqa hujjatlar qabul qilinmaydi. Patent berilgan sana umumiy KPI hisobot davriga mos bo‘lishi va resursni yuklagan professor-o‘qituvchi patent mualliflari orasida ko‘rsatilgan bo‘lishi shart. Tasdiqlangan har bir patent uchun ilmiy darajalilarga 3 ball, qolgan toifalarga 4 ball beriladi. Ball mualliflar soniga bo‘linmaydi.';
+    public const DESCRIPTION_UZ = 'Faqat rasmiy patent hujjati qabul qilinadi. DGU, EHM dasturi yoki ma’lumotlar bazasini ro‘yxatdan o‘tkazish guvohnomasi, mualliflik guvohnomasi, patent arizasi va boshqa hujjatlar qabul qilinmaydi. Patent berilgan sana umumiy KPI hisobot davriga mos bo‘lishi va resursni yuklagan professor-o‘qituvchi patent mualliflari orasida ko‘rsatilgan bo‘lishi shart. Huquq egasi universitet yoki universitet o‘qituvchisi bo‘lishi kerak. Tasdiqlangan har bir patent uchun ilmiy darajalilarga 3 ball, qolgan toifalarga 4 ball beriladi. Ball mualliflar soniga bo‘linmaydi.';
 
     public const DESCRIPTION_KAA = 'Tek ǵana rásmiy patent hújjeti qabıl etiledi. DGU, EEM programması yamasa maǵlıwmatlar bazasın dizimnen ótkeriw gúwalıǵı, avtorlıq gúwalıǵı, patent arızası hám basqa hújjetler qabıl etilmeydi. Patent berilgen sáne ulıwma KPI esabat dáwirine sáykes bolıwı hám resurstı júklegen professor-oqıtıwshı patent avtorları arasında kórsetiliwi shárt. Tastıyıqlanǵan hár bir patent ushın ilimiy dárejelilerge 3 ball, qalǵan kategoriyalarǵa 4 ball beriledi. Ball avtorlar sanına bólinbeydi.';
 

@@ -71,6 +71,7 @@ class PatentCriterionScoringTest extends TestCase
         $this->assertStringContainsString('author_full_name', PatentCriterionRule::PROMPT);
         $this->assertStringContainsString('resource_date', PatentCriterionRule::PROMPT);
         $this->assertStringContainsString('Author_count qaytarmang', PatentCriterionRule::PROMPT);
+        $this->assertStringContainsString('Huquq egasi universitet yoki universitet o‘qituvchisi bo‘lishi kerak. Tasdiqlangan har bir patent', PatentCriterionRule::DESCRIPTION_UZ);
     }
 
     public function test_server_date_policy_rejects_out_of_period_patent_and_requires_a_clear_date(): void
