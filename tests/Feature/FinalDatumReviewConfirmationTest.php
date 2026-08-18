@@ -23,7 +23,7 @@ class FinalDatumReviewConfirmationTest extends TestCase
         $this->actingAs($reviewer)
             ->get(route('upload.details', $datum))
             ->assertOk()
-            ->assertSee('Yakuniy tekshiruvni tasdiqlash')
+            ->assertSee('Oxirgi tekshiruvdan o‘tdi')
             ->assertDontSee('Yakuniy tasdiq');
 
         $this->actingAs($reviewer)
@@ -45,7 +45,7 @@ class FinalDatumReviewConfirmationTest extends TestCase
             ->assertSee('Yakuniy tasdiq')
             ->assertSee('BERDIYEV BEKZOD')
             ->assertSee($history->created_at->format('d.m.Y H:i:s'))
-            ->assertDontSee('Yakuniy tekshiruvni tasdiqlash');
+            ->assertDontSee('Oxirgi tekshiruvdan o‘tdi');
 
         $this->actingAs($reviewer)
             ->patch(route('submissions.final-confirmation.update', $datum))
@@ -102,7 +102,7 @@ class FinalDatumReviewConfirmationTest extends TestCase
             ->get(route('upload.details', $datum))
             ->assertOk()
             ->assertDontSee('Yakuniy tasdiq')
-            ->assertSee('Yakuniy tekshiruvni tasdiqlash');
+            ->assertSee('Oxirgi tekshiruvdan o‘tdi');
     }
 
     /** @return array{User, User, Criterion} */

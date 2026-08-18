@@ -181,7 +181,7 @@
                                     <button type="submit" class="btn btn-warning btn-sm"
                                             onclick="return confirm('Resurs yakuniy tekshiruvdan o‘tganini tasdiqlaysizmi?')">
                                         <i class="fas fa-star mr-1" aria-hidden="true"></i>
-                                        Yakuniy tekshiruvni tasdiqlash
+                                        Oxirgi tekshiruvdan o‘tdi
                                     </button>
                                 </form>
                             @endcan

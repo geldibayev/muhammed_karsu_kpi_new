@@ -27,6 +27,15 @@ class AiHumanReviewAssignment extends Model
         return is_numeric($hemisId) ? (int) $hemisId : null;
     }
 
+    /** @return array<int, string> */
+    public static function criterionCodesFor(int $reviewerHemisId): array
+    {
+        return array_keys(array_filter(
+            config('kpi.ai_human_review_criterion_reviewers', []),
+            fn (mixed $hemisId): bool => (string) $hemisId === (string) $reviewerHemisId,
+        ));
+    }
+
     public static function reviewerHemisIdFor(Criterion $criterion, bool $sharedLock = false): ?int
     {
         $criterionReviewers = config('kpi.ai_human_review_criterion_reviewers', []);

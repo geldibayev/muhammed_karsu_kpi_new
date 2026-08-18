@@ -114,10 +114,36 @@ class FinalizedDatumDecisionOverrideTest extends TestCase
         ]);
 
         $assigned = $this->datum($owner, $aiCriterion, 'accepted', 2, 'AI tasdiqladi.');
+        $assignedCancelled = $this->datum($owner, $aiCriterion, 'cancelled', 0, 'AI rad etdi.');
         $manualAccepted = $this->datum($owner, $manualCriterion, 'accepted', 2, 'Mas’ul tasdiqladi.');
         $manualCancelled = $this->datum($owner, $manualCriterion, 'cancelled', 0, 'Mas’ul rad etdi.');
         $unassignedAccepted = $this->datum($owner, $unassignedCriterion, 'accepted', 2, 'AI tasdiqladi.');
         $unassignedCancelled = $this->datum($owner, $unassignedCriterion, 'cancelled', 0, 'AI rad etdi.');
+
+        $this->actingAs($reviewer)
+            ->get(route('ai-human-reviews.index', ['status' => 'accepted']))
+            ->assertOk()
+            ->assertSee($assigned->name)
+            ->assertSee(route('upload.details', $assigned))
+            ->assertDontSee($unassignedAccepted->name);
+        $this->actingAs($reviewer)
+            ->get(route('ai-human-reviews.index', ['status' => 'cancelled']))
+            ->assertOk()
+            ->assertSee($assignedCancelled->name)
+            ->assertSee(route('upload.details', $assignedCancelled))
+            ->assertDontSee($unassignedCancelled->name);
+        $this->actingAs($reviewer)
+            ->get(route('reviews.index', ['status' => 'accepted']))
+            ->assertOk()
+            ->assertSee($manualAccepted->name)
+            ->assertSee(route('upload.details', $manualAccepted))
+            ->assertDontSee($assigned->name);
+        $this->actingAs($reviewer)
+            ->get(route('reviews.index', ['status' => 'cancelled']))
+            ->assertOk()
+            ->assertSee($manualCancelled->name)
+            ->assertSee(route('upload.details', $manualCancelled))
+            ->assertDontSee($assignedCancelled->name);
 
         $this->actingAs($reviewer)
             ->get(route('upload.details', $assigned))

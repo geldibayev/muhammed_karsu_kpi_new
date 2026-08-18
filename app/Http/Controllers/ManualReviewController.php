@@ -6,6 +6,7 @@ use App\Actions\ReviewDatumSubmission;
 use App\Actions\TransferDatumCriterion;
 use App\Enums\DatumStatus;
 use App\Http\Requests\ApproveDatumRequest;
+use App\Http\Requests\ManualReviewFilterRequest;
 use App\Http\Requests\RejectDatumRequest;
 use App\Http\Requests\TransferDatumCriterionRequest;
 use App\Models\CriterionReviewerAssignment;
@@ -20,10 +21,11 @@ use Illuminate\View\View;
 
 class ManualReviewController extends Controller
 {
-    public function index(Request $request): View
+    public function index(ManualReviewFilterRequest $request): View
     {
         $user = $request->user();
-        abort_unless($user?->can('access-manual-reviews'), 403);
+        $selectedStatus = $request->validated('status') ?: 'pending';
+        $selectedCriterionId = $request->integer('criterion') ?: null;
 
         $assignmentsQuery = CriterionReviewerAssignment::query()
             ->with('criterion:id,name,checking,status')
@@ -35,12 +37,24 @@ class ManualReviewController extends Controller
             ->orderBy('criterion_code');
 
         $assignments = $assignmentsQuery->get();
-        $pendingSubmissions = Datum::query()
+        $submissions = Datum::query()
             ->whereIn('criterion_id', $assignments->pluck('criterion_id'))
-            ->whereIn('status', [DatumStatus::Received->value, DatumStatus::Checking->value])
+            ->when(
+                $selectedCriterionId !== null,
+                fn (Builder $query): Builder => $query->where('criterion_id', $selectedCriterionId),
+            )
+            ->when(
+                $selectedStatus === 'pending',
+                fn (Builder $query): Builder => $query->whereIn('status', [
+                    DatumStatus::Received->value,
+                    DatumStatus::Checking->value,
+                ]),
+                fn (Builder $query): Builder => $query->where('status', $selectedStatus),
+            )
             ->with(['user:id,name,hemis_id,degree', 'criterion:id,name', 'year:id,name'])
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         $breadcrumbs = [
             ['url' => route('home'), 'name' => 'Asosiy sahifa'],
@@ -49,7 +63,9 @@ class ManualReviewController extends Controller
 
         return view('pages.reviews.index', compact(
             'assignments',
-            'pendingSubmissions',
+            'submissions',
+            'selectedCriterionId',
+            'selectedStatus',
             'breadcrumbs',
         ));
     }

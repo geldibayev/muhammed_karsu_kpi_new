@@ -173,6 +173,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define(
             'access-ai-human-reviews',
             fn (User $user): bool => $user->isSuperAdmin()
+                || AiHumanReviewAssignment::criterionCodesFor((int) $user->hemis_id) !== []
                 || AiHumanReviewAssignment::query()
                     ->active()
                     ->where('hemis_id', $user->hemis_id)

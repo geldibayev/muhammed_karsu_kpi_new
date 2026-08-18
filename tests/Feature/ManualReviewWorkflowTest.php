@@ -267,6 +267,12 @@ class ManualReviewWorkflowTest extends TestCase
             'status' => 'checking',
             'reviewer_hemis_id' => $reviewer->hemis_id,
         ]);
+        $humanReview->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'AI inson tekshiruviga yubordi.',
+            'message_type' => 'ai_evaluation',
+        ]);
         $this->createDatum($owner, $criterion, [
             'name' => 'Yakunlangan OAV resursi',
             'status' => 'accepted',
@@ -275,6 +281,12 @@ class ManualReviewWorkflowTest extends TestCase
             'name' => 'Boshqa tekshiruvchining OAV resursi',
             'status' => 'checking',
             'reviewer_hemis_id' => $otherReviewer->hemis_id,
+        ]);
+        $otherHumanReview->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'warning',
+            'message' => 'AI inson tekshiruviga yubordi.',
+            'message_type' => 'ai_evaluation',
         ]);
 
         $this->actingAs($reviewer)

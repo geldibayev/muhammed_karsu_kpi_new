@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AiHumanReviewFilterRequest;
+use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\Datum;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,23 +16,44 @@ class AiHumanReviewController extends Controller
         $user = $request->user();
         $isSuperAdmin = $user->isSuperAdmin();
         $selectedCriterionId = $request->integer('criterion') ?: null;
+        $selectedStatus = $request->validated('status') ?: 'pending';
+        $assignedCriterionCodes = AiHumanReviewAssignment::criterionCodesFor((int) $user->hemis_id);
 
-        $pendingScope = fn (Builder $query): Builder => $isSuperAdmin
-            ? $query->pendingAiHumanReviews((int) $user->hemis_id)
-            : $query->pendingAiHumanReviewFor((int) $user->hemis_id);
+        $resourceScope = function (Builder $query) use (
+            $assignedCriterionCodes,
+            $isSuperAdmin,
+            $selectedStatus,
+            $user,
+        ): Builder {
+            if ($selectedStatus === 'pending') {
+                return $isSuperAdmin
+                    ? $query->pendingAiHumanReviews((int) $user->hemis_id)
+                    : $query->pendingAiHumanReviewFor((int) $user->hemis_id);
+            }
+
+            return $query
+                ->where('status', $selectedStatus)
+                ->whereHas('criterion', function (Builder $query) use ($assignedCriterionCodes, $isSuperAdmin): void {
+                    $query->where('checking', 'ai');
+
+                    if (! $isSuperAdmin) {
+                        $query->whereIn('code', $assignedCriterionCodes);
+                    }
+                });
+        };
 
         $criteria = Criterion::query()
             ->select(['id', 'code', 'name', 'sort_order'])
             ->whereHas(
                 'files',
-                $pendingScope,
+                $resourceScope,
             )
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
 
-        $pendingSubmissions = Datum::query()
-            ->tap($pendingScope)
+        $submissions = Datum::query()
+            ->tap($resourceScope)
             ->when(
                 $selectedCriterionId !== null,
                 fn (Builder $query): Builder => $query->where('criterion_id', $selectedCriterionId),
@@ -51,9 +73,10 @@ class AiHumanReviewController extends Controller
         ];
 
         return view('pages.ai-human-reviews.index', compact(
-            'pendingSubmissions',
+            'submissions',
             'criteria',
             'selectedCriterionId',
+            'selectedStatus',
             'breadcrumbs',
             'isSuperAdmin',
         ));
