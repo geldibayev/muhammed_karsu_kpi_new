@@ -57,6 +57,42 @@ class FinalDatumReviewConfirmationTest extends TestCase
             ->count());
     }
 
+    public function test_configured_ai_criterion_reviewer_can_confirm_final_review(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create();
+        $report = Report::query()->create([
+            'name' => ['uz' => 'AI yakuniy tekshiruv'],
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'code' => 'test.ai.final.confirmation',
+            'name' => ['uz' => 'AI yakuniy tekshiruv kriteriyasi'],
+            'report_id' => $report->getKey(),
+            'checking' => 'ai',
+            'status' => '1',
+        ]);
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            $criterion->code => $reviewer->hemis_id,
+        ]);
+        $datum = $this->acceptedDatum($owner, $criterion);
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $datum))
+            ->assertOk()
+            ->assertSee('Oxirgi tekshiruvdan o‘tdi');
+
+        $this->actingAs($reviewer)
+            ->patch(route('submissions.final-confirmation.update', $datum))
+            ->assertRedirect(route('upload.details', $datum));
+
+        $this->assertSame($reviewer->getKey(), DatumHistory::query()
+            ->whereBelongsTo($datum)
+            ->where('message_type', DatumHistory::FINAL_REVIEW_CONFIRMED)
+            ->sole()
+            ->user_id);
+    }
+
     public function test_unassigned_users_and_cancelled_resources_cannot_be_finally_confirmed(): void
     {
         [$reviewer, $owner, $criterion] = $this->context();
