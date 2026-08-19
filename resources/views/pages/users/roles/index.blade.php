@@ -21,6 +21,7 @@
                         <tr>
                             <th>Foydalanuvchi</th>
                             <th>Ish joyi</th>
+                            <th>Holati</th>
                             <th>Rollar</th>
                             <th class="text-right">Amal</th>
                         </tr>
@@ -34,6 +35,11 @@
                                 </td>
                                 <td class="align-middle small">
                                     {{ $user->ratingWorkplace?->department?->name['uz'] ?? 'Biriktirilmagan' }}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge {{ $user->isActive() ? 'badge-success' : 'badge-secondary' }}">
+                                        {{ $user->isActive() ? 'Faol' : 'Faol emas' }}
+                                    </span>
                                 </td>
                                 <td class="align-middle">
                                     @if($user->isSuperAdmin())
@@ -54,18 +60,30 @@
                                     @endif
                                 </td>
                                 <td class="align-middle text-right">
-                                    @unless($user->isSuperAdmin())
-                                        <button type="submit" form="role-form-{{ $user->id }}" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-save mr-1"></i> Saqlash
-                                        </button>
-                                    @else
-                                        <span class="small text-muted">Himoyalangan rol</span>
-                                    @endunless
+                                    <div class="d-inline-flex align-items-center">
+                                        @unless($user->isSuperAdmin())
+                                            <button type="submit" form="role-form-{{ $user->id }}" class="btn btn-primary btn-sm mr-1">
+                                                <i class="fas fa-save mr-1"></i> Saqlash
+                                            </button>
+                                        @else
+                                            <span class="small text-muted">Himoyalangan rol</span>
+                                        @endunless
+                                        @can('deactivate', $user)
+                                            <form method="POST" action="{{ route('users.deactivation.update', $user) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-danger btn-sm"
+                                                        onclick="return confirm('Foydalanuvchini faolsizlantirish, barcha resurs va ballarini reytingdan chiqarishni tasdiqlaysizmi?')">
+                                                    <i class="fas fa-user-slash mr-1"></i> Faolsizlantirish
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-4">Foydalanuvchilar topilmadi.</td>
+                                <td colspan="5" class="text-center text-muted py-4">Foydalanuvchilar topilmadi.</td>
                             </tr>
                         @endforelse
                         </tbody>

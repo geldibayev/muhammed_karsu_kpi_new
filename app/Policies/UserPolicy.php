@@ -7,6 +7,14 @@ use App\Models\User;
 
 class UserPolicy
 {
+    public function deactivate(User $user, User $target): bool
+    {
+        return $user->isSuperAdmin()
+            && $user->isNot($target)
+            && $target->isActive()
+            && ! $target->isSuperAdmin();
+    }
+
     public function manageUploadRestriction(User $user, User $target): bool
     {
         return $user->isSuperAdmin()

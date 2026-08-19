@@ -32,6 +32,100 @@ class ExternalPartTimeUserDeletionTest extends TestCase
 
     private int $referenceId = 120_000;
 
+    public function test_super_admin_can_deactivate_any_active_user_from_the_user_list(): void
+    {
+        Storage::fake('local');
+
+        $superAdmin = User::factory()->superAdmin()->create();
+        $target = User::factory()->create([
+            'name' => $this->userName('Faolsizlantiriladigan Xodim'),
+        ]);
+        $userWithoutWorkplace = User::factory()->create([
+            'name' => $this->userName('Ish Joyisiz Xodim'),
+        ]);
+        $faculty = $this->createDepartment('Umumiy fakultet');
+        $department = $this->createDepartment('Umumiy kafedra', $faculty);
+        $this->createWorkplace($target, $department, EmploymentForm::PRIMARY_WORKPLACE_ID);
+        [$report, $criterion] = $this->createScoredCriterion();
+        $path = 'uploads/deactivated-user.pdf';
+        Storage::disk('local')->put($path, 'evidence');
+        $datum = $this->createDatum($target, $criterion, 'accepted', 7, [
+            'type' => 'file',
+            'disk' => 'local',
+            'path' => $path,
+        ]);
+        app(RecalculateReportPoints::class)->handle($report);
+
+        $this->actingAs($superAdmin)
+            ->get(route('users.roles.index'))
+            ->assertOk()
+            ->assertSee('Faolsizlantiriladigan Xodim')
+            ->assertSee('Ish Joyisiz Xodim')
+            ->assertSee(route('users.deactivation.update', $target))
+            ->assertSee(route('users.deactivation.update', $userWithoutWorkplace))
+            ->assertSee('Faolsizlantirish');
+
+        $this->actingAs($superAdmin)
+            ->patch(route('users.deactivation.update', $target))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertSame('0', $target->fresh()->status);
+        $this->assertSame('deleted', $datum->fresh()->status);
+        $this->assertSame(0.0, $datum->fresh()->point);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->getKey(),
+            'user_id' => $superAdmin->getKey(),
+            'message_type' => 'user_deactivated',
+            'message' => 'Foydalanuvchi kafedra yoki fakultetda faol ishlamagani sabab faolsizlantirildi; resurs va uning balli barcha reytinglardan chiqarildi.',
+        ]);
+        $this->assertDatabaseMissing('criterion_points', ['user_id' => $target->getKey()]);
+        $this->assertDatabaseMissing('points', ['user_id' => $target->getKey()]);
+        Storage::disk('local')->assertExists($path);
+
+        $this->actingAs($superAdmin)
+            ->get(route('ratings.index', ['mode' => 'without_degree']))
+            ->assertOk()
+            ->assertViewHas('users', fn (LengthAwarePaginator $users): bool => $users
+                ->getCollection()
+                ->doesntContain(fn (User $user): bool => $user->is($target)));
+        $this->actingAs($superAdmin)
+            ->get(route('users.roles.index'))
+            ->assertOk()
+            ->assertSee('Faol emas')
+            ->assertDontSee(route('users.deactivation.update', $target));
+    }
+
+    public function test_only_super_admin_can_deactivate_an_active_non_admin_user(): void
+    {
+        $superAdmin = User::factory()->superAdmin()->create();
+        $otherSuperAdmin = User::factory()->superAdmin()->create();
+        $teacher = User::factory()->create();
+        $target = User::factory()->create();
+
+        $this->patch(route('users.deactivation.update', $target))
+            ->assertRedirect(route('login'));
+        $this->actingAs($teacher)
+            ->patch(route('users.deactivation.update', $target))
+            ->assertForbidden();
+        $this->actingAs($superAdmin)
+            ->patch(route('users.deactivation.update', $superAdmin))
+            ->assertForbidden();
+        $this->actingAs($superAdmin)
+            ->patch(route('users.deactivation.update', $otherSuperAdmin))
+            ->assertForbidden();
+        $this->actingAs($superAdmin)
+            ->patch(route('users.deactivation.update', $target))
+            ->assertRedirect();
+        $this->actingAs($superAdmin)
+            ->patch(route('users.deactivation.update', $target))
+            ->assertForbidden();
+
+        $this->assertSame('0', $target->fresh()->status);
+        $this->assertSame('1', $superAdmin->fresh()->status);
+        $this->assertSame('1', $otherSuperAdmin->fresh()->status);
+    }
+
     public function test_super_admin_can_deactivate_external_part_timer_and_remove_all_rating_effects(): void
     {
         Storage::fake('local');
@@ -96,7 +190,7 @@ class ExternalPartTimeUserDeletionTest extends TestCase
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $acceptedDatum->getKey(),
             'user_id' => $superAdmin->getKey(),
-            'message_type' => 'external_part_time_user_deleted',
+            'message_type' => 'user_deactivated',
         ]);
         $this->assertNull(DatumResourceIdentifier::query()
             ->whereBelongsTo($acceptedDatum)

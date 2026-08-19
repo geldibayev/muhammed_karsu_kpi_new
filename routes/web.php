@@ -13,6 +13,7 @@ use App\Http\Controllers\CriterionResourceStatisticsController;
 use App\Http\Controllers\CriterionResourceStatisticsExportController;
 use App\Http\Controllers\DatumController;
 use App\Http\Controllers\DatumHistoryController;
+use App\Http\Controllers\DeactivateUserController;
 use App\Http\Controllers\DeleteExternalPartTimeUserController;
 use App\Http\Controllers\ExternalPartTimeUserController;
 use App\Http\Controllers\ExternalPartTimeUserExportController;
@@ -77,6 +78,8 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
         ->middleware('can:view-ratings')
         ->name('criteria.ratings.show');
     Route::get('/users/roles', [UserRoleController::class, 'index'])->name('users.roles.index');
+    Route::patch('/users/{user}/deactivation', DeactivateUserController::class)
+        ->name('users.deactivation.update');
     Route::get('/users/external-part-timers', [ExternalPartTimeUserController::class, 'index'])
         ->middleware('can:export-employment-data')
         ->name('users.external-part-timers.index');

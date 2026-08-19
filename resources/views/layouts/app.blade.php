@@ -220,6 +220,15 @@
                     <li class="nav-header font-weight-bold" style="text-transform: uppercase">
                         Tizim
                     </li>
+                    @if(auth()->user()->isSuperAdmin())
+                        <li class="nav-item">
+                            <a href="{{ route('users.roles.index') }}"
+                               class="nav-link @if(request()->routeIs('users.roles.*')) active @endif">
+                                <i class="nav-icon fas fa-users-cog"></i>
+                                <p>Foydalanuvchilar</p>
+                            </a>
+                        </li>
+                    @endif
                     @can('export-employment-data')
                         <li class="nav-item">
                             <a href="{{ route('users.external-part-timers.index') }}"
