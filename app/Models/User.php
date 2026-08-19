@@ -98,13 +98,6 @@ class User extends Authenticatable
         ];
     }
 
-    public const ASSIGNABLE_ROLES = [
-        'moder' => 'Tekshiruvchi',
-        'dean' => 'Dekan',
-        'department' => 'Kafedra mudiri',
-        'teacher' => 'O‘qituvchi',
-    ];
-
     public function hasRole(string $role): bool
     {
         return in_array($role, $this->rol ?? [], true);

@@ -88,7 +88,6 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
         ->name('users.external-part-timers.export');
     Route::delete('/users/external-part-timers/{user}', DeleteExternalPartTimeUserController::class)
         ->name('users.external-part-timers.destroy');
-    Route::put('/users/{user}/roles', [UserRoleController::class, 'update'])->name('users.roles.update');
     Route::patch('/users/{user}/upload-restriction', UpdateUserUploadRestrictionController::class)
         ->name('users.upload-restriction.update');
     Route::get('/reviewer-assignments', [ReviewerAssignmentController::class, 'index'])

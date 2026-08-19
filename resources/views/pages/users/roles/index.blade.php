@@ -4,15 +4,33 @@
     <section class="content">
         <div class="card card-outline card-primary">
             <div class="card-header">
-                <h3 class="card-title font-weight-bold">Foydalanuvchi rollari</h3>
+                <h3 class="card-title font-weight-bold">Foydalanuvchilar</h3>
                 <div class="card-tools d-flex align-items-center">
-                    <span class="text-muted small mr-3">Rollarni faqat super administrator o‘zgartira oladi.</span>
                     @can('export-employment-data')
                         <a href="{{ route('users.external-part-timers.index') }}" class="btn btn-outline-primary btn-sm">
                             <i class="fas fa-user-tie mr-1"></i> Tashqi o‘rindoshlar
                         </a>
                     @endcan
                 </div>
+            </div>
+            <div class="card-body border-bottom">
+                <form method="GET" action="{{ route('users.roles.index') }}" class="form-row align-items-end">
+                    <div class="col-md-6 col-lg-4">
+                        <label for="user-search" class="small font-weight-bold">Foydalanuvchini izlash</label>
+                        <input id="user-search" type="search" name="search" value="{{ $search }}"
+                               class="form-control" placeholder="F.I.Sh. yoki HEMIS ID">
+                    </div>
+                    <div class="col-auto mt-2 mt-md-0">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search mr-1"></i> Izlash
+                        </button>
+                        @if($search !== '')
+                            <a href="{{ route('users.roles.index') }}" class="btn btn-outline-secondary ml-1">
+                                Tozalash
+                            </a>
+                        @endif
+                    </div>
+                </form>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -22,7 +40,6 @@
                             <th>Foydalanuvchi</th>
                             <th>Ish joyi</th>
                             <th>Holati</th>
-                            <th>Rollar</th>
                             <th class="text-right">Amal</th>
                         </tr>
                         </thead>
@@ -41,49 +58,26 @@
                                         {{ $user->isActive() ? 'Faol' : 'Faol emas' }}
                                     </span>
                                 </td>
-                                <td class="align-middle">
-                                    @if($user->isSuperAdmin())
-                                        <span class="badge badge-danger">Super admin</span>
-                                    @else
-                                        <form id="role-form-{{ $user->id }}" method="POST" action="{{ route('users.roles.update', $user) }}" class="d-flex flex-wrap align-items-center">
-                                            @csrf
-                                            @method('PUT')
-                                            @foreach($roles as $key => $label)
-                                                <div class="custom-control custom-checkbox custom-control-inline mr-3 mb-1">
-                                                    <input class="custom-control-input" type="checkbox" name="roles[]"
-                                                           value="{{ $key }}" id="role-{{ $user->id }}-{{ $key }}"
-                                                           @checked($user->hasRole($key))>
-                                                    <label class="custom-control-label" for="role-{{ $user->id }}-{{ $key }}">{{ $label }}</label>
-                                                </div>
-                                            @endforeach
-                                        </form>
-                                    @endif
-                                </td>
                                 <td class="align-middle text-right">
-                                    <div class="d-inline-flex align-items-center">
-                                        @unless($user->isSuperAdmin())
-                                            <button type="submit" form="role-form-{{ $user->id }}" class="btn btn-primary btn-sm mr-1">
-                                                <i class="fas fa-save mr-1"></i> Saqlash
+                                    @can('deactivate', $user)
+                                        <form method="POST" action="{{ route('users.deactivation.update', $user) }}">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Foydalanuvchini faolsizlantirish, barcha resurs va ballarini reytingdan chiqarishni tasdiqlaysizmi?')">
+                                                <i class="fas fa-user-slash mr-1"></i> Faolsizlantirish
                                             </button>
-                                        @else
-                                            <span class="small text-muted">Himoyalangan rol</span>
-                                        @endunless
-                                        @can('deactivate', $user)
-                                            <form method="POST" action="{{ route('users.deactivation.update', $user) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="btn btn-danger btn-sm"
-                                                        onclick="return confirm('Foydalanuvchini faolsizlantirish, barcha resurs va ballarini reytingdan chiqarishni tasdiqlaysizmi?')">
-                                                    <i class="fas fa-user-slash mr-1"></i> Faolsizlantirish
-                                                </button>
-                                            </form>
-                                        @endcan
-                                    </div>
+                                        </form>
+                                    @else
+                                        <span class="small text-muted">
+                                            {{ $user->isActive() ? 'Himoyalangan' : 'Faolsizlantirilgan' }}
+                                        </span>
+                                    @endcan
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">Foydalanuvchilar topilmadi.</td>
+                                <td colspan="4" class="text-center text-muted py-4">Foydalanuvchilar topilmadi.</td>
                             </tr>
                         @endforelse
                         </tbody>

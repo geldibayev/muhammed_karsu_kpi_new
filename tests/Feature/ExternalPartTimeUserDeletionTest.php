@@ -23,6 +23,7 @@ use App\Models\Workplace;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -35,6 +36,8 @@ class ExternalPartTimeUserDeletionTest extends TestCase
     public function test_super_admin_can_deactivate_any_active_user_from_the_user_list(): void
     {
         Storage::fake('local');
+
+        $this->assertFalse(Route::has('users.roles.update'));
 
         $superAdmin = User::factory()->superAdmin()->create();
         $target = User::factory()->create([
@@ -63,7 +66,23 @@ class ExternalPartTimeUserDeletionTest extends TestCase
             ->assertSee('Ish Joyisiz Xodim')
             ->assertSee(route('users.deactivation.update', $target))
             ->assertSee(route('users.deactivation.update', $userWithoutWorkplace))
-            ->assertSee('Faolsizlantirish');
+            ->assertSee('Faolsizlantirish')
+            ->assertSee('Foydalanuvchini izlash')
+            ->assertDontSee('name="roles[]"', false)
+            ->assertDontSee('Saqlash');
+
+        $this->actingAs($superAdmin)
+            ->get(route('users.roles.index', ['search' => 'Ish Joyisiz']))
+            ->assertOk()
+            ->assertSee('Ish Joyisiz Xodim')
+            ->assertDontSee('Faolsizlantiriladigan Xodim')
+            ->assertSee('value="Ish Joyisiz"', false);
+
+        $this->actingAs($superAdmin)
+            ->get(route('users.roles.index', ['search' => (string) $target->hemis_id]))
+            ->assertOk()
+            ->assertSee('Faolsizlantiriladigan Xodim')
+            ->assertDontSee('Ish Joyisiz Xodim');
 
         $this->actingAs($superAdmin)
             ->patch(route('users.deactivation.update', $target))
