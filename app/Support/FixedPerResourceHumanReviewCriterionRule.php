@@ -171,13 +171,16 @@ Siz 4.1.1 mezoni bo'yicha professor-o'qituvchining OAV yoki ijtimoiy tarmoqlarda
 
 VAZIFA:
 - Gazetada chop etilgan maqola, televideniyedagi chiqish, rasmiy OAV materiali yoki rasmiy ijtimoiy tarmoq chiqishini tekshiring.
-- Gazeta maqolasi nusxasi, televideniye chiqishi bo'yicha tashkilot bergan rasmiy ma'lumotnoma va boshqa ishonchli tasdiqlovchi hujjatlar dalil hisoblanadi.
+- Yuklangan resursning o'zi ma'lumotnoma turidagi hujjat bo'lsa, undagi bayonotlar chiqishni tasdiqlashidan qat'i nazar uni qabul qilmang.
+- Hujjat turi va sarlavhasini o'zbekcha "ma'lumotnoma" yoki "маълумотнома", qoraqalpoqcha "maǵlıwmatnama", "mag'liwmatnama" yoki "мағлыўматнама", ruscha "справка" hamda ularning kelishik va ko'plik shakllari bo'yicha tekshiring.
+- Ma'lumotnoma o'rniga chiqishning o'zi: gazeta maqolasi nusxasi, televideniye chiqishi videosi yoki rasmiy OAV/ijtimoiy tarmoq materiali dalil bo'lishi kerak.
 - Materialda resursni taqdim etgan professor-o'qituvchining muallif yoki chiqish qilgan shaxs ekani aniq tasdiqlanishi kerak.
 - Chiqish mavzusi universitetdagi yoki mamlakatdagi islohotlar, jumladan ta'lim, ijtimoiy yoki iqtisodiy yangilanishlarga bevosita oid bo'lishi kerak.
 - Materialning chop etilgan, efirga uzatilgan yoki e'lon qilingan sanasini aniqlang va tizim talab qilgan resource_date maydonida qaytaring.
 - Ballni tanlamang va hisoblamang. Har bir tasdiqlangan resursga server chet tili yo'nalishi uchun 0.5 ball, qolgan toifalar uchun 0.75 ball beradi; yakuniy ball chet tili yo'nalishi uchun 2 ball, qolgan toifalar uchun 3 ball bilan cheklanadi.
 
 QAROR:
+- Yuklangan resurs ma'lumotnoma ekanligi aniq bo'lsa, boshqa talablarni tekshirishni davom ettirmasdan cancelled statusi va 0 ball qaytaring.
 - OAV yoki rasmiy ijtimoiy tarmoqdagi chiqish, professor-o'qituvchining ishtiroki, islohotlarga oid mavzu va sana aniq tasdiqlansa accepted qaytaring.
 - Hujjat xira, kesilgan, qarama-qarshi bo'lsa yoki chiqish, shaxs, mavzu yoxud sana ishonchli aniqlanmasa checking qaytaring; resurs amaldagi inson tekshiruvchisiga yuboriladi.
 - Material OAV yoki rasmiy ijtimoiy tarmoq chiqishi emasligi, professor-o'qituvchiga tegishli emasligi, islohotlarga aloqasizligi yoki ruxsat etilgan davrdan tashqaridaligi aniq bo'lsa cancelled qaytaring.

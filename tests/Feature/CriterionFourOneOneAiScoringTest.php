@@ -79,6 +79,11 @@ class CriterionFourOneOneAiScoringTest extends TestCase
         );
         $this->assertStringContainsString('Gazetada chop etilgan maqola', $specification['ai_prompt']);
         $this->assertStringContainsString('televideniye chiqishi', $specification['ai_prompt']);
+        $this->assertStringContainsString("ma'lumotnoma", $specification['ai_prompt']);
+        $this->assertStringContainsString('maǵlıwmatnama', $specification['ai_prompt']);
+        $this->assertStringContainsString('мағлыўматнама', $specification['ai_prompt']);
+        $this->assertStringContainsString('справка', $specification['ai_prompt']);
+        $this->assertStringContainsString('cancelled statusi va 0 ball', $specification['ai_prompt']);
         $this->assertStringContainsString('resource_date', $specification['ai_prompt']);
         $this->assertStringContainsString("chet tili yo'nalishi uchun 0.5 ball", $specification['ai_prompt']);
     }
