@@ -260,6 +260,11 @@
                                                         <span class="badge {{ \App\Enums\DatumStatus::from($matchingDatum->status)->badgeClass() }} ml-1">
                                                             {{ \App\Enums\DatumStatus::from($matchingDatum->status)->label() }}
                                                         </span>
+                                                        @if($matchingDatum->isFinalReviewConfirmed())
+                                                            <i class="fas fa-star text-warning ml-1"
+                                                               title="Yakuniy tekshiruv tasdiqlangan"
+                                                               aria-label="Yakuniy tekshiruv tasdiqlangan"></i>
+                                                        @endif
                                                         <div class="small text-muted">
                                                             {{ $matchingDatum->user?->full ?: $matchingDatum->user?->short ?: 'Noma’lum' }}
                                                             ({{ $matchingDatum->user?->hemis_id ?? 'HEMIS ID yo‘q' }})

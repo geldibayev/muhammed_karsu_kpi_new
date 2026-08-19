@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\DatumStatus;
 use App\Models\Criterion;
+use App\Models\Datum;
 use App\Models\Point;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,10 +14,19 @@ use Illuminate\Pagination\LengthAwarePaginator;
 class GetCriterionRating
 {
     /** @return LengthAwarePaginator<int, Point> */
-    public function handle(Criterion $criterion): LengthAwarePaginator
+    public function handle(Criterion $criterion, string $sort = 'point_desc'): LengthAwarePaginator
     {
-        return Point::query()
+        $pointTable = (new Point)->getTable();
+        $datumTable = (new Datum)->getTable();
+        $acceptedResourcesCount = Datum::query()
+            ->selectRaw('COUNT(*)')
+            ->whereColumn("{$datumTable}.user_id", "{$pointTable}.user_id")
+            ->where("{$datumTable}.criterion_id", $criterion->getKey())
+            ->where("{$datumTable}.status", DatumStatus::Accepted->value);
+
+        $query = Point::query()
             ->select(['id', 'user_id', 'criterion_id', 'report_id', 'point'])
+            ->addSelect(['accepted_resources_count' => $acceptedResourcesCount])
             ->whereBelongsTo($criterion)
             ->where('report_id', $criterion->report_id)
             ->whereHas(
@@ -37,9 +47,17 @@ class GetCriterionRating
                 },
                 'user.ratingWorkplace.position',
                 'user.ratingWorkplace.department.parent',
-            ])
-            ->orderByDesc('point')
+            ]);
+
+        $query = match ($sort) {
+            'resources_desc' => $query->orderByDesc('accepted_resources_count')->orderByDesc('point'),
+            'resources_asc' => $query->orderBy('accepted_resources_count')->orderByDesc('point'),
+            default => $query->orderByDesc('point'),
+        };
+
+        return $query
             ->orderBy('user_id')
-            ->paginate(50);
+            ->paginate(50)
+            ->withQueryString();
     }
 }

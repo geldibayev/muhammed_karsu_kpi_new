@@ -13,9 +13,21 @@
                             {{ data_get($criterion->report?->name, 'uz', 'Hisobot davri ko‘rsatilmagan') }}
                         </div>
                     </div>
-                    <a href="{{ route('home') }}" class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-arrow-left mr-1"></i> Asosiy sahifaga qaytish
-                    </a>
+                    <div class="d-flex align-items-center">
+                        <form method="GET" action="{{ route('criteria.ratings.show', $criterion) }}"
+                              class="form-inline mr-2">
+                            <label for="criterion-rating-sort" class="mr-2 mb-0">Saralash:</label>
+                            <select id="criterion-rating-sort" name="sort" class="form-control form-control-sm mr-2">
+                                <option value="point_desc" @selected($selectedSort === 'point_desc')>Ball: ko‘pdan kamga</option>
+                                <option value="resources_desc" @selected($selectedSort === 'resources_desc')>Resurslar: ko‘pdan kamga</option>
+                                <option value="resources_asc" @selected($selectedSort === 'resources_asc')>Resurslar: kamdan ko‘pga</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary btn-sm">Saralash</button>
+                        </form>
+                        <a href="{{ route('home') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left mr-1"></i> Asosiy sahifaga qaytish
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">

@@ -66,6 +66,8 @@ class CriterionRatingTest extends TestCase
         $this->createPoint($withoutDegree, $criterion, 9);
         $this->createPoint($administrativeEmployee, $criterion, 100);
         $withDegreeAccepted = $this->createDatum($withDegree, $criterion, 'accepted');
+        $this->createDatum($withDegree, $criterion, 'accepted');
+        $this->createDatum($withDegree, $criterion, 'accepted');
         $withoutDegreeAccepted = $this->createDatum($withoutDegree, $criterion, 'accepted');
         $withoutDegreeSecondAccepted = $this->createDatum($withoutDegree, $criterion, 'accepted');
         $cancelled = $this->createDatum($withoutDegree, $criterion, 'cancelled');
@@ -94,7 +96,7 @@ class CriterionRatingTest extends TestCase
             ->assertDontSee(route('upload.details', $cancelled))
             ->assertDontSee(route('upload.details', $otherCriterionAccepted))
             ->assertSeeInOrder(['2 ta', '9.00'])
-            ->assertSeeInOrder(['1 ta', '5.50'])
+            ->assertSeeInOrder(['3 ta', '5.50'])
             ->assertSeeInOrder(['Darajasiz Ustoz', 'Darajali Ustoz'])
             ->assertViewHas('rankedPoints', function (LengthAwarePaginator $points) use ($withoutDegree, $withDegree): bool {
                 return $points->total() === 2
@@ -102,9 +104,24 @@ class CriterionRatingTest extends TestCase
                     && $points->items()[0]->user->submissions->count() === 2
                     && (float) $points->items()[0]->point === 9.0
                     && $points->items()[1]->user->is($withDegree)
-                    && $points->items()[1]->user->submissions->count() === 1
+                    && $points->items()[1]->user->submissions->count() === 3
                     && (float) $points->items()[1]->point === 5.5;
             });
+
+        $this->actingAs($viewer)
+            ->get(route('criteria.ratings.show', [$criterion, 'sort' => 'resources_desc']))
+            ->assertOk()
+            ->assertSee('value="resources_desc" selected', false)
+            ->assertSeeInOrder(['Darajali Ustoz', 'Darajasiz Ustoz']);
+
+        $this->actingAs($viewer)
+            ->get(route('criteria.ratings.show', [$criterion, 'sort' => 'resources_asc']))
+            ->assertOk()
+            ->assertSeeInOrder(['Darajasiz Ustoz', 'Darajali Ustoz']);
+
+        $this->actingAs($viewer)
+            ->get(route('criteria.ratings.show', [$criterion, 'sort' => 'unsafe']))
+            ->assertSessionHasErrors('sort');
     }
 
     public function test_home_shows_rating_action_ai_and_assigned_reviewer_name(): void

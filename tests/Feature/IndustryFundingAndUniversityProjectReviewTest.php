@@ -6,6 +6,7 @@ use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Datum;
+use App\Models\DatumHistory;
 use App\Models\Evaluation;
 use App\Models\Formula;
 use App\Models\Report;
@@ -184,6 +185,12 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
             'received_amount' => 10_000_000,
             'author_count' => 2,
         ]);
+        $matching->histories()->create([
+            'user_id' => $reviewer->getKey(),
+            'type' => 'success',
+            'message' => 'Yakuniy tekshiruv tasdiqlandi.',
+            'message_type' => DatumHistory::FINAL_REVIEW_CONFIRMED,
+        ]);
         $unrelated = Datum::query()->create([
             'name' => 'Boshqa shartnoma.pdf',
             'user_id' => $unrelatedOwner->getKey(),
@@ -229,6 +236,16 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
             ->assertOk()
             ->assertSeeText('Boshqa yuklamalar')
             ->assertSeeText('Bu resursni boshqa foydalanuvchilar yuklamagan.');
+
+        $unrelated->resourceIdentifiers()->update([
+            'value_hash' => str_repeat('a', 64),
+            'active_value_hash' => str_repeat('a', 64),
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $unrelated))
+            ->assertOk()
+            ->assertSee('title="Yakuniy tekshiruv tasdiqlangan"', false);
 
         $this->actingAs(User::factory()->create())
             ->get(route('reviews.show', $current))

@@ -173,7 +173,10 @@ class Datum extends Model
                     }
                 });
             })
-            ->with('user:id,name,hemis_id')
+            ->with([
+                'user:id,name,hemis_id',
+                'latestHistory',
+            ])
             ->latest()
             ->get();
     }
