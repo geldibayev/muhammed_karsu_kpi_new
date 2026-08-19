@@ -89,6 +89,7 @@ class RecheckCriterionFourOneOneAiEvaluationsCommandTest extends TestCase
             $this->assertDatabaseHas('datum_histories', [
                 'datum_id' => $datum->getKey(),
                 'message_type' => 'ai_four_one_one_reference_recheck_queued',
+                'message' => 'Ma’lumotnoma qabul etilmaydi. Resurs 4.1.1 mezoni bo‘yicha qayta AI tekshiruviga yuborildi.',
             ]);
         }
 

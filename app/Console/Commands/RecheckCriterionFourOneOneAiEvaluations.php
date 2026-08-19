@@ -160,7 +160,7 @@ class RecheckCriterionFourOneOneAiEvaluations extends Command
                 [
                     'user_id' => $datum->user_id,
                     'type' => 'info',
-                    'message' => 'Resurs 4.1.1 mezonining ma’lumotnomani rad etuvchi AI qoidasi bilan qayta tekshiruvga belgilandi.',
+                    'message' => 'Ma’lumotnoma qabul etilmaydi. Resurs 4.1.1 mezoni bo‘yicha qayta AI tekshiruviga yuborildi.',
                     'message_type' => self::RECHECK_MESSAGE_TYPE,
                 ],
                 [
