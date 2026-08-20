@@ -48,6 +48,17 @@
                             </div>
                         </div>
                         <div class="card-body">
+                            @if($errors->any())
+                                <div class="alert alert-danger" role="alert">
+                                    <div class="font-weight-bold">Amalni bajarishda xatolik:</div>
+                                    <ul class="mb-0 pl-3">
+                                        @foreach($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
                             @if($finalConfirmation !== null)
                                 <div class="alert alert-warning" role="status">
                                     <div class="font-weight-bold">

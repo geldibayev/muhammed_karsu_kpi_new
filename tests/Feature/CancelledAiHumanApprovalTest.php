@@ -179,6 +179,46 @@ class CancelledAiHumanApprovalTest extends TestCase
         }
     }
 
+    public function test_historyless_legacy_resource_can_be_approved_when_another_cancelled_copy_exists(): void
+    {
+        [$reviewer, $owner, $report, $criterion] = $this->context();
+        $url = 'https://example.com/legacy-returned-resource';
+        $otherCancelled = Datum::query()->create([
+            'name' => 'Boshqa qaytarilgan nusxa',
+            'material' => ['type' => 'url', 'link' => $url],
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'cancelled',
+        ]);
+        DatumResourceIdentifier::query()->create([
+            'datum_id' => $otherCancelled->getKey(),
+            'report_id' => $report->getKey(),
+            'user_id' => $owner->getKey(),
+            'type' => 'canonical_url',
+            'value_hash' => hash('sha256', 'canonical_url:'.$url),
+            'active_value_hash' => null,
+        ]);
+        $legacyDatum = Datum::query()->create([
+            'name' => 'Tarixsiz eski resurs',
+            'material' => ['type' => 'url', 'link' => $url],
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'cancelled',
+        ]);
+
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.approve-cancelled', $legacyDatum), ['point' => 2])
+            ->assertRedirect(route('upload.details', $legacyDatum))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('accepted', $legacyDatum->fresh()->status);
+        $this->assertTrue($legacyDatum->resourceIdentifiers()->whereNotNull('active_value_hash')->exists());
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $legacyDatum->getKey(),
+            'message_type' => 'human_override_approved',
+        ]);
+    }
+
     public function test_repeated_approval_is_forbidden_and_history_is_not_duplicated(): void
     {
         [$reviewer, $owner, $report, $criterion] = $this->context();

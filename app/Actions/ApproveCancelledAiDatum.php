@@ -183,11 +183,13 @@ class ApproveCancelledAiDatum
                     ? 'human_override_ai_approved'
                     : 'human_override_approved',
             ]);
-            $this->identifierRegistry->register(
+            $identifiers = $this->fingerprintGenerator->forDatum($lockedDatum);
+            $this->identifierRegistry->storeInactive(
                 $lockedDatum,
                 $lockedDatum->criterion->report_id,
-                $this->fingerprintGenerator->forDatum($lockedDatum),
+                $identifiers,
             );
+            $this->identifierRegistry->activate($lockedDatum);
 
             return $lockedDatum;
         }, 3);
