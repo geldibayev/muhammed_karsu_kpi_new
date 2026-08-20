@@ -18,6 +18,8 @@ use Illuminate\Support\Str;
 
 class DatumPolicy
 {
+    private const FOUR_ONE_ONE_REFERENCE_REJECTION_DATE = '2026-08-19';
+
     public function __construct(private ResourceUploadWindow $resourceUploadWindow) {}
 
     public function viewAny(User $user): bool
@@ -184,7 +186,7 @@ class DatumPolicy
         $aiEvaluation = $datum->histories()
             ->where('message_type', 'ai_evaluation')
             ->latest('id')
-            ->first(['id', 'type', 'message']);
+            ->first(['id', 'type', 'message', 'created_at']);
         $lastHumanDecisionId = $this->latestHistoryId($datum, [
             'manual_review_approved',
             'manual_review_rejected',
@@ -201,7 +203,8 @@ class DatumPolicy
             && $aiEvaluation->type === 'error'
             && $aiEvaluation->id > $recheckId
             && $aiEvaluation->id > $lastHumanDecisionId
-            && $this->isReferenceRejection((string) $aiEvaluation->message);
+            && ($this->isReferenceRejection((string) $aiEvaluation->message)
+                || $aiEvaluation->created_at?->toDateString() === self::FOUR_ONE_ONE_REFERENCE_REJECTION_DATE);
     }
 
     public function transferCriterion(User $user, Datum $datum): bool

@@ -118,6 +118,28 @@ class FourOneOneReferenceReplacementTest extends TestCase
         $this->assertFalse($teacher->can('replaceFourOneOneReference', $eligible));
     }
 
+    public function test_generic_ai_rejection_from_august_nineteenth_can_be_replaced(): void
+    {
+        [$criterion, $year] = $this->createCriterion();
+        $teacher = User::factory()->create();
+        $this->travelTo(CarbonImmutable::parse('2026-08-19 12:00:00', 'Asia/Tashkent'));
+        $datum = $this->createCancelledDatum($teacher, $criterion, $year);
+        $datum->histories()->create([
+            'user_id' => $teacher->getKey(),
+            'type' => 'info',
+            'message' => 'Qayta tekshiruvga yuborildi.',
+            'message_type' => 'ai_four_one_one_reference_recheck_queued',
+        ]);
+        $datum->histories()->create([
+            'user_id' => $teacher->getKey(),
+            'type' => 'error',
+            'message' => 'Yuklangan hujjat talabga mos emas.',
+            'message_type' => 'ai_evaluation',
+        ]);
+
+        $this->assertTrue($teacher->can('replaceFourOneOneReference', $datum));
+    }
+
     public function test_later_human_decision_and_reference_negation_do_not_open_replacement(): void
     {
         [$criterion, $year] = $this->createCriterion();
