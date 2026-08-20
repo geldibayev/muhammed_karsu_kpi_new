@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Actions\RecalculateReportPoints;
 use App\Data\AiEvaluationResult;
-use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Datum;
@@ -14,24 +13,14 @@ use App\Models\Point;
 use App\Models\Report;
 use App\Models\User;
 use App\Services\AiResourceDatePolicy;
-use App\Services\AiSubmissionEvaluator;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\KpiCriterionSpecification;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Illuminate\Support\Facades\RateLimiter;
-use Mockery;
 use Tests\TestCase;
 
 class CriterionFourOneOneAiScoringTest extends TestCase
 {
     use LazilyRefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        RateLimiter::clear(ProcessAiDatumEvaluation::RATE_LIMIT_KEY);
-    }
 
     public function test_ai_only_decides_status_and_server_assigns_category_point(): void
     {
@@ -88,7 +77,7 @@ class CriterionFourOneOneAiScoringTest extends TestCase
         $this->assertStringContainsString("chet tili yo'nalishi uchun 0.5 ball", $specification['ai_prompt']);
     }
 
-    public function test_uncertain_ai_result_goes_to_existing_reviewer_and_human_approval_uses_server_point(): void
+    public function test_direct_human_review_approval_uses_server_point(): void
     {
         [, $criterion] = $this->context();
         $reviewer = User::factory()->create();
@@ -102,21 +91,21 @@ class CriterionFourOneOneAiScoringTest extends TestCase
             'user_id' => $owner->getKey(),
             'criterion_id' => $criterion->getKey(),
             'status' => 'checking',
+            'reviewer_hemis_id' => $reviewer->hemis_id,
+            'reason' => Datum::PUBLIC_CHECKING_REASON,
             'point' => 0,
         ]);
-        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
-        $evaluator->shouldReceive('evaluate')
-            ->once()
-            ->andReturn(AiEvaluationResult::checking('Efir sanasi aniq o‘qilmadi.'));
-        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
-        $recalculateReportPoints->shouldNotReceive('handle');
-
-        (new ProcessAiDatumEvaluation($datum->getKey(), $criterion->getKey()))
-            ->handle($evaluator, $recalculateReportPoints);
+        $datum->histories()->create([
+            'user_id' => $owner->getKey(),
+            'type' => 'info',
+            'message' => 'Qo‘lda tekshirish uchun mas’ulga biriktirildi.',
+            'message_type' => 'ai_human_review_assigned',
+        ]);
 
         $datum->refresh();
         $this->assertSame('checking', $datum->status);
         $this->assertSame($reviewer->hemis_id, $datum->reviewer_hemis_id);
+        $this->assertSame(Datum::PUBLIC_CHECKING_REASON, $datum->reason);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $datum->getKey(),
             'message_type' => 'ai_human_review_assigned',

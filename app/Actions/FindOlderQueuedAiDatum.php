@@ -40,6 +40,7 @@ class FindOlderQueuedAiDatum
                 $join->on('ai_history.datum_id', '=', "{$datumTable}.id");
             })
             ->where("{$datumTable}.status", 'checking')
+            ->whereNull("{$datumTable}.reviewer_hemis_id")
             ->where("{$criterionTable}.checking", 'ai')
             ->whereColumn('ai_history.last_queue_id', '>', 'ai_history.last_evaluation_id')
             ->whereColumn('ai_history.last_queue_id', '>', 'ai_history.last_failure_id')

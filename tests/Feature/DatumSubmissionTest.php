@@ -270,9 +270,10 @@ class DatumSubmissionTest extends TestCase
         $this->assertDatabaseCount('data', 0);
     }
 
-    public function test_criterion_four_one_one_accepts_a_file_or_url_for_ai_review(): void
+    public function test_criterion_four_one_one_goes_directly_to_the_configured_human_reviewer(): void
     {
         $teacher = User::factory()->create();
+        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
         $criterion = $this->createCriterion([
             'code' => '4.1.1',
             'res_type' => 'all',
@@ -306,10 +307,18 @@ class DatumSubmissionTest extends TestCase
         $this->assertSame('url', data_get($datum->material, 'type'));
         $this->assertSame('https://example.com/oav-chiqishi', data_get($datum->material, 'link'));
         $this->assertSame('checking', $datum->status);
-        Queue::assertPushed(
-            ProcessAiDatumEvaluation::class,
-            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $datum->getKey(),
-        );
+        $this->assertSame($reviewer->hemis_id, $datum->reviewer_hemis_id);
+        $this->assertSame(Datum::PUBLIC_CHECKING_REASON, $datum->reason);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->getKey(),
+            'message_type' => 'ai_human_review_assigned',
+        ]);
+        Queue::assertNothingPushed();
+
+        $this->actingAs($reviewer)
+            ->get(route('ai-human-reviews.index', ['criterion' => $criterion->getKey()]))
+            ->assertOk()
+            ->assertSee($datum->name);
     }
 
     public function test_criterion_3_1_15_only_allows_users_with_scientific_degrees_to_submit(): void

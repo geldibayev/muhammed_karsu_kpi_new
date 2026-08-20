@@ -293,9 +293,9 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
         $history = $datum->histories()
             ->selectRaw("MAX(CASE WHEN message_type = 'ai_human_review_assigned' THEN id ELSE 0 END) AS last_assignment_id")
-            ->selectRaw("MAX(CASE WHEN message_type IN ('submission_created', 'ai_queued') THEN id ELSE 0 END) AS last_queue_id")
+            ->selectRaw("MAX(CASE WHEN message_type IN ('submission_created', 'ai_queued', 'criterion_transferred') THEN id ELSE 0 END) AS last_invalidating_id")
             ->first();
 
-        return (int) $history?->last_assignment_id > (int) $history?->last_queue_id;
+        return (int) $history?->last_assignment_id > (int) $history?->last_invalidating_id;
     }
 }

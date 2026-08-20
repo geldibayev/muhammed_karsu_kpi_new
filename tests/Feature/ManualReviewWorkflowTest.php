@@ -579,7 +579,10 @@ class ManualReviewWorkflowTest extends TestCase
 
     public function test_assignment_command_can_move_queued_criterion_resources_to_the_configured_reviewer(): void
     {
-        config()->set('kpi.ai_human_review_criterion_reviewers.4.1.1', 3172011004);
+        config()->set('kpi.ai_human_review_criterion_reviewers', [
+            ...config('kpi.ai_human_review_criterion_reviewers'),
+            '4.1.1' => 3172011004,
+        ]);
         $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
         $owner = User::factory()->create();
         $criterion = $this->createCriterion();
@@ -620,6 +623,10 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertSame($reviewer->hemis_id, $datum->reviewer_hemis_id);
         $this->assertSame(Datum::PUBLIC_CHECKING_REASON, $datum->reason);
         $this->assertSame(1, $datum->histories()->where('message_type', 'ai_human_review_assigned')->count());
+        $this->actingAs($reviewer)
+            ->get(route('ai-human-reviews.index', ['criterion' => $criterion->getKey()]))
+            ->assertOk()
+            ->assertSee($datum->name);
 
         $this->artisan('kpi:ai:assign-human-reviews', [
             '--criterion' => '4.1.1',

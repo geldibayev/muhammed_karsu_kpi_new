@@ -125,6 +125,7 @@ class QueuePendingAiEvaluations extends Command
                 'histories as last_ai_queue_at' => fn (Builder $query): Builder => $query
                     ->whereIn('message_type', ['submission_created', 'ai_queued']),
             ], 'created_at')
+            ->whereNull('data.reviewer_hemis_id')
             ->whereIn('status', ['received', 'checking'])
             ->whereHas(
                 'criterion',
@@ -172,6 +173,7 @@ class QueuePendingAiEvaluations extends Command
 
             if ($datum === null
                 || ! in_array($datum->status, ['received', 'checking'], true)
+                || $datum->reviewer_hemis_id !== null
                 || $datum->criterion?->checking !== 'ai') {
                 return null;
             }

@@ -3,10 +3,12 @@
 namespace App\Actions;
 
 use App\Jobs\ProcessAiDatumEvaluation;
+use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\Datum;
 use App\Models\User;
 use App\Services\DatumResourceFingerprintGenerator;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -74,6 +76,16 @@ class CreateDatumSubmission
                     $identifiers,
                 );
 
+                $isDirectHumanReview = $lockedCriterion->checking === 'ai'
+                    && $lockedCriterion->code === FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_ONE_CODE;
+                $reviewerHemisId = $isDirectHumanReview
+                    ? AiHumanReviewAssignment::reviewerHemisIdFor($lockedCriterion, sharedLock: true)
+                    : null;
+
+                if ($isDirectHumanReview && $reviewerHemisId === null) {
+                    throw new RuntimeException('4.1.1 kriteriyasi uchun mas’ul sozlanmagan.');
+                }
+
                 $datum = Datum::query()->create([
                     'user_id' => $user->id,
                     'criterion_id' => $lockedCriterion->id,
@@ -81,10 +93,11 @@ class CreateDatumSubmission
                     'language_id' => $validated['language_id'] ?? data_get($validated, 'article.lang'),
                     'material' => $material,
                     'status' => $lockedCriterion->checking === 'ai' ? 'checking' : 'received',
+                    'reviewer_hemis_id' => $reviewerHemisId,
                     'point' => 0,
-                    'reason' => $lockedCriterion->checking === 'ai'
-                        ? 'AI tahlili navbatga qo\'yildi.'
-                        : '',
+                    'reason' => $isDirectHumanReview
+                        ? Datum::PUBLIC_CHECKING_REASON
+                        : ($lockedCriterion->checking === 'ai' ? 'AI tahlili navbatga qo\'yildi.' : ''),
                     'name' => match ($material['type']) {
                         'file' => $material['original_name'],
                         'h_index' => 'H-index profillari',
@@ -104,6 +117,15 @@ class CreateDatumSubmission
                     'message_type' => 'submission_created',
                 ]);
 
+                if ($isDirectHumanReview) {
+                    $datum->histories()->create([
+                        'user_id' => $user->id,
+                        'type' => 'info',
+                        'message' => "Resurs HEMIS ID {$reviewerHemisId} mas’ulga qo‘lda tekshirish uchun biriktirildi.",
+                        'message_type' => 'ai_human_review_assigned',
+                    ]);
+                }
+
                 $replacementDatum?->histories()->create([
                     'user_id' => $user->id,
                     'type' => 'info',
@@ -121,7 +143,7 @@ class CreateDatumSubmission
             throw $exception;
         }
 
-        if ($datum->status === 'checking') {
+        if ($datum->status === 'checking' && $datum->reviewer_hemis_id === null) {
             try {
                 ProcessAiDatumEvaluation::dispatch($datum->id, $datum->criterion_id);
             } catch (Throwable $exception) {

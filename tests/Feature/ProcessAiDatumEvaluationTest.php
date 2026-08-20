@@ -546,14 +546,23 @@ class ProcessAiDatumEvaluationTest extends TestCase
 
     public function test_completed_older_ai_attempt_does_not_block_the_next_resource(): void
     {
+        $assignedDatum = $this->createDatum(['reviewer_hemis_id' => 3172011004]);
         $failedDatum = $this->createDatum();
         $olderDatum = $this->createDatum();
         $newerDatum = $this->createDatum();
+        $assignedDatum->update(['created_at' => now()->subMinutes(3)]);
         $failedDatum->update(['created_at' => now()->subMinutes(2)]);
         $olderDatum->update(['created_at' => now()->subMinute()]);
+        $this->markAsSubmitted($assignedDatum);
         $this->markAsSubmitted($failedDatum);
         $this->markAsSubmitted($olderDatum);
         $this->markAsSubmitted($newerDatum);
+        $assignedDatum->histories()->create([
+            'user_id' => $assignedDatum->user_id,
+            'type' => 'info',
+            'message' => 'Inson tekshiruviga biriktirildi.',
+            'message_type' => 'ai_human_review_assigned',
+        ]);
         $failedDatum->histories()->create([
             'user_id' => $failedDatum->user_id,
             'type' => 'warning',

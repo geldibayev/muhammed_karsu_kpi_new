@@ -63,7 +63,7 @@ class Datum extends Model
         return $query
             ->where('status', DatumStatus::Checking->value)
             ->whereRaw(
-                "COALESCE((SELECT MAX(id) FROM {$historyTable} WHERE datum_id = {$dataTable}.id AND message_type IN ('ai_evaluation', 'ai_failed')), 0) > COALESCE((SELECT MAX(id) FROM {$historyTable} WHERE datum_id = {$dataTable}.id AND message_type IN ('submission_created', 'ai_queued', 'criterion_transferred')), 0)",
+                "COALESCE((SELECT MAX(id) FROM {$historyTable} WHERE datum_id = {$dataTable}.id AND message_type IN ('ai_evaluation', 'ai_failed', 'ai_human_review_assigned')), 0) > COALESCE((SELECT MAX(id) FROM {$historyTable} WHERE datum_id = {$dataTable}.id AND message_type IN ('submission_created', 'ai_queued', 'criterion_transferred')), 0)",
             )
             ->whereHas(
                 'criterion',

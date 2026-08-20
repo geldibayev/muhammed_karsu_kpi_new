@@ -137,6 +137,35 @@ class AiQueueCommandsTest extends TestCase
         ]);
     }
 
+    public function test_recovery_does_not_requeue_a_resource_assigned_to_a_human_reviewer(): void
+    {
+        config()->set('queue.default', 'database');
+        config()->set('kpi.ai_queue_stale_after_minutes', 10);
+        $datum = $this->createDatum(['reviewer_hemis_id' => 3172011004]);
+        $this->markAsQueued($datum);
+        $datum->histories()->create([
+            'user_id' => $datum->user_id,
+            'type' => 'info',
+            'message' => 'Inson tekshiruviga biriktirildi.',
+            'message_type' => 'ai_human_review_assigned',
+        ]);
+        $datum->histories()
+            ->where('message_type', 'submission_created')
+            ->update(['created_at' => now()->subMinutes(11)]);
+        Queue::fake();
+
+        $this->artisan('kpi:ai:queue-pending', ['--recover-stale' => true])
+            ->expectsOutput('AI navbatiga qo‘yildi: 0')
+            ->assertSuccessful();
+
+        Queue::assertNothingPushed();
+        $this->assertSame(3172011004, $datum->fresh()->reviewer_hemis_id);
+        $this->assertDatabaseMissing('datum_histories', [
+            'datum_id' => $datum->id,
+            'message_type' => 'ai_queued',
+        ]);
+    }
+
     public function test_ai_worker_loop_recovers_a_stale_orphan_without_the_scheduler(): void
     {
         config()->set('queue.default', 'database');
