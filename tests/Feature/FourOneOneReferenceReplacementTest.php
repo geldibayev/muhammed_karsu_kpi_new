@@ -41,6 +41,12 @@ class FourOneOneReferenceReplacementTest extends TestCase
             ->assertSee(route('upload.four-one-one-reference.replace', $rejectedDatum));
 
         $this->actingAs($teacher)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee(route('upload.four-one-one-reference.replace', $rejectedDatum))
+            ->assertDontSee(route('upload.show', $criterion));
+
+        $this->actingAs($teacher)
             ->get(route('upload.four-one-one-reference.replace', $rejectedDatum))
             ->assertOk()
             ->assertSee('name="replacement_datum_id"', false)
@@ -126,18 +132,18 @@ class FourOneOneReferenceReplacementTest extends TestCase
         $datum = $this->createCancelledDatum($teacher, $criterion, $year);
         $datum->histories()->create([
             'user_id' => $teacher->getKey(),
-            'type' => 'info',
-            'message' => 'Qayta tekshiruvga yuborildi.',
-            'message_type' => 'ai_four_one_one_reference_recheck_queued',
-        ]);
-        $datum->histories()->create([
-            'user_id' => $teacher->getKey(),
             'type' => 'error',
             'message' => 'Yuklangan hujjat talabga mos emas.',
             'message_type' => 'ai_evaluation',
         ]);
 
         $this->assertTrue($teacher->can('replaceFourOneOneReference', $datum));
+        $this->actingAs($teacher)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee(route('upload.four-one-one-reference.replace', $datum))
+            ->assertSee('fa-plus', false)
+            ->assertDontSee(route('upload.show', $criterion));
     }
 
     public function test_later_human_decision_and_reference_negation_do_not_open_replacement(): void
@@ -180,11 +186,19 @@ class FourOneOneReferenceReplacementTest extends TestCase
             'name' => ['uz' => 'Faol hisobot'],
             'status' => '1',
         ]);
+        $parent = Criterion::query()->create([
+            'code' => '4.1',
+            'name' => ['uz' => 'Ma’naviy faoliyat'],
+            'desc' => ['uz' => 'Test bo‘limi'],
+            'report_id' => $report->getKey(),
+            'status' => '1',
+        ]);
         $criterion = Criterion::query()->create([
             'code' => '4.1.1',
             'name' => ['uz' => 'OAV chiqishlari'],
             'desc' => ['uz' => 'Test tavsifi'],
             'report_id' => $report->getKey(),
+            'parent_id' => $parent->getKey(),
             'upload' => '1',
             'status' => '1',
             'res_type' => 'all',

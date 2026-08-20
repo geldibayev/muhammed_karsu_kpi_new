@@ -198,13 +198,16 @@ class DatumPolicy
             'criterion_transferred',
         ]);
 
-        return $recheckId > 0
-            && $aiEvaluation !== null
-            && $aiEvaluation->type === 'error'
-            && $aiEvaluation->id > $recheckId
-            && $aiEvaluation->id > $lastHumanDecisionId
-            && ($this->isReferenceRejection((string) $aiEvaluation->message)
-                || $aiEvaluation->created_at?->toDateString() === self::FOUR_ONE_ONE_REFERENCE_REJECTION_DATE);
+        if ($aiEvaluation === null
+            || $aiEvaluation->type !== 'error'
+            || $aiEvaluation->id <= $lastHumanDecisionId) {
+            return false;
+        }
+
+        return $aiEvaluation->created_at?->toDateString() === self::FOUR_ONE_ONE_REFERENCE_REJECTION_DATE
+            || ($recheckId > 0
+                && $aiEvaluation->id > $recheckId
+                && $this->isReferenceRejection((string) $aiEvaluation->message));
     }
 
     public function transferCriterion(User $user, Datum $datum): bool

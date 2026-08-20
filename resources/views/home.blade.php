@@ -134,7 +134,13 @@
                                                        title="Kriteriya reytingini ko‘rish">
                                                         <i class="fa fa-eye"></i>
                                                     </a>
-                                                    @if($resourceUploadsEnabled && ($value->upload == '1' || $value->isHIndexCriterion()) && $evaluation)
+                                                    @if($fourOneOneReplacementDatum?->criterion_id === $value->id)
+                                                        <a href="{{ route('upload.four-one-one-reference.replace', $fourOneOneReplacementDatum) }}"
+                                                           class="btn btn-outline-primary btn-sm"
+                                                           title="Yangi resurs yuklash">
+                                                            <i class="fa fa-plus"></i>
+                                                        </a>
+                                                    @elseif($resourceUploadsEnabled && ($value->upload == '1' || $value->isHIndexCriterion()) && $evaluation)
                                                         <a href="{{ route('upload.show', $value->id) }}"
                                                            class="btn btn-outline-primary btn-sm"
                                                            title="Ma’lumot kiritish">

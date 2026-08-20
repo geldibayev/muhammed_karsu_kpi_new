@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Criterion;
+use App\Models\Datum;
 use App\Models\Option;
 use App\Models\Point;
 use App\Models\Report;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\RatingMethodPresenter;
 use App\Support\ResourceUploadWindow;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -50,6 +52,22 @@ class HomeController extends Controller
             ->mapWithKeys(fn (Criterion $criterion): array => [
                 $criterion->getKey() => $ratingMethodPresenter->describe($criterion, $degree),
             ]);
+        $fourOneOneCriterion = $criteria
+            ->flatMap(fn (Criterion $criterion) => $criterion->children)
+            ->firstWhere('code', FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_ONE_CODE);
+        $fourOneOneReplacementDatum = $fourOneOneCriterion === null
+            ? null
+            : Datum::query()
+                ->whereBelongsTo($request->user())
+                ->whereBelongsTo($fourOneOneCriterion)
+                ->where('status', 'cancelled')
+                ->whereDoesntHave(
+                    'histories',
+                    fn ($query) => $query->where('message_type', 'four_one_one_reference_replacement_submitted'),
+                )
+                ->latest('id')
+                ->get(['id', 'user_id', 'criterion_id', 'status'])
+                ->first(fn (Datum $datum): bool => $request->user()->can('replaceFourOneOneReference', $datum));
         $points = $report === null
             ? collect()
             : Point::query()
@@ -74,6 +92,7 @@ class HomeController extends Controller
             'resourceUploadsEnabled',
             'resourceUploadWindowOpen',
             'ratingMethods',
+            'fourOneOneReplacementDatum',
         ]));
     }
 

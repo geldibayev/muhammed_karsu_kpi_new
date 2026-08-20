@@ -140,7 +140,7 @@
                             @can('replaceFourOneOneReference', $datum)
                                 <a href="{{ route('upload.four-one-one-reference.replace', $datum) }}"
                                    class="btn btn-primary btn-sm ml-2">
-                                    <i class="fas fa-upload mr-1" aria-hidden="true"></i>
+                                    <i class="fas fa-plus mr-1" aria-hidden="true"></i>
                                     Yangi resurs yuklash
                                 </a>
                             @endcan
