@@ -45,8 +45,16 @@ class CreateDatumSubmission
                 $identifiers,
             ): Datum {
                 $lockedCriterion = Criterion::query()->lockForUpdate()->findOrFail($criterion->id);
+                $replacementDatum = filled($validated['replacement_datum_id'] ?? null)
+                    ? Datum::query()->lockForUpdate()->findOrFail((int) $validated['replacement_datum_id'])
+                    : null;
 
-                Gate::forUser($user)->authorize('submit', $lockedCriterion);
+                if ($replacementDatum !== null) {
+                    abort_unless($replacementDatum->criterion_id === $lockedCriterion->id, 403);
+                    Gate::forUser($user)->authorize('replaceFourOneOneReference', $replacementDatum);
+                } else {
+                    Gate::forUser($user)->authorize('submit', $lockedCriterion);
+                }
 
                 $submissionCount = Datum::query()
                     ->whereBelongsTo($user)
@@ -94,6 +102,13 @@ class CreateDatumSubmission
                     'type' => 'info',
                     'message' => 'Resurs foydalanuvchi tomonidan yuborildi.',
                     'message_type' => 'submission_created',
+                ]);
+
+                $replacementDatum?->histories()->create([
+                    'user_id' => $user->id,
+                    'type' => 'info',
+                    'message' => "Ma’lumotnoma o‘rniga yangi resurs #{$datum->id} yuborildi.",
+                    'message_type' => 'four_one_one_reference_replacement_submitted',
                 ]);
 
                 return $datum;

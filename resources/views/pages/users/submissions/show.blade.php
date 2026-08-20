@@ -137,6 +137,14 @@
                                 <i class="fas fa-arrow-left mr-1"></i> Ro‘yxatga qaytish
                             </a>
 
+                            @can('replaceFourOneOneReference', $datum)
+                                <a href="{{ route('upload.four-one-one-reference.replace', $datum) }}"
+                                   class="btn btn-primary btn-sm ml-2">
+                                    <i class="fas fa-upload mr-1" aria-hidden="true"></i>
+                                    Yangi resurs yuklash
+                                </a>
+                            @endcan
+
                             @can('requeueAiEvaluation', $datum)
                                 <form action="{{ route('upload.ai-requeue', $datum) }}" method="post"
                                       class="d-inline-block ml-2">

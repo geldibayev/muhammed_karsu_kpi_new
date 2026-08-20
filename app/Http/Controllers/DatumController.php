@@ -23,6 +23,18 @@ class DatumController extends Controller
     {
         $this->authorize('submit', $upload);
 
+        return $this->uploadForm($upload);
+    }
+
+    public function replaceFourOneOneReference(Datum $datum): View
+    {
+        $this->authorize('replaceFourOneOneReference', $datum);
+
+        return $this->uploadForm($datum->criterion, $datum);
+    }
+
+    private function uploadForm(Criterion $upload, ?Datum $replacementDatum = null): View
+    {
         $years = $upload->years()
             ->where('status', '1')
             ->orderBy('name')
@@ -54,6 +66,7 @@ class DatumController extends Controller
             'breadcrumbs',
             'submissions',
             'files',
+            'replacementDatum',
         ));
     }
 
@@ -62,7 +75,13 @@ class DatumController extends Controller
         Criterion $upload,
         CreateDatumSubmission $action,
     ): RedirectResponse {
-        $action->handle($request->user(), $upload, $request->validated());
+        $datum = $action->handle($request->user(), $upload, $request->validated());
+
+        if ($request->filled('replacement_datum_id')) {
+            return redirect()
+                ->route('upload.details', $datum)
+                ->with('success', 'Yangi resurs AI tekshiruviga yuborildi.');
+        }
 
         return redirect()
             ->route('upload.show', $upload)

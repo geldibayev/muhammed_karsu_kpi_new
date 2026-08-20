@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Criterion;
+use App\Models\Datum;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Database\Query\Builder;
@@ -18,6 +19,14 @@ class StoreDatumRequest extends FormRequest
     public function authorize(): bool
     {
         $criterion = $this->route('upload');
+
+        if ($this->filled('replacement_datum_id')) {
+            $datum = Datum::query()->find($this->integer('replacement_datum_id'));
+
+            return $criterion instanceof Criterion
+                && $datum?->criterion_id === $criterion->getKey()
+                && $this->user()?->can('replaceFourOneOneReference', $datum) === true;
+        }
 
         return $criterion instanceof Criterion
             && $this->user()?->can('submit', $criterion) === true;
@@ -56,6 +65,7 @@ class StoreDatumRequest extends FormRequest
         }
 
         $rules = [
+            'replacement_datum_id' => ['nullable', 'integer', 'exists:data,id'],
             'uploadResourceType' => ['required', Rule::in($allowedResourceTypes)],
             'year' => $this->yearRules($criterion),
             'uploadResourceFile' => [

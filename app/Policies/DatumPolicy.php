@@ -10,9 +10,11 @@ use App\Models\CriterionReviewerAssignment;
 use App\Models\Datum;
 use App\Models\User;
 use App\Support\EducationalContentCriterionRule;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\ResourceUploadWindow;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 class DatumPolicy
 {
@@ -153,6 +155,55 @@ class DatumPolicy
             && $lastAiEvaluationId > $lastHumanDecisionId;
     }
 
+    public function replaceFourOneOneReference(User $user, Datum $datum): bool
+    {
+        if (! $user->isActive()
+            || $user->isUploadBlocked()
+            || (! $user->hasRole('teacher') && ! $user->hasRole('user'))
+            || $datum->user_id !== $user->id
+            || $datum->status !== DatumStatus::Cancelled->value
+            || $datum->histories()->where('message_type', 'four_one_one_reference_replacement_submitted')->exists()) {
+            return false;
+        }
+
+        $criterion = $datum->criterion()->first(['id', 'code', 'checking', 'upload', 'status', 'report_id']);
+
+        if ($criterion?->code !== FixedPerResourceHumanReviewCriterionRule::FOUR_ONE_ONE_CODE
+            || $criterion->checking !== 'ai'
+            || $criterion->upload !== '1'
+            || $criterion->status !== '1'
+            || ! $criterion->report()->where('status', '1')->exists()
+            || ! $criterion->criterionEvaluations()
+                ->where('evaluation', $user->degree)
+                ->where('has', '1')
+                ->exists()) {
+            return false;
+        }
+
+        $recheckId = $this->latestHistoryId($datum, ['ai_four_one_one_reference_recheck_queued']);
+        $aiEvaluation = $datum->histories()
+            ->where('message_type', 'ai_evaluation')
+            ->latest('id')
+            ->first(['id', 'type', 'message']);
+        $lastHumanDecisionId = $this->latestHistoryId($datum, [
+            'manual_review_approved',
+            'manual_review_rejected',
+            'h_index_review_approved',
+            'human_override_ai_rejected',
+            'human_override_ai_approved',
+            'human_override_rejected',
+            'human_override_approved',
+            'criterion_transferred',
+        ]);
+
+        return $recheckId > 0
+            && $aiEvaluation !== null
+            && $aiEvaluation->type === 'error'
+            && $aiEvaluation->id > $recheckId
+            && $aiEvaluation->id > $lastHumanDecisionId
+            && $this->isReferenceRejection((string) $aiEvaluation->message);
+    }
+
     public function transferCriterion(User $user, Datum $datum): bool
     {
         return $this->review($user, $datum)
@@ -255,5 +306,33 @@ class DatumPolicy
         return (int) $datum->histories()
             ->whereIn('message_type', $messageTypes)
             ->max('id');
+    }
+
+    private function isReferenceRejection(string $reason): bool
+    {
+        $reason = Str::lower($reason);
+
+        if (Str::contains($reason, [
+            "ma'lumotnoma emas",
+            'ma’lumotnoma emas',
+            'маълумотнома эмас',
+            'maǵlıwmatnama emes',
+            "mag'liwmatnama emes",
+            'мағлыўматнама емес',
+            'не является справк',
+            'справкой не является',
+        ])) {
+            return false;
+        }
+
+        return Str::contains($reason, [
+            "ma'lumotnoma",
+            'ma’lumotnoma',
+            'маълумотнома',
+            'maǵlıwmatnama',
+            "mag'liwmatnama",
+            'мағлыўматнама',
+            'справк',
+        ]);
     }
 }

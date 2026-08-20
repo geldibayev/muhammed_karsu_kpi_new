@@ -120,6 +120,8 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
     Route::get('/upload/{upload}', [DatumController::class, 'show'])->name('upload.show');
     Route::post('/upload/{upload}', [DatumController::class, 'store'])->name('upload.store');
     Route::get('/submissions/{datum}', [DatumController::class, 'details'])->name('upload.details');
+    Route::get('/submissions/{datum}/replace-four-one-one-reference', [DatumController::class, 'replaceFourOneOneReference'])
+        ->name('upload.four-one-one-reference.replace');
     Route::post('/submissions/{datum}/requeue-ai', RequeueCancelledAiDatumController::class)
         ->name('upload.ai-requeue');
     Route::patch('/submissions/{datum}/educational-content-type', ChangeEducationalContentTypeController::class)

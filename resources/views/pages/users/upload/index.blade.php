@@ -80,6 +80,13 @@
                     @endif
                 </div>
                 <div class="card-body p-0">
+                    @if($replacementDatum)
+                        <div class="alert alert-info m-3" role="alert">
+                            Ma’lumotnoma deb qaytarilgan #{{ $replacementDatum->id }} resurs o‘rniga gazetada chop etilgan
+                            maqolaning PDF/JPG faylini yoki gazeta, OAV yoxud ijtimoiy tarmoqdagi chiqishning hammaga ochiq
+                            havolasini yuklang. Ma’lumotnoma qabul qilinmaydi.
+                        </div>
+                    @endif
                     @if($errors->any())
                         <div class="alert alert-danger m-3" role="alert">
                             <div class="font-weight-bold">Resursni yuborishda xatolik:</div>
@@ -140,6 +147,9 @@
                             <form action="{{ route('upload.store', $upload) }}" method="post"
                                   enctype="multipart/form-data" id="fileForm">
                                 @csrf
+                                @if($replacementDatum)
+                                    <input type="hidden" name="replacement_datum_id" value="{{ $replacementDatum->id }}">
+                                @endif
                                 <div class="card-footer">
                                     <div class="row">
                                         @if($upload->template)
