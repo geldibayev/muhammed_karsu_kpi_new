@@ -15,6 +15,7 @@ class AssignPendingAiHumanReviews extends Command
                             {--limit=0 : Biriktiriladigan maksimum resurslar soni (0 = barchasi)}
                             {--criterion= : Faqat ko‘rsatilgan kriteriya kodi bo‘yicha biriktirish}
                             {--reassign : Oldin boshqa mas’ulga biriktirilgan resurslarni ham amaldagi mas’ulga o‘tkazish}
+                            {--include-queued : AI javobini kutayotgan resurslarni ham amaldagi mas’ulga o‘tkazish}
                             {--dry-run : Ma’lumotlarni o‘zgartirmasdan nomzodlar sonini ko‘rsatish}';
 
     protected $description = 'AI inson tekshiruviga qoldirgan resurslarni kriteriya yoki global HEMIS mas’uliga biriktiradi';
@@ -23,6 +24,7 @@ class AssignPendingAiHumanReviews extends Command
     {
         $limit = max(0, (int) $this->option('limit'));
         $reassign = (bool) $this->option('reassign');
+        $includeQueued = (bool) $this->option('include-queued');
         $dryRun = (bool) $this->option('dry-run');
         $criterionCode = trim((string) $this->option('criterion')) ?: null;
         $unassignedCheckingCount = Datum::query()
@@ -42,7 +44,7 @@ class AssignPendingAiHumanReviews extends Command
         $assignedCount = 0;
         $unassignedCount = 0;
 
-        foreach ($this->candidateQuery($reassign, $criterionCode)->lazyById(200, column: 'data.id', alias: 'id') as $datum) {
+        foreach ($this->candidateQuery($reassign, $criterionCode, $includeQueued)->lazyById(200, column: 'data.id', alias: 'id') as $datum) {
             $reviewerHemisId = $datum->criterion instanceof Criterion
                 ? AiHumanReviewAssignment::reviewerHemisIdFor($datum->criterion)
                 : null;
@@ -53,7 +55,7 @@ class AssignPendingAiHumanReviews extends Command
                 continue;
             }
 
-            if (! $this->shouldAssign($datum, $reviewerHemisId, $reassign)) {
+            if (! $this->shouldAssign($datum, $reviewerHemisId, $reassign, $includeQueued)) {
                 continue;
             }
 
@@ -67,7 +69,7 @@ class AssignPendingAiHumanReviews extends Command
                 break;
             }
 
-            if ($this->assign($datum->getKey(), $reviewerHemisId, $reassign)) {
+            if ($this->assign($datum->getKey(), $reviewerHemisId, $reassign, $includeQueued)) {
                 $assignedCount++;
             }
         }
@@ -94,7 +96,7 @@ class AssignPendingAiHumanReviews extends Command
         return self::SUCCESS;
     }
 
-    private function candidateQuery(bool $reassign, ?string $criterionCode): Builder
+    private function candidateQuery(bool $reassign, ?string $criterionCode, bool $includeQueued): Builder
     {
         $query = Datum::query()
             ->select(['data.id', 'data.criterion_id', 'data.reviewer_hemis_id'])
@@ -128,7 +130,12 @@ class AssignPendingAiHumanReviews extends Command
             ->whereHas(
                 'histories',
                 fn (Builder $query): Builder => $query
-                    ->whereIn('message_type', ['ai_evaluation', 'ai_failed']),
+                    ->whereIn(
+                        'message_type',
+                        $includeQueued
+                            ? ['ai_evaluation', 'ai_failed', 'submission_created', 'ai_queued']
+                            : ['ai_evaluation', 'ai_failed'],
+                    ),
             );
 
         if (! $reassign) {
@@ -138,22 +145,26 @@ class AssignPendingAiHumanReviews extends Command
         return $query;
     }
 
-    private function shouldAssign(Datum $datum, int $reviewerHemisId, bool $reassign): bool
+    private function shouldAssign(Datum $datum, int $reviewerHemisId, bool $reassign, bool $includeQueued): bool
     {
         $lastHumanReviewId = max(
             (int) ($datum->last_ai_evaluation_id ?? 0),
             (int) ($datum->last_ai_failure_id ?? 0),
         );
 
-        return $lastHumanReviewId > (int) ($datum->last_criterion_transfer_id ?? 0)
-            && $lastHumanReviewId > (int) ($datum->last_ai_queue_id ?? 0)
+        return $this->latestAttemptCanBeAssigned(
+            $lastHumanReviewId,
+            (int) ($datum->last_ai_queue_id ?? 0),
+            (int) ($datum->last_criterion_transfer_id ?? 0),
+            $includeQueued,
+        )
             && ($datum->reviewer_hemis_id === null
                 || ($reassign && (int) $datum->reviewer_hemis_id !== $reviewerHemisId));
     }
 
-    private function assign(int $datumId, int $reviewerHemisId, bool $reassign): bool
+    private function assign(int $datumId, int $reviewerHemisId, bool $reassign, bool $includeQueued): bool
     {
-        return DB::transaction(function () use ($datumId, $reviewerHemisId, $reassign): bool {
+        return DB::transaction(function () use ($datumId, $reviewerHemisId, $reassign, $includeQueued): bool {
             $datum = Datum::query()
                 ->with('criterion:id,code,checking')
                 ->lockForUpdate()
@@ -187,12 +198,19 @@ class AssignPendingAiHumanReviews extends Command
                 (int) $history?->last_failure_id,
             );
 
-            if ($lastHumanReviewId <= (int) $history?->last_transfer_id
-                || $lastHumanReviewId <= (int) $history?->last_queue_id) {
+            if (! $this->latestAttemptCanBeAssigned(
+                $lastHumanReviewId,
+                (int) $history?->last_queue_id,
+                (int) $history?->last_transfer_id,
+                $includeQueued,
+            )) {
                 return false;
             }
 
-            $datum->update(['reviewer_hemis_id' => $reviewerHemisId]);
+            $datum->update([
+                'reason' => Datum::PUBLIC_CHECKING_REASON,
+                'reviewer_hemis_id' => $reviewerHemisId,
+            ]);
             $datum->histories()->create([
                 'user_id' => $datum->user_id,
                 'type' => 'info',
@@ -202,5 +220,15 @@ class AssignPendingAiHumanReviews extends Command
 
             return true;
         }, 3);
+    }
+
+    private function latestAttemptCanBeAssigned(
+        int $lastHumanReviewId,
+        int $lastQueueId,
+        int $lastTransferId,
+        bool $includeQueued,
+    ): bool {
+        return ($lastHumanReviewId > $lastTransferId && $lastHumanReviewId > $lastQueueId)
+            || ($includeQueued && $lastQueueId > $lastTransferId && $lastQueueId > $lastHumanReviewId);
     }
 }

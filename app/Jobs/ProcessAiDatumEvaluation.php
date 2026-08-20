@@ -59,7 +59,8 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
         if ($datum === null
             || $datum->criterion?->checking !== 'ai'
-            || $datum->criterion_id !== $expectedCriterionId) {
+            || $datum->criterion_id !== $expectedCriterionId
+            || $this->hasCurrentHumanReviewer($datum)) {
             return;
         }
 
@@ -131,7 +132,8 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
             if ($lockedDatum === null
                 || $lockedDatum->status !== 'checking'
-                || $lockedDatum->criterion_id !== $expectedCriterionId) {
+                || $lockedDatum->criterion_id !== $expectedCriterionId
+                || $this->hasCurrentHumanReviewer($lockedDatum)) {
                 return false;
             }
 
@@ -239,7 +241,8 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
 
                 if ($datum === null
                     || $datum->status !== 'checking'
-                    || ($this->criterionId !== null && $datum->criterion_id !== $this->criterionId)) {
+                    || ($this->criterionId !== null && $datum->criterion_id !== $this->criterionId)
+                    || $this->hasCurrentHumanReviewer($datum)) {
                     return;
                 }
 
@@ -280,5 +283,19 @@ class ProcessAiDatumEvaluation implements ShouldBeUnique, ShouldQueue
                 'history_exception' => $historyException->getMessage(),
             ]);
         }
+    }
+
+    private function hasCurrentHumanReviewer(Datum $datum): bool
+    {
+        if ($datum->reviewer_hemis_id === null) {
+            return false;
+        }
+
+        $history = $datum->histories()
+            ->selectRaw("MAX(CASE WHEN message_type = 'ai_human_review_assigned' THEN id ELSE 0 END) AS last_assignment_id")
+            ->selectRaw("MAX(CASE WHEN message_type IN ('submission_created', 'ai_queued') THEN id ELSE 0 END) AS last_queue_id")
+            ->first();
+
+        return (int) $history?->last_assignment_id > (int) $history?->last_queue_id;
     }
 }

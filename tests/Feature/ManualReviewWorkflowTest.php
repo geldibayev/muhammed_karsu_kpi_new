@@ -577,6 +577,59 @@ class ManualReviewWorkflowTest extends TestCase
         $this->assertNull($humanReview->fresh()->reviewer_hemis_id);
     }
 
+    public function test_assignment_command_can_move_queued_criterion_resources_to_the_configured_reviewer(): void
+    {
+        config()->set('kpi.ai_human_review_criterion_reviewers.4.1.1', 3172011004);
+        $reviewer = User::factory()->create(['hemis_id' => 3172011004]);
+        $owner = User::factory()->create();
+        $criterion = $this->createCriterion();
+        $criterion->update([
+            'code' => '4.1.1',
+            'checking' => 'ai',
+        ]);
+        $datum = $this->createDatum($owner, $criterion, ['status' => 'checking']);
+        $datum->histories()->create([
+            'user_id' => $owner->id,
+            'type' => 'info',
+            'message' => 'AI navbatiga qo‘yildi.',
+            'message_type' => 'ai_queued',
+        ]);
+
+        $this->artisan('kpi:ai:assign-human-reviews', [
+            '--criterion' => '4.1.1',
+            '--dry-run' => true,
+        ])->assertSuccessful();
+        $this->assertNull($datum->fresh()->reviewer_hemis_id);
+
+        $this->artisan('kpi:ai:assign-human-reviews', [
+            '--criterion' => '4.1.1',
+            '--include-queued' => true,
+            '--dry-run' => true,
+        ])
+            ->expectsOutput('AI inson tekshiruvi uchun biriktiriladigan resurslar: 1')
+            ->assertSuccessful();
+
+        $this->artisan('kpi:ai:assign-human-reviews', [
+            '--criterion' => '4.1.1',
+            '--include-queued' => true,
+        ])
+            ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 1')
+            ->assertSuccessful();
+
+        $datum->refresh();
+        $this->assertSame($reviewer->hemis_id, $datum->reviewer_hemis_id);
+        $this->assertSame(Datum::PUBLIC_CHECKING_REASON, $datum->reason);
+        $this->assertSame(1, $datum->histories()->where('message_type', 'ai_human_review_assigned')->count());
+
+        $this->artisan('kpi:ai:assign-human-reviews', [
+            '--criterion' => '4.1.1',
+            '--include-queued' => true,
+        ])
+            ->expectsOutput('AI inson tekshiruvi uchun biriktirildi: 0')
+            ->assertSuccessful();
+        $this->assertSame(1, $datum->histories()->where('message_type', 'ai_human_review_assigned')->count());
+    }
+
     public function test_assignment_command_reassigns_existing_criterion_specific_ai_human_reviews(): void
     {
         config()->set('kpi.ai_human_review_criterion_reviewers', [

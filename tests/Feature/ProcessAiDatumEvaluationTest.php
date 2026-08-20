@@ -383,6 +383,44 @@ class ProcessAiDatumEvaluationTest extends TestCase
         $this->assertDatabaseCount('datum_histories', 0);
     }
 
+    public function test_job_does_not_overwrite_a_submission_assigned_to_a_human_reviewer(): void
+    {
+        $alreadyAssigned = $this->createDatum(['reviewer_hemis_id' => 3172011004]);
+        $alreadyAssigned->histories()->create([
+            'user_id' => $alreadyAssigned->user_id,
+            'type' => 'info',
+            'message' => 'Inson tekshiruviga biriktirildi.',
+            'message_type' => 'ai_human_review_assigned',
+        ]);
+        $assignedDuringEvaluation = $this->createDatum();
+        $evaluator = Mockery::mock(AiSubmissionEvaluator::class);
+        $evaluator->shouldReceive('evaluate')
+            ->once()
+            ->andReturnUsing(function () use ($assignedDuringEvaluation): AiEvaluationResult {
+                $assignedDuringEvaluation->update(['reviewer_hemis_id' => 3172011004]);
+                $assignedDuringEvaluation->histories()->create([
+                    'user_id' => $assignedDuringEvaluation->user_id,
+                    'type' => 'info',
+                    'message' => 'Inson tekshiruviga biriktirildi.',
+                    'message_type' => 'ai_human_review_assigned',
+                ]);
+
+                return new AiEvaluationResult('accepted', 8.5, 'AI natijasi.');
+            });
+        $recalculateReportPoints = Mockery::mock(RecalculateReportPoints::class);
+        $recalculateReportPoints->shouldNotReceive('handle');
+
+        (new ProcessAiDatumEvaluation($alreadyAssigned->id))->handle($evaluator, $recalculateReportPoints);
+        (new ProcessAiDatumEvaluation($assignedDuringEvaluation->id))->handle($evaluator, $recalculateReportPoints);
+        (new ProcessAiDatumEvaluation($alreadyAssigned->id))->failed(new RuntimeException('Network error'));
+
+        foreach ([$alreadyAssigned, $assignedDuringEvaluation] as $datum) {
+            $this->assertSame('checking', $datum->fresh()->status);
+            $this->assertSame(3172011004, $datum->reviewer_hemis_id);
+            $this->assertSame(1, $datum->histories()->count());
+        }
+    }
+
     public function test_job_retry_recalculates_points_for_an_already_persisted_ai_result(): void
     {
         $datum = $this->createDatum(['status' => 'accepted', 'point' => 4]);
