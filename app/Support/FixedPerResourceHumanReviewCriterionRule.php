@@ -69,6 +69,12 @@ class FixedPerResourceHumanReviewCriterionRule
             'hold_degrees' => 3.0,
             'foreign_lang' => 3.0,
         ],
+        '3.1.5' => [
+            'hold_degrees' => 2.0,
+            'no_degrees' => 3.0,
+            'foreign_lang' => 3.0,
+            'physical' => 3.0,
+        ],
         self::THREE_ONE_ELEVEN_CODE => [
             'hold_degrees' => 3.0,
             'no_degrees' => 4.0,

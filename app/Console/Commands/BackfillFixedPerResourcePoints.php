@@ -14,6 +14,7 @@ class BackfillFixedPerResourcePoints extends Command
 {
     protected $signature = 'kpi:criteria:backfill-fixed-resource-points
                             {--criterion= : Faqat ko\'rsatilgan kriteriya kodini qayta hisoblash}
+                            {--report= : Faqat ko\'rsatilgan hisobot ID doirasida qayta hisoblash}
                             {--dry-run : Bazaga yozmasdan tuzatiladigan resurslar sonini ko‘rsatish}';
 
     protected $description = 'Qat’iy resurs balli mezonlaridagi accepted resurslarni kategoriya bo‘yicha qayta hisoblaydi';
@@ -22,6 +23,11 @@ class BackfillFixedPerResourcePoints extends Command
     {
         $dryRun = (bool) $this->option('dry-run');
         $criterionCode = trim((string) $this->option('criterion'));
+        $reportId = $this->reportId();
+
+        if ($reportId === false) {
+            return self::FAILURE;
+        }
 
         if ($criterionCode !== '' && ! FixedPerResourceHumanReviewCriterionRule::supports($criterionCode)) {
             $this->error("Qat'iy resurs balli qoidasi topilmadi: {$criterionCode}.");
@@ -32,7 +38,7 @@ class BackfillFixedPerResourcePoints extends Command
         $changedCount = 0;
         $reportIds = collect();
 
-        $this->acceptedDataQuery($criterionCode !== '' ? $criterionCode : null)
+        $this->acceptedDataQuery($criterionCode !== '' ? $criterionCode : null, $reportId)
             ->lazyById(200)
             ->each(function (Datum $datum) use (&$changedCount, $dryRun, $reportIds): void {
                 $targetPoint = FixedPerResourceHumanReviewCriterionRule::pointFor(
@@ -76,7 +82,7 @@ class BackfillFixedPerResourcePoints extends Command
         return self::SUCCESS;
     }
 
-    private function acceptedDataQuery(?string $criterionCode): Builder
+    private function acceptedDataQuery(?string $criterionCode, ?int $reportId): Builder
     {
         return Datum::query()
             ->where('status', 'accepted')
@@ -85,10 +91,39 @@ class BackfillFixedPerResourcePoints extends Command
                 fn (Builder $query): Builder => $query
                     ->whereIn('code', $criterionCode === null
                         ? FixedPerResourceHumanReviewCriterionRule::criterionCodes()
-                        : [$criterionCode]),
+                        : [$criterionCode])
+                    ->when($reportId !== null, fn (Builder $query): Builder => $query
+                        ->where('report_id', $reportId)),
             )
             ->with(['criterion:id,code,report_id', 'user:id,degree'])
             ->orderBy('id');
+    }
+
+    private function reportId(): int|false|null
+    {
+        $reportOption = trim((string) $this->option('report'));
+
+        if ($reportOption === '') {
+            return null;
+        }
+
+        $reportId = filter_var($reportOption, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+
+        if ($reportId === false) {
+            $this->error('Hisobot ID musbat butun son bo‘lishi kerak.');
+
+            return false;
+        }
+
+        if (! Report::query()->whereKey($reportId)->exists()) {
+            $this->error("Hisobot topilmadi: {$reportId}.");
+
+            return false;
+        }
+
+        return $reportId;
     }
 
     private function updateDatumPoint(int $datumId, float $targetPoint): void
