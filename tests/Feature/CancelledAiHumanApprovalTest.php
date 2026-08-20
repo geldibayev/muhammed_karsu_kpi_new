@@ -219,6 +219,52 @@ class CancelledAiHumanApprovalTest extends TestCase
         ]);
     }
 
+    public function test_active_duplicate_error_shows_the_existing_resource_id(): void
+    {
+        [$reviewer, $owner, $report, $criterion] = $this->context();
+        $url = 'https://example.com/already-accepted-resource';
+        $accepted = Datum::query()->create([
+            'name' => 'Oldin tasdiqlangan resurs',
+            'material' => ['type' => 'url', 'link' => $url],
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'accepted',
+            'point' => 1,
+        ]);
+        DatumResourceIdentifier::query()->create([
+            'datum_id' => $accepted->getKey(),
+            'report_id' => $report->getKey(),
+            'user_id' => $owner->getKey(),
+            'type' => 'canonical_url',
+            'value_hash' => hash('sha256', 'canonical_url:'.$url),
+            'active_value_hash' => hash('sha256', 'canonical_url:'.$url),
+        ]);
+        $legacyDatum = Datum::query()->create([
+            'name' => 'Tarixsiz qaytarilgan resurs',
+            'material' => ['type' => 'url', 'link' => $url],
+            'user_id' => $owner->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'cancelled',
+        ]);
+        $message = "Ushbu resurs siz tomonidan shu hisobot davrida oldin yuklangan (#{$accepted->id}).";
+
+        $this->actingAs($reviewer)
+            ->from(route('upload.details', $legacyDatum))
+            ->patch(route('ai-human-reviews.approve-cancelled', $legacyDatum), ['point' => 2])
+            ->assertRedirect(route('upload.details', $legacyDatum))
+            ->assertSessionHasErrors(['uploadResourceUrl' => $message]);
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $legacyDatum))
+            ->assertOk()
+            ->assertSee($message);
+        $this->assertSame('cancelled', $legacyDatum->fresh()->status);
+        $this->assertDatabaseMissing('datum_histories', [
+            'datum_id' => $legacyDatum->getKey(),
+            'message_type' => 'human_override_approved',
+        ]);
+    }
+
     public function test_repeated_approval_is_forbidden_and_history_is_not_duplicated(): void
     {
         [$reviewer, $owner, $report, $criterion] = $this->context();

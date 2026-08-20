@@ -131,7 +131,14 @@ class DatumResourceIdentifierRegistry
                 throw $exception;
             }
 
-            throw $this->duplicateValidation($datum);
+            $duplicate = $this->findActiveDuplicate(
+                (int) $identifiers->first()->report_id,
+                $datum->user_id,
+                $identifierValues,
+                $datum->getKey(),
+            );
+
+            throw $this->duplicateValidation($datum, $duplicate?->datum_id);
         }
     }
 
