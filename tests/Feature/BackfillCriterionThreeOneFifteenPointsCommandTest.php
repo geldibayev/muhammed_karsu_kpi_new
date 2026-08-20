@@ -15,7 +15,7 @@ class BackfillCriterionThreeOneFifteenPointsCommandTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_command_only_updates_eligible_low_accepted_points_and_is_idempotent(): void
+    public function test_command_updates_all_accepted_points_to_exactly_two_and_is_idempotent(): void
     {
         $report = Report::query()->create([
             'name' => ['uz' => 'KPI hisoboti'],
@@ -45,7 +45,7 @@ class BackfillCriterionThreeOneFifteenPointsCommandTest extends TestCase
         $this->app->instance(RecalculateReportPoints::class, $recalculateReportPoints);
 
         $this->artisan('kpi:criteria:backfill-3-1-15-points', ['report' => $report->getKey()])
-            ->expectsOutput('3.1.15 bo‘yicha 2 ballga yangilanadigan resurslar: 1')
+            ->expectsOutput('3.1.15 bo‘yicha 2 ballga yangilanadigan resurslar: 3')
             ->expectsOutput('Dry-run: o‘zgarish kiritilmadi. Yozish uchun --apply parametridan foydalaning.')
             ->assertSuccessful();
         $this->assertSame(0.5, $eligible->fresh()->point);
@@ -54,14 +54,14 @@ class BackfillCriterionThreeOneFifteenPointsCommandTest extends TestCase
             'report' => $report->getKey(),
             '--apply' => true,
         ])
-            ->expectsOutput('3.1.15 bo‘yicha 2 ballga yangilanadigan resurslar: 1')
-            ->expectsOutput('3.1.15 bo‘yicha 2 ballga yangilandi: 1')
+            ->expectsOutput('3.1.15 bo‘yicha 2 ballga yangilanadigan resurslar: 3')
+            ->expectsOutput('3.1.15 bo‘yicha 2 ballga yangilandi: 3')
             ->assertSuccessful();
 
         $this->assertSame(2.0, $eligible->fresh()->point);
         $this->assertSame(2.0, $alreadyCorrect->fresh()->point);
-        $this->assertSame(3.0, $higherPoint->fresh()->point);
-        $this->assertSame(1.0, $ineligibleDegree->fresh()->point);
+        $this->assertSame(2.0, $higherPoint->fresh()->point);
+        $this->assertSame(2.0, $ineligibleDegree->fresh()->point);
         $this->assertSame(0.0, $notAccepted->fresh()->point);
         $this->assertSame(1.0, $otherCriterionDatum->fresh()->point);
         $this->assertSame(1.0, $otherReportDatum->fresh()->point);
@@ -70,7 +70,7 @@ class BackfillCriterionThreeOneFifteenPointsCommandTest extends TestCase
             'user_id' => $withDegree->getKey(),
             'message_type' => 'criterion_3_1_15_point_corrected',
         ]);
-        $this->assertDatabaseCount('datum_histories', 1);
+        $this->assertDatabaseCount('datum_histories', 3);
 
         $this->artisan('kpi:criteria:backfill-3-1-15-points', [
             'report' => $report->getKey(),
@@ -79,7 +79,7 @@ class BackfillCriterionThreeOneFifteenPointsCommandTest extends TestCase
             ->expectsOutput('3.1.15 bo‘yicha 2 ballga yangilanadigan resurslar: 0')
             ->expectsOutput('3.1.15 bo‘yicha 2 ballga yangilandi: 0')
             ->assertSuccessful();
-        $this->assertDatabaseCount('datum_histories', 1);
+        $this->assertDatabaseCount('datum_histories', 3);
     }
 
     public function test_command_rejects_an_unknown_report(): void

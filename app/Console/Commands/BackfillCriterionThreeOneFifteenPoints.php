@@ -13,7 +13,7 @@ class BackfillCriterionThreeOneFifteenPoints extends Command
                             {report : Hisobot ID raqami}
                             {--apply : O‘zgarishlarni bazaga yozish va hisobot ballarini qayta hisoblash}';
 
-    protected $description = '3.1.15 bo‘yicha ilmiy darajali foydalanuvchilarning kam ball olgan tasdiqlangan resurslarini 2 ballga tenglaydi';
+    protected $description = '3.1.15 bo‘yicha barcha tasdiqlangan resurslarni 2 ballga tenglaydi';
 
     public function handle(
         BackfillPoints $backfillPoints,

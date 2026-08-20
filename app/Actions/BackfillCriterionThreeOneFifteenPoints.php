@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class BackfillCriterionThreeOneFifteenPoints
 {
+    private const TARGET_POINT = 2.0;
+
     public function count(Report $report): int
     {
         return $this->candidateQuery($report)->count();
@@ -34,9 +36,7 @@ class BackfillCriterionThreeOneFifteenPoints
             ->where('data.status', 'accepted')
             ->where(fn (Builder $query): Builder => $query
                 ->whereNull('data.point')
-                ->orWhere('data.point', '<', 2))
-            ->whereHas('user', fn (Builder $query): Builder => $query
-                ->where('degree', 'hold_degrees'))
+                ->orWhere('data.point', '!=', self::TARGET_POINT))
             ->whereHas('criterion', fn (Builder $query): Builder => $query
                 ->whereBelongsTo($report)
                 ->where('code', '3.1.15'));
@@ -46,16 +46,15 @@ class BackfillCriterionThreeOneFifteenPoints
     {
         return DB::transaction(function () use ($datumId, $report): bool {
             $datum = Datum::query()
-                ->with(['user:id,degree', 'criterion:id,code,report_id'])
+                ->with('criterion:id,code,report_id')
                 ->lockForUpdate()
                 ->find($datumId);
 
             if ($datum === null
                 || $datum->status !== 'accepted'
-                || $datum->user?->degree !== 'hold_degrees'
                 || $datum->criterion?->code !== '3.1.15'
                 || $datum->criterion->report_id !== $report->getKey()
-                || ($datum->point !== null && $datum->point >= 2)) {
+                || $datum->point === self::TARGET_POINT) {
                 return false;
             }
 
@@ -63,7 +62,7 @@ class BackfillCriterionThreeOneFifteenPoints
             $oldPointLabel = $oldPoint === null
                 ? 'mavjud emas'
                 : number_format($oldPoint, 4, '.', '');
-            $datum->update(['point' => 2]);
+            $datum->update(['point' => self::TARGET_POINT]);
             $datum->histories()->create([
                 'user_id' => $datum->user_id,
                 'type' => 'info',
