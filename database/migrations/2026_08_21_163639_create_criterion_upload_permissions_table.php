@@ -6,11 +6,26 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    private const UNIQUE_INDEX = 'cup_user_criterion_active_unique';
+
+    private const UNIQUE_COLUMNS = ['user_id', 'criterion_id', 'active_key'];
+
     /**
      * Run the migrations.
      */
     public function up(): void
     {
+        if (Schema::hasTable('criterion_upload_permissions')) {
+            Schema::whenTableDoesntHaveIndex(
+                'criterion_upload_permissions',
+                self::UNIQUE_COLUMNS,
+                fn (Blueprint $table) => $table->unique(self::UNIQUE_COLUMNS, self::UNIQUE_INDEX),
+                'unique',
+            );
+
+            return;
+        }
+
         Schema::create('criterion_upload_permissions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -24,7 +39,7 @@ return new class extends Migration
             $table->foreignId('revoked_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            $table->unique(['user_id', 'criterion_id', 'active_key']);
+            $table->unique(self::UNIQUE_COLUMNS, self::UNIQUE_INDEX);
         });
     }
 

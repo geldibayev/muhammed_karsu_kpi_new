@@ -10,13 +10,31 @@ use App\Models\Option;
 use App\Models\Report;
 use App\Models\User;
 use App\Models\Year;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class CriterionUploadPermissionTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    public function test_migration_can_resume_after_mariadb_leaves_the_created_table_behind(): void
+    {
+        Schema::table('criterion_upload_permissions', function (Blueprint $table): void {
+            $table->dropUnique('cup_user_criterion_active_unique');
+        });
+
+        $migration = require database_path('migrations/2026_08_21_163639_create_criterion_upload_permissions_table.php');
+        $migration->up();
+
+        $this->assertTrue(Schema::hasIndex(
+            'criterion_upload_permissions',
+            ['user_id', 'criterion_id', 'active_key'],
+            'unique',
+        ));
+    }
 
     public function test_manager_can_grant_one_late_upload_to_one_user_and_criterion(): void
     {
