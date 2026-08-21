@@ -5,10 +5,13 @@ namespace App\Actions;
 use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
+use App\Models\CriterionUploadPermission;
 use App\Models\Datum;
+use App\Models\Option;
 use App\Models\User;
 use App\Services\DatumResourceFingerprintGenerator;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
+use App\Support\ResourceUploadWindow;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +28,7 @@ class CreateDatumSubmission
         private DatumResourceFingerprintGenerator $fingerprintGenerator,
         private DatumResourceIdentifierRegistry $identifierRegistry,
         private EnsureTranslationSubmissionIsEligible $ensureTranslationSubmissionIsEligible,
+        private ResourceUploadWindow $resourceUploadWindow,
     ) {}
 
     /** @param array<string, mixed> $validated */
@@ -49,6 +53,15 @@ class CreateDatumSubmission
                 $lockedCriterion = Criterion::query()->lockForUpdate()->findOrFail($criterion->id);
                 $replacementDatum = filled($validated['replacement_datum_id'] ?? null)
                     ? Datum::query()->lockForUpdate()->findOrFail((int) $validated['replacement_datum_id'])
+                    : null;
+                $uploadPermission = $replacementDatum === null
+                    && (! Option::resourceUploadsEnabled() || ! $this->resourceUploadWindow->isOpen())
+                    ? CriterionUploadPermission::query()
+                        ->available()
+                        ->whereBelongsTo($user)
+                        ->whereBelongsTo($lockedCriterion)
+                        ->lockForUpdate()
+                        ->first()
                     : null;
 
                 if ($replacementDatum !== null) {
@@ -109,6 +122,20 @@ class CreateDatumSubmission
                     $lockedCriterion->report_id,
                     $identifiers,
                 );
+
+                if ($uploadPermission !== null) {
+                    $uploadPermission->update([
+                        'active_key' => null,
+                        'used_at' => now(),
+                        'datum_id' => $datum->getKey(),
+                    ]);
+                    $datum->histories()->create([
+                        'user_id' => $user->getKey(),
+                        'type' => 'info',
+                        'message' => "Bir martalik maxsus yuklash ruxsati #{$uploadPermission->getKey()} ishlatildi.",
+                        'message_type' => 'criterion_upload_permission_used',
+                    ]);
+                }
 
                 $datum->histories()->create([
                     'user_id' => $user->id,

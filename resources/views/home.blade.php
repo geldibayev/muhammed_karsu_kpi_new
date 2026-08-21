@@ -9,7 +9,10 @@
                 <i class="fas fa-pause-circle mr-1" aria-hidden="true"></i>
                 {{ $resourceUploadWindowOpen
                     ? 'Tizimga resurs yuklash administrator tomonidan vaqtincha to‘xtatilgan.'
-                    : 'Resurs yuklash muddati yakunlangan. Yangi resurslar qabul qilinmaydi.' }}
+                    : 'Resurs yuklash muddati yakunlangan. Umumiy yuklash yopilgan.' }}
+                @if($uploadPermissionCriterionIds->isNotEmpty())
+                    Sizga maxsus ruxsat berilgan kriteriyalarda yuklash tugmasi faol.
+                @endif
             </div>
         @endunless
 
@@ -140,7 +143,8 @@
                                                            title="Yangi resurs yuklash">
                                                             <i class="fa fa-plus"></i>
                                                         </a>
-                                                    @elseif($resourceUploadsEnabled && ($value->upload == '1' || $value->isHIndexCriterion()) && $evaluation)
+                                                    @elseif(($resourceUploadsEnabled || $uploadPermissionCriterionIds->contains($value->getKey()))
+                                                        && ($value->upload == '1' || $value->isHIndexCriterion()) && $evaluation)
                                                         <a href="{{ route('upload.show', $value->id) }}"
                                                            class="btn btn-outline-primary btn-sm"
                                                            title="Ma’lumot kiritish">

@@ -6,8 +6,12 @@ use App\Actions\SetAiEvaluationState;
 use App\Http\Requests\UpdateAiSettingsRequest;
 use App\Http\Requests\UpdateUploadSettingsRequest;
 use App\Jobs\ProcessAiDatumEvaluation;
+use App\Models\Criterion;
+use App\Models\CriterionUploadPermission;
 use App\Models\Option;
+use App\Models\User;
 use App\Support\ResourceUploadWindow;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
@@ -23,12 +27,45 @@ class SystemSettingsController extends Controller
         $connection = (string) config('queue.default');
         $resourceUploadsEnabled = Option::resourceUploadsEnabled();
         $resourceUploadWindowOpen = $resourceUploadWindow->isOpen();
+        $uploadPermissionCriteria = Criterion::query()
+            ->select(['id', 'code', 'name', 'parent_id'])
+            ->with('parent:id,name')
+            ->whereNotNull('parent_id')
+            ->where('status', '1')
+            ->whereHas('report', fn (Builder $query): Builder => $query->where('status', '1'))
+            ->where(fn (Builder $query): Builder => $query
+                ->where('upload', '1')
+                ->orWhere('code', Criterion::H_INDEX_CODE))
+            ->orderBy('code')
+            ->get();
+        $uploadPermissionUsers = User::query()
+            ->select(['id', 'hemis_id', 'name', 'rol', 'status', 'upload_blocked_at'])
+            ->active()
+            ->whereNull('upload_blocked_at')
+            ->where(fn (Builder $query): Builder => $query
+                ->whereJsonContains('rol', 'teacher')
+                ->orWhereJsonContains('rol', 'user'))
+            ->get()
+            ->sortBy(fn (User $user): string => $user->full ?: $user->short)
+            ->values();
+        $uploadPermissions = CriterionUploadPermission::query()
+            ->available()
+            ->with([
+                'user:id,hemis_id,name',
+                'criterion:id,code,name',
+                'grantedBy:id,name',
+            ])
+            ->latest()
+            ->get();
 
         return view('pages.settings.index', [
             'resourceUploadsEnabled' => $resourceUploadsEnabled,
             'resourceUploadsAvailable' => $resourceUploadsEnabled && $resourceUploadWindowOpen,
             'resourceUploadWindowOpen' => $resourceUploadWindowOpen,
             'resourceUploadDeadlineLabel' => $resourceUploadWindow->formattedDeadline(),
+            'uploadPermissionCriteria' => $uploadPermissionCriteria,
+            'uploadPermissionUsers' => $uploadPermissionUsers,
+            'uploadPermissions' => $uploadPermissions,
             'aiEvaluationsEnabled' => Option::aiEvaluationsEnabled(),
             'aiQueuePaused' => Queue::isPaused($connection, ProcessAiDatumEvaluation::QUEUE),
             'aiQueuePausedBySetting' => Option::aiQueuePausedBySetting() === true,

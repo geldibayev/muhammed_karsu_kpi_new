@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('criterion_upload_permissions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('criterion_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('granted_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->text('reason');
+            $table->boolean('active_key')->nullable()->default(true);
+            $table->timestamp('used_at')->nullable();
+            $table->foreignId('datum_id')->nullable()->constrained('data')->nullOnDelete();
+            $table->timestamp('revoked_at')->nullable();
+            $table->foreignId('revoked_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+
+            $table->unique(['user_id', 'criterion_id', 'active_key']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('criterion_upload_permissions');
+    }
+};

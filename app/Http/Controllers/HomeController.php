@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Criterion;
+use App\Models\CriterionUploadPermission;
 use App\Models\Datum;
 use App\Models\Option;
 use App\Models\Point;
@@ -84,6 +85,12 @@ class HomeController extends Controller
         $resourceUploadsEnabled = Option::resourceUploadsEnabled()
             && $resourceUploadWindowOpen
             && ! $request->user()->isUploadBlocked();
+        $uploadPermissionCriterionIds = $request->user()->isUploadBlocked()
+            ? collect()
+            : CriterionUploadPermission::query()
+                ->available()
+                ->whereBelongsTo($request->user())
+                ->pluck('criterion_id');
 
         return view('home', compact([
             'criteria',
@@ -93,6 +100,7 @@ class HomeController extends Controller
             'resourceUploadWindowOpen',
             'ratingMethods',
             'fourOneOneReplacementDatum',
+            'uploadPermissionCriterionIds',
         ]));
     }
 

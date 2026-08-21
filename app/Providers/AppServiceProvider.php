@@ -153,6 +153,7 @@ class AppServiceProvider extends ServiceProvider
             ) !== [],
         );
         Gate::define('rebuild-report-points', fn (User $user): bool => $user->isSuperAdmin());
+        Gate::define('manage-upload-permissions', fn (User $user): bool => $user->isSuperAdmin());
         Gate::define('export-employment-data', fn (User $user): bool => $user->isSuperAdmin());
         Gate::define(
             'manage-kpi-settings',

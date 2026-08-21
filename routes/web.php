@@ -11,6 +11,7 @@ use App\Http\Controllers\CriterionPointController;
 use App\Http\Controllers\CriterionRatingController;
 use App\Http\Controllers\CriterionResourceStatisticsController;
 use App\Http\Controllers\CriterionResourceStatisticsExportController;
+use App\Http\Controllers\CriterionUploadPermissionController;
 use App\Http\Controllers\DatumController;
 use App\Http\Controllers\DatumHistoryController;
 use App\Http\Controllers\DeactivateUserController;
@@ -60,6 +61,12 @@ Route::prefix('home')->middleware(['auth', 'active-user'])->group(function () {
     Route::put('/settings/uploads', [SystemSettingsController::class, 'updateUploads'])
         ->middleware('can:manage-kpi-settings')
         ->name('settings.uploads.update');
+    Route::post('/settings/upload-permissions', [CriterionUploadPermissionController::class, 'store'])
+        ->middleware('can:manage-upload-permissions')
+        ->name('settings.upload-permissions.store');
+    Route::delete('/settings/upload-permissions/{permission}', [CriterionUploadPermissionController::class, 'destroy'])
+        ->middleware('can:manage-upload-permissions')
+        ->name('settings.upload-permissions.destroy');
     Route::put('/settings/ai', [SystemSettingsController::class, 'updateAi'])
         ->middleware('can:manage-kpi-settings')
         ->name('settings.ai.update');

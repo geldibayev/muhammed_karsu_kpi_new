@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\Criterion;
+use App\Models\CriterionUploadPermission;
 use App\Models\Option;
 use App\Models\User;
 use App\Support\ResourceUploadWindow;
@@ -14,10 +15,15 @@ class CriterionPolicy
     public function submit(User $user, Criterion $criterion): bool
     {
         $hasTeacherRole = $user->hasRole('teacher') || $user->hasRole('user');
+        $hasUploadAccess = (Option::resourceUploadsEnabled() && $this->resourceUploadWindow->isOpen())
+            || CriterionUploadPermission::query()
+                ->available()
+                ->whereBelongsTo($user)
+                ->whereBelongsTo($criterion)
+                ->exists();
 
         return ! $user->isUploadBlocked()
-            && Option::resourceUploadsEnabled()
-            && $this->resourceUploadWindow->isOpen()
+            && $hasUploadAccess
             && ($hasTeacherRole || $user->isSuperAdmin())
             && ($criterion->upload === '1' || $criterion->isHIndexCriterion())
             && $criterion->status === '1'
