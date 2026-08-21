@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\CreateDatumSubmission;
 use App\Actions\ResolveAiManualPointMaximum;
+use App\Actions\TransferDatumCriterion;
 use App\Enums\DatumStatus;
 use App\Http\Requests\StoreDatumRequest;
 use App\Models\Criterion;
@@ -101,10 +102,16 @@ class DatumController extends Controller
         return back()->with('error', 'Fayl topilmadi!');
     }
 
-    public function details(Datum $datum, ResolveAiManualPointMaximum $maximumResolver): View
-    {
+    public function details(
+        Datum $datum,
+        ResolveAiManualPointMaximum $maximumResolver,
+        TransferDatumCriterion $transferDatumCriterion,
+    ): View {
         $this->authorize('view', $datum);
 
+        $transferCriteria = auth()->user()?->can('transferCriterion', $datum) === true
+            ? $transferDatumCriterion->destinations($datum)
+            : collect();
         $decisionOverridePointMaximum = (auth()->user()?->can('overrideCancellation', $datum) === true
             || auth()->user()?->can('updateAcceptedScore', $datum) === true)
             ? $maximumResolver->handle($datum)
@@ -204,6 +211,7 @@ class DatumController extends Controller
             'foreignLanguageCertificatePoints',
             'matchingSharedResourceSubmissions',
             'finalConfirmation',
+            'transferCriteria',
         ));
     }
 

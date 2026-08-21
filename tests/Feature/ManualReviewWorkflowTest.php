@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Actions\RecalculateReportPoints;
+use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\AiHumanReviewAssignment;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
@@ -19,6 +20,7 @@ use Database\Seeders\CriterionManualScoreOptionSeeder;
 use Database\Seeders\CriterionReviewerAssignmentSeeder;
 use Database\Seeders\OavCriterionRuleSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -900,6 +902,17 @@ class ManualReviewWorkflowTest extends TestCase
         $owner = User::factory()->create();
         $sourceCriterion = $this->createCriterion();
         $targetCriterion = $this->createSiblingCriterion($sourceCriterion, 'Tegishli mezon');
+        Evaluation::query()->create([
+            'code' => $owner->degree,
+            'name' => ['uz' => 'Ilmiy darajasiz'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $targetCriterion->id,
+            'evaluation' => $owner->degree,
+            'has' => '1',
+            'score' => 5,
+        ]);
         $this->assign($reviewer, $sourceCriterion, '1/'.$sourceCriterion->id);
         $datum = $this->createDatum($owner, $sourceCriterion, [
             'material' => ['type' => 'file', 'path' => 'uploads/proof.pdf'],
@@ -942,6 +955,86 @@ class ManualReviewWorkflowTest extends TestCase
             'message' => "Resurs “Manual test mezoni” (#{$sourceCriterion->id}) kriteriyasidan “Tegishli mezon” (#{$targetCriterion->id}) kriteriyasiga o‘tkazildi.",
         ]);
         $this->assertSame('uploads/proof.pdf', $datum->refresh()->storagePath());
+    }
+
+    public function test_assigned_reviewer_can_transfer_cancelled_submission_from_its_details(): void
+    {
+        $reviewer = User::factory()->create();
+        $owner = User::factory()->create();
+        $sourceCriterion = $this->createCriterion();
+        $targetCriterion = $this->createSiblingCriterion($sourceCriterion, 'Yangi mezon', [
+            'checking' => 'ai',
+            'ai_prompt' => 'Yangi mezon bo‘yicha tekshiring.',
+            'ai_model' => 'gemini-test',
+        ]);
+        Evaluation::query()->create([
+            'code' => $owner->degree,
+            'name' => ['uz' => 'Ilmiy darajasiz'],
+            'status' => '1',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $targetCriterion->id,
+            'evaluation' => $owner->degree,
+            'has' => '1',
+            'score' => 5,
+        ]);
+        $this->assign($reviewer, $sourceCriterion, '1/'.$sourceCriterion->id);
+        $scoreOption = $this->createScoreOption($sourceCriterion, 'old_score', 'Eski ball', 4.5);
+        $datum = $this->createDatum($owner, $sourceCriterion, [
+            'status' => 'cancelled',
+            'point' => 4.5,
+            'manual_score_option_id' => $scoreOption->id,
+            'reason' => 'Oldingi rad javobi.',
+        ]);
+        $identifier = $datum->resourceIdentifiers()->create([
+            'report_id' => $sourceCriterion->report_id,
+            'user_id' => $owner->id,
+            'type' => 'canonical_url',
+            'value_hash' => hash('sha256', 'https://example.com/transferred'),
+            'active_value_hash' => null,
+        ]);
+        Queue::fake();
+
+        $this->actingAs(User::factory()->create())
+            ->patch(route('reviews.transfer-criterion', $datum), [
+                'criterion_id' => $targetCriterion->id,
+            ])
+            ->assertForbidden();
+        $this->assertSame($sourceCriterion->id, $datum->fresh()->criterion_id);
+        $this->assertDatabaseMissing('datum_histories', [
+            'datum_id' => $datum->id,
+            'message_type' => 'criterion_transferred',
+        ]);
+
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $datum))
+            ->assertOk()
+            ->assertSee('Boshqa kriteriyaga o‘tkazish')
+            ->assertSee('Yangi mezon');
+
+        $this->actingAs($reviewer)
+            ->patch(route('reviews.transfer-criterion', $datum), [
+                'criterion_id' => $targetCriterion->id,
+            ])
+            ->assertRedirect(route('reviews.index'));
+
+        $datum->refresh();
+
+        $this->assertSame($targetCriterion->id, $datum->criterion_id);
+        $this->assertSame('checking', $datum->status);
+        $this->assertSame(0.0, $datum->point);
+        $this->assertNull($datum->manual_score_option_id);
+        $this->assertSame($identifier->value_hash, $identifier->fresh()->active_value_hash);
+        Queue::assertPushed(
+            ProcessAiDatumEvaluation::class,
+            fn (ProcessAiDatumEvaluation $job): bool => $job->datumId === $datum->id
+                && $job->criterionId === $targetCriterion->id,
+        );
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->id,
+            'user_id' => $reviewer->id,
+            'message_type' => 'criterion_transferred',
+        ]);
     }
 
     public function test_criterion_transfer_rejects_unauthorized_and_invalid_destinations(): void

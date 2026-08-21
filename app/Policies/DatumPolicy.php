@@ -212,6 +212,10 @@ class DatumPolicy
 
     public function transferCriterion(User $user, Datum $datum): bool
     {
+        if ($this->overrideCancellation($user, $datum)) {
+            return true;
+        }
+
         return $this->review($user, $datum)
             && ! CriterionManualScoreOption::query()
                 ->where('criterion_id', $datum->criterion_id)

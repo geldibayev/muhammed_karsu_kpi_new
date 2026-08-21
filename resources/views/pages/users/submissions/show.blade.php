@@ -232,6 +232,22 @@
                                 </button>
                             @endcan
 
+                            @can('transferCriterion', $datum)
+                                @if($transferCriteria->isNotEmpty())
+                                    <button type="button" class="btn btn-warning btn-sm ml-2"
+                                            data-toggle="modal" data-target="#transfer-criterion-modal">
+                                        <i class="fas fa-exchange-alt mr-1"></i>
+                                        Boshqa kriteriyaga o‘tkazish
+                                    </button>
+                                @else
+                                    <button type="button" class="btn btn-warning btn-sm ml-2" disabled
+                                            title="O‘tkazish uchun mos kriteriya topilmadi">
+                                        <i class="fas fa-exchange-alt mr-1"></i>
+                                        Boshqa kriteriyaga o‘tkazish
+                                    </button>
+                                @endif
+                            @endcan
+
                             @can('overrideCancellation', $datum)
                               @if($decisionOverridePointMaximum !== null
                                   && ($datum->criterion?->code !== \App\Support\EducationalContentCriterionRule::CODE
@@ -574,6 +590,55 @@
                 @endif
             @endcan
 
+            @can('transferCriterion', $datum)
+                @if($transferCriteria->isNotEmpty())
+                    <div class="modal fade" id="transfer-criterion-modal" tabindex="-1" role="dialog"
+                         aria-labelledby="transfer-criterion-modal-title" aria-hidden="true">
+                        <div class="modal-dialog" role="document">
+                            <form method="POST" action="{{ route('reviews.transfer-criterion', $datum) }}"
+                                  class="modal-content">
+                                @csrf
+                                @method('PATCH')
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="transfer-criterion-modal-title">
+                                        Boshqa kriteriyaga o‘tkazish
+                                    </h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Yopish">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-warning small">
+                                        Resurs yangi kriteriyada tekshirilayotgan holatga o‘tadi va balli 0 ga qaytariladi.
+                                    </div>
+                                    <label for="transfer-criterion">Yangi kriteriya</label>
+                                    <select id="transfer-criterion" name="criterion_id" required
+                                            class="form-control @error('criterion_id') is-invalid @enderror">
+                                        <option value="">Kriteriyani tanlang</option>
+                                        @foreach($transferCriteria as $transferCriterion)
+                                            <option value="{{ $transferCriterion->id }}"
+                                                @selected(old('criterion_id') == $transferCriterion->id)>
+                                                {{ data_get($transferCriterion->parent?->name, 'uz', 'Bo‘limsiz') }}
+                                                / {{ data_get($transferCriterion->name, 'uz', 'Nomsiz kriteriya') }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('criterion_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Bekor qilish</button>
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-exchange-alt mr-1"></i> O‘tkazish
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                @endif
+            @endcan
+
             @can('overrideCancellation', $datum)
                 @if($decisionOverridePointMaximum !== null)
                 <div class="modal fade" id="approve-cancelled-ai-modal" tabindex="-1" role="dialog"
@@ -694,6 +759,8 @@
         <script>$('#update-accepted-score-modal').modal('show');</script>
     @elseif($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Accepted)
         <script>$('#change-educational-content-type-modal').modal('show');</script>
+    @elseif($errors->has('criterion_id'))
+        <script>$('#transfer-criterion-modal').modal('show');</script>
     @elseif($errors->has('point') || $errors->has('author_count') || $errors->has('publication_tier') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
         <script>$('#approve-cancelled-ai-modal').modal('show');</script>
     @elseif($errors->has('reason'))
