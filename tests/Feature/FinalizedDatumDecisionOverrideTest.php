@@ -19,6 +19,24 @@ class FinalizedDatumDecisionOverrideTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    public function test_criterion_one_eight_reviewer_has_all_requested_decision_permissions(): void
+    {
+        [$reviewer, $owner, $criterion] = $this->context('ai');
+        $reviewer->update(['hemis_id' => 3462111241]);
+        $criterion->update(['code' => '1.8']);
+        config()->set('kpi.super_admin_hemis_ids', []);
+        config()->set('kpi.accepted_ai_reviewer_hemis_id', 9999999998);
+        config()->set('kpi.assigned_final_decision_reviewer_hemis_id', 9999999997);
+
+        $accepted = $this->datum($owner, $criterion, 'accepted', 2, 'Tasdiqlangan.');
+        $cancelled = $this->datum($owner, $criterion, 'cancelled', 0, 'Rad etilgan.');
+
+        $this->assertTrue($reviewer->can('access-ai-human-reviews'));
+        $this->assertTrue($reviewer->can('overrideAcceptance', $accepted));
+        $this->assertTrue($reviewer->can('overrideCancellation', $cancelled));
+        $this->assertTrue($reviewer->can('confirmFinalReview', $accepted));
+    }
+
     #[DataProvider('assignedReviewerModes')]
     public function test_assigned_reviewers_can_reverse_final_decisions_without_special_access(string $checking): void
     {

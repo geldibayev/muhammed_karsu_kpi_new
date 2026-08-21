@@ -679,9 +679,10 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertSee($datum->name);
     }
 
-    public function test_assignment_command_routes_educational_literature_reviews_to_configured_reviewer(): void
+    public function test_assignment_command_routes_educational_literature_and_master_class_reviews_to_configured_reviewers(): void
     {
-        $reviewer = User::factory()->create(['hemis_id' => 3862011037]);
+        $educationalLiteratureReviewer = User::factory()->create(['hemis_id' => 3862011037]);
+        $masterClassReviewer = User::factory()->create(['hemis_id' => 3462111241]);
         $oldReviewer = User::factory()->create();
         $owner = User::factory()->create();
         $baseCriterion = $this->createCriterion();
@@ -715,7 +716,11 @@ class ManualReviewWorkflowTest extends TestCase
                 '--reassign' => true,
             ])->assertSuccessful();
 
-            $this->assertSame($reviewer->hemis_id, $datum->fresh()->reviewer_hemis_id);
+            $expectedReviewer = $code === '1.8'
+                ? $masterClassReviewer
+                : $educationalLiteratureReviewer;
+
+            $this->assertSame($expectedReviewer->hemis_id, $datum->fresh()->reviewer_hemis_id);
         }
     }
 
@@ -1797,7 +1802,7 @@ class ManualReviewWorkflowTest extends TestCase
 
     public function test_criterion_1_8_human_approval_uses_the_evaluation_category_score(): void
     {
-        $reviewer = User::factory()->create(['hemis_id' => 3862011037]);
+        $reviewer = User::factory()->create(['hemis_id' => 3462111241]);
         $baseCriterion = $this->createCriterion();
         $criterion = $this->createSiblingCriterion($baseCriterion, '1.8 AI kriteriya', [
             'code' => '1.8',

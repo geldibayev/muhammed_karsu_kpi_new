@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\AiHumanReviewAssignment;
+use App\Models\Criterion;
 use Tests\TestCase;
 
 class ReviewerConfigurationTest extends TestCase
@@ -25,7 +27,7 @@ class ReviewerConfigurationTest extends TestCase
             '1.4' => 3862011037,
             '1.6' => 3862011037,
             '1.7' => 3462612025,
-            '1.8' => 3862011037,
+            '1.8' => 3462111241,
             '2.1.1' => 3462111204,
             '2.1.2' => 3462611061,
             '2.1.3' => 3862311015,
@@ -55,5 +57,11 @@ class ReviewerConfigurationTest extends TestCase
         foreach ($expected as $criterionCode => $hemisId) {
             $this->assertSame($hemisId, $assignments[$criterionCode]);
         }
+
+        $this->assertSame(['1.8'], AiHumanReviewAssignment::criterionCodesFor(3462111241));
+        $this->assertSame(
+            3462111241,
+            AiHumanReviewAssignment::reviewerHemisIdFor(new Criterion(['code' => '1.8'])),
+        );
     }
 }
