@@ -8,7 +8,7 @@ class ScopusCriterionRule
 {
     public const CODE = '3.1.3';
 
-    public const NAME_UZ = '“SCOPUS” xalqaro ilmiy - texnik ma’lumotlar bazalaridagi Q1 - Q4 kvartildagi jurnallarda nashr etilgan maqolalar';
+    public const NAME_UZ = 'SCOPUS va Web of Science xalqaro ilmiy - texnik ma’lumotlar bazalaridagi jurnallarda nashr etilgan maqolalar';
 
     public const MAXIMUM_POINT = 20.0;
 
@@ -20,7 +20,7 @@ class ScopusCriterionRule
         'conference' => 5.0,
     ];
 
-    public const DESCRIPTION_UZ = 'Scopus va Web of Science bazalarida indekslangan nashrlar server tomonidan qat’iy baholanadi: Q1 — 20 ball, Q2 — 15 ball, Q3 — 10 ball, Q4 — 5 ball, Scopus yoki Web of Science konferensiya materiali — 5 ball. Ball mualliflar soniga bo‘linmaydi.';
+    public const DESCRIPTION_UZ = 'Scopus va Web of Science bazalarida indekslangan nashrlar kvartiliga qarab quyidagicha baholanadi: Q1 - 20 ball, Q2 - 15 ball, Q3 - 10 ball, Q4 - 5 ball. Scopus yoki Web of Science bazalarida indekslangan konferensiya materiallari uchun - 5 ball.';
 
     public const PROMPT = <<<'PROMPT'
 Siz qat'iy ilmiy nashr tasniflovchi AI yordamchisiz. Ballni hisoblamang. Faqat hujjatdagi ishonchli dalil asosida nashr turini aniqlang.

@@ -7,7 +7,6 @@ use App\Models\CriterionManualScoreOption;
 use App\Models\Formula;
 use App\Models\Report;
 use App\Support\FixedPerResourceHumanReviewCriterionRule;
-use App\Support\HIndexCriterionRule;
 use App\Support\IndustryFundingCriterionRule;
 use App\Support\KpiCriterionSpecification;
 use App\Support\MasterClassCriterionRule;
@@ -149,7 +148,10 @@ class KpiCriterionSpecificationSeederTest extends TestCase
         $hIndexCriterion = Criterion::query()->where('code', '3.1.4')->firstOrFail();
         $this->assertSame('site:profile:index', $hIndexCriterion->checking);
         $this->assertSame('0', $hIndexCriterion->upload);
-        $this->assertSame(HIndexCriterionRule::DESCRIPTION_UZ, $hIndexCriterion->desc['uz']);
+        $this->assertSame(
+            'Xirsh indeksi quyidagicha baholanadi: h=0 uchun 0 ball, h≤2 uchun 25%, h=3 uchun 50%, h=4 uchun 75%, h=5 uchun 100%. h=5 dan yuqori har bir qo‘shimcha birlik uchun 1 ball qo‘shiladi. Web of Science ko‘rsatkichi alohida baholanadi. Scopus va ResearchGate ko‘rsatkichlaridan esa faqat yuqori natija hisobga olinadi.',
+            $hIndexCriterion->desc['uz'],
+        );
 
         $criterionThreeOneFifteen = Criterion::query()->where('code', '3.1.15')->firstOrFail();
         $this->assertSame('ai', $criterionThreeOneFifteen->checking);
@@ -184,6 +186,10 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             ->firstOrFail();
         $this->assertSame(4, $criterionThreeOneTwo->file_limit);
         $this->assertTrue($criterionThreeOneTwo->divide_ai_point_by_authors);
+        $this->assertSame(
+            'Har bir tasdiqlangan resurs uchun ilmiy darajaga ega foydalanuvchiga 0,5 ball, ilmiy darajaga ega bo‘lmagan foydalanuvchiga 0,75 ball beriladi. Ball maqoladagi jami mualliflar soniga teng taqsimlanadi.',
+            $criterionThreeOneTwo->desc['uz'],
+        );
 
         $criterionTwoOneFive = Criterion::query()->where('code', '2.1.5')->firstOrFail();
         $this->assertSame(

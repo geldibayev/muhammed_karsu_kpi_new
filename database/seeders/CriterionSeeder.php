@@ -654,7 +654,7 @@ class CriterionSeeder extends Seeder
                             'en' => 'Articles published in journals included in the impact factor collection (except for "Web of Science" and "Scopus") published scientific articles',
                         ],
                         'desc' => [
-                            'uz' => 'Impakt - faktor toplamına kiriwshi jurnallarda basıp shıǵarılǵan maqalalarda ("Web of Science," "Scopus"dan tısqarı) basıp shıǵarılǵan ilimiy maqalalarǵa muwapıq bahalanadı(shet elli birge islesiwde shıǵarılǵan maqalalardan tısqarı maqalalar avtorlarına ball teń bólistiriledi).',
+                            'uz' => 'Har bir tasdiqlangan resurs uchun ilmiy darajaga ega foydalanuvchiga 0,5 ball, ilmiy darajaga ega bo‘lmagan foydalanuvchiga 0,75 ball beriladi. Ball maqoladagi jami mualliflar soniga teng taqsimlanadi.',
                             'kaa' => 'Impakt - faktor toplamına kiriwshi jurnallarda basıp shıǵarılǵan maqalalarda ("Web of Science," "Scopus"dan tısqarı) basıp shıǵarılǵan ilimiy maqalalarǵa muwapıq bahalanadı(shet elli birge islesiwde shıǵarılǵan maqalalardan tısqarı maqalalar avtorlarına ball teń bólistiriledi).',
                             'ru' => 'Оценивается в соответствии с научными статьями, опубликованными в журналах, входящих в совокупность импакт - факторов (кроме "Web of Science," "Scopus") (за исключением статей, опубликованных в зарубежном сотрудничестве, баллы распределяются поровну между авторами статей).',
                             'en' => 'It is evaluated in accordance with scientific articles published in journals included in the impact factor collection (except for "Web of Science" and "Scopus") (scores are distributed equally among the authors of articles, with the exception of articles published in foreign cooperation).',
@@ -688,13 +688,13 @@ class CriterionSeeder extends Seeder
                     ],
                     [
                         'name' => [
-                            'uz' => '“SCOPUS” xalqaro ilmiy - texnik ma’lumotlar bazalaridagi Q1 - Q4 kvartildagi jurnallarda nashr etilgan maqolalar',
+                            'uz' => ScopusCriterionRule::NAME_UZ,
                             'kaa' => '"SCOPUS" xalıqaralıq ilimiy - texnikalıq maǵlıwmatlar bazalarındaǵı Q1 - Q4 kvartilindegi jurnallarda járiyalanǵan maqalalar',
                             'ru' => 'Статьи, опубликованные в журналах квартилей Q1 - Q4 международных научно - технических баз данных "SCOPUS"',
                             'en' => 'Articles published in Q1 - Q4 quartile journals in the international scientific and technical databases "SCOPUS"',
                         ],
                         'desc' => [
-                            'uz' => 'Scopus va Web of Science bazasi orqali baholanadi (xorijiy hamkorlikda chiqarilgan maqolalardan tashqarilari mualliflariga ball teng taqsimlanadi). Q1, Q2 - bo‘lsa - 100 %, Q3 - Q4 % bo‘lsa - 80 %, konferensiyalarda nashr etilgan maqolalar - 50 % ',
+                            'uz' => ScopusCriterionRule::DESCRIPTION_UZ,
                             'kaa' => 'Scopus hám Web of Science bazası arqalı bahalanadı (shet elli birge islesiwde shıǵarılǵan maqalalardan tısqarı avtorlarına ball teń bólistiriledi). Q1, Q2 bolsa - 100 %, Q3 - Q4 % bolsa - 80 %, konferenciyalarda járiyalanǵan maqalalar - 50 %.',
                             'ru' => 'Оценивается через базы данных Scopus и Web of Science (за исключением статей, опубликованных в зарубежном сотрудничестве, баллы распределяются поровну между авторами). Q1, Q2 - 100 %, Q3 - Q4 % -80 %, статьи, опубликованные на конференциях - 50 % ',
                             'en' => 'It is evaluated through the Scopus and Web of Science databases(except for articles published in foreign cooperation, the authors are awarded equal points). Q1, Q2 - 100 %, Q3 - Q4 % -80 %, articles published at conferences - 50 % ',

@@ -25,9 +25,14 @@ class ScopusCriterionRuleSeeder extends Seeder
         }
 
         $criterion = $scopusCriteria->firstOrFail();
+        $name = is_array($criterion->name) ? $criterion->name : [];
         $description = is_array($criterion->desc) ? $criterion->desc : [];
 
         $criterion->update([
+            'name' => [
+                ...$name,
+                'uz' => ScopusCriterionRule::NAME_UZ,
+            ],
             'desc' => [
                 ...$description,
                 'uz' => ScopusCriterionRule::DESCRIPTION_UZ,

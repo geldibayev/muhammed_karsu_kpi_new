@@ -36,7 +36,7 @@ class ScopusCriterionRuleSeederTest extends TestCase
         ]);
         $criterion = Criterion::query()->create([
             'code' => ScopusCriterionRule::CODE,
-            'name' => ['uz' => ScopusCriterionRule::NAME_UZ],
+            'name' => ['uz' => 'Eski asosiy matn'],
             'desc' => ['uz' => 'Eski qoida'],
             'parent_id' => $parent->id,
             'report_id' => $report->id,
@@ -55,7 +55,14 @@ class ScopusCriterionRuleSeederTest extends TestCase
         $this->assertSame(ScopusCriterionRule::PROMPT, $criterion->ai_prompt);
         $this->assertSame(20.0, $criterion->ai_submission_max_point);
         $this->assertFalse($criterion->divide_ai_point_by_authors);
-        $this->assertStringContainsString('bo‘linmaydi', $criterion->desc['uz']);
+        $this->assertSame(
+            'SCOPUS va Web of Science xalqaro ilmiy - texnik ma’lumotlar bazalaridagi jurnallarda nashr etilgan maqolalar',
+            $criterion->name['uz'],
+        );
+        $this->assertSame(
+            'Scopus va Web of Science bazalarida indekslangan nashrlar kvartiliga qarab quyidagicha baholanadi: Q1 - 20 ball, Q2 - 15 ball, Q3 - 10 ball, Q4 - 5 ball. Scopus yoki Web of Science bazalarida indekslangan konferensiya materiallari uchun - 5 ball.',
+            $criterion->desc['uz'],
+        );
         $this->assertSame([20, 20, 20, 20], $criterion->criterionEvaluations()
             ->orderBy('evaluation')
             ->pluck('score')

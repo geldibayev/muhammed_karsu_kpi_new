@@ -112,6 +112,7 @@ class KpiCriterionSpecification
                 'current',
                 [2, 3, 3, 3],
                 divideAiPointByAuthors: true,
+                descriptionUz: 'Har bir tasdiqlangan resurs uchun ilmiy darajaga ega foydalanuvchiga 0,5 ball, ilmiy darajaga ega bo‘lmagan foydalanuvchiga 0,75 ball beriladi. Ball maqoladagi jami mualliflar soniga teng taqsimlanadi.',
             ),
             '3.1.3' => self::rule(
                 self::Unlimited,

@@ -714,7 +714,7 @@
                                     @enderror
                                 @elseif($datum->criterion?->usesDegreeBasedAuthorDividedArticleScore())
                                     <div class="alert alert-info py-2">
-                                        {{ \App\Support\OakArticleCriterionRule::DESCRIPTION_UZ }}
+                                        {{ $datum->criterion->desc['uz'] ?? \App\Support\OakArticleCriterionRule::DESCRIPTION_UZ }}
                                     </div>
                                     <label for="cancelled-oak-author-count">Jami mualliflar soni</label>
                                     <input id="cancelled-oak-author-count" type="number" name="author_count"
