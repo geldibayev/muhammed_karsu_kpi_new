@@ -891,7 +891,7 @@ class CriterionSeeder extends Seeder
                     ],
                     [
                         'name' => [
-                            'uz' => 'Ilmiy-tadqiqot ishlarining samaradorligi: MUALLIFLIK GUVOHNOMALARI',
+                            'uz' => 'Axborot-kommunikatsiya texnologiyalariga oid dasturlar va ma’lumotlar bazalari uchun olingan guvohnomalar',
                             'kaa' => 'Ilimiy-izertlew jumıslarınıń nátiyjeliligi: AVTORLÍQ GÚWÁLÍQLARÍ',
                             'ru' => 'Эффективность научно-исследовательских работ: АВТОРСКИЕ УДОСТОВЕРЕНИЯ',
                             'en' => 'Effectiveness of research work: AUTHOR’S CERTIFICATES',

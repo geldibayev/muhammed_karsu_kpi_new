@@ -64,6 +64,10 @@ class KpiCriterionSpecificationSeederTest extends TestCase
             'Based on the established procedure and requirements, the creation of electronic textbooks and teaching aids or their translation into other languages, as well as the preparation and publication of this educational literature, is determined on the basis of the university’s publication permit and ISBN number. The author’s contribution is taken into account.',
             $criterion->desc['en'],
         );
+        $this->assertSame(
+            'Axborot-kommunikatsiya texnologiyalariga oid dasturlar va ma’lumotlar bazalari uchun olingan guvohnomalar',
+            Criterion::query()->where('code', '3.1.9')->firstOrFail()->name['uz'],
+        );
     }
 
     public function test_new_criteria_use_the_cost_efficient_default_ai_model(): void
