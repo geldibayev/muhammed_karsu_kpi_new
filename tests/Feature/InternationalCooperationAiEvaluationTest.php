@@ -141,6 +141,8 @@ class InternationalCooperationAiEvaluationTest extends TestCase
             ->where('code', InternationalCooperationCriterionRule::CODE)
             ->firstOrFail();
 
+        $this->assertStringContainsString('(ekspert, mutaxassis)', data_get($criterion->name, 'uz'));
+        $this->assertStringNotContainsString('yekspert', data_get($criterion->name, 'uz'));
         $this->assertSame(InternationalCooperationCriterionRule::PROMPT, $criterion->ai_prompt);
         $this->assertSame(1, $criterion->file_limit);
         $this->assertSame('file', $criterion->res_type);
@@ -202,5 +204,32 @@ class InternationalCooperationAiEvaluationTest extends TestCase
         $this->assertSame(3, $criterion->criterionEvaluations->firstWhere('evaluation', 'no_degrees')?->score);
         $this->assertSame(4, $criterion->criterionEvaluations->firstWhere('evaluation', 'foreign_lang')?->score);
         $this->assertSame(4, $criterion->criterionEvaluations->firstWhere('evaluation', 'physical')?->score);
+    }
+
+    public function test_name_typo_migration_replaces_yekspert_with_ekspert(): void
+    {
+        $report = Report::query()->create([
+            'name' => ['uz' => 'Nom tuzatish testi'],
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'code' => InternationalCooperationCriterionRule::CODE,
+            'name' => [
+                'uz' => 'Xorijlik olimlar(yekspert, mutaxassis)ni jalb qilish',
+                'en' => 'Involving foreign scientists',
+            ],
+            'report_id' => $report->id,
+            'checking' => 'ai',
+            'upload' => '1',
+            'status' => '1',
+        ]);
+
+        $migration = require database_path('migrations/2026_08_24_164311_fix_expert_typo_in_criterion_2_1_6_name.php');
+        $migration->up();
+
+        $criterion->refresh();
+
+        $this->assertSame('Xorijlik olimlar(ekspert, mutaxassis)ni jalb qilish', data_get($criterion->name, 'uz'));
+        $this->assertSame('Involving foreign scientists', data_get($criterion->name, 'en'));
     }
 }
