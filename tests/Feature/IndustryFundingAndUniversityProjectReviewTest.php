@@ -143,7 +143,7 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
         }
     }
 
-    public function test_industry_funding_reviewer_sees_the_same_resource_uploaded_by_other_users(): void
+    public function test_previously_excluded_criterion_reviewer_sees_the_same_resource_uploaded_by_other_users(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3462011188]);
         $owner = User::factory()->create();
@@ -162,7 +162,7 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
             'status' => '1',
         ]);
         $criterion = Criterion::query()->create([
-            'code' => '3.1.13',
+            'code' => '3.1.14',
             'name' => ['uz' => 'Xo‘jalik shartnomasi'],
             'report_id' => $report->getKey(),
             'checking' => 'ai',
@@ -252,19 +252,12 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_all_coauthored_criteria_support_shared_resource_matching(): void
+    public function test_all_criteria_support_shared_resource_matching(): void
     {
-        foreach (Criterion::SHARED_RESOURCE_MATCHING_CODES as $criterionCode) {
+        foreach (['1.2', '3.1.3', '3.1.8', '3.1.14', '4.1.1'] as $criterionCode) {
             $this->assertTrue(
                 (new Criterion(['code' => $criterionCode]))->supportsSharedResourceMatching(),
                 "{$criterionCode} mezoni bir xil resurslarni ko‘rsatishi kerak.",
-            );
-        }
-
-        foreach (['3.1.8', '3.1.14', '4.1.1'] as $criterionCode) {
-            $this->assertFalse(
-                (new Criterion(['code' => $criterionCode]))->supportsSharedResourceMatching(),
-                "{$criterionCode} mezoni bu ro‘yxatga kirmasligi kerak.",
             );
         }
     }

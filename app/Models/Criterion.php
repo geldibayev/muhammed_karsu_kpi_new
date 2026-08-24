@@ -40,11 +40,6 @@ class Criterion extends Model
 
     public const PRINTED_EDUCATIONAL_LITERATURE_CODES = ['1.2', '1.3', '1.4'];
 
-    public const SHARED_RESOURCE_MATCHING_CODES = [
-        '1.2', '1.3', '1.4', '1.6',
-        '3.1.1', '3.1.2', '3.1.3', '3.1.5', '3.1.9', '3.1.13',
-    ];
-
     protected $fillable = [
         'id', 'code', 'name', 'desc', 'parent_id', 'sort_order', 'template',
         'upload', 'file_limit', 'observation', 'report_id', 'res_type',
@@ -184,7 +179,7 @@ class Criterion extends Model
 
     public function supportsSharedResourceMatching(): bool
     {
-        return in_array($this->code, self::SHARED_RESOURCE_MATCHING_CODES, true);
+        return true;
     }
 
     public function usesAutomaticAiHumanReviewScore(): bool
