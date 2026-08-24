@@ -16,11 +16,16 @@ class RecheckInternationalCooperationAiEvaluationsCommandTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_dry_run_does_not_change_or_dispatch_the_cancelled_resource(): void
+    public function test_dry_run_does_not_change_or_dispatch_the_accepted_resource(): void
     {
         Queue::fake();
         [$report, $criterion] = $this->createReportAndCriterion();
-        $datum = $this->createAiEvaluatedDatum($criterion, 'cancelled', 0);
+        $datum = $this->createAiEvaluatedDatum(
+            $criterion,
+            'accepted',
+            3,
+            'Al-Farabi nomidagi Qozog‘iston Milliy Universiteti bilan hamkorlik tasdiqlandi.',
+        );
 
         $this->artisan('kpi:recheck-international-cooperation-ai-evaluations', [
             'report' => $report->id,
@@ -30,21 +35,43 @@ class RecheckInternationalCooperationAiEvaluationsCommandTest extends TestCase
             ->expectsOutputToContain('Dry-run')
             ->assertSuccessful();
 
-        $this->assertSame('cancelled', $datum->fresh()->status);
+        $this->assertSame('accepted', $datum->fresh()->status);
         $this->assertDatabaseMissing('datum_histories', [
             'datum_id' => $datum->id,
-            'message_type' => 'ai_international_cooperation_recheck_queued',
+            'message_type' => 'criterion_2_1_6_percentage_recheck_queued',
         ]);
         Queue::assertNothingPushed();
     }
 
-    public function test_apply_requeues_only_target_criterion_ai_decisions_and_is_idempotent(): void
+    public function test_apply_recalculates_determinable_resources_and_only_queues_unknown_ones(): void
     {
         Queue::fake();
         [$report, $criterion] = $this->createReportAndCriterion();
-        $cancelled = $this->createAiEvaluatedDatum($criterion, 'cancelled', 0);
-        $accepted = $this->createAiEvaluatedDatum($criterion, 'accepted', 3);
-        $manuallyReviewed = $this->createAiEvaluatedDatum($criterion, 'accepted', 3);
+        $alFarabi = $this->createAiEvaluatedDatum(
+            $criterion,
+            'accepted',
+            3,
+            'Al-Farabi nomidagi Qozog‘iston Milliy Universiteti bilan hamkorlik tasdiqlandi.',
+        );
+        $ranked = $this->createAiEvaluatedDatum(
+            $criterion,
+            'accepted',
+            4,
+            'Universitet QS reytingida 450-o‘rinda.',
+            'physical',
+        );
+        $unknown = $this->createAiEvaluatedDatum(
+            $criterion,
+            'accepted',
+            3,
+            'Xorijiy universitet bilan hamkorlik tasdiqlandi, reyting o‘rni yozilmagan.',
+        );
+        $manuallyReviewed = $this->createAiEvaluatedDatum(
+            $criterion,
+            'accepted',
+            1,
+            'Xorijlik talabalarni jalb qilganligi rasmiy hujjatda tasdiqlandi.',
+        );
         $manuallyReviewed->histories()->create([
             'user_id' => $manuallyReviewed->user_id,
             'type' => 'success',
@@ -62,31 +89,43 @@ class RecheckInternationalCooperationAiEvaluationsCommandTest extends TestCase
             'upload' => '1',
             'status' => '1',
         ]);
-        $otherCriterionDatum = $this->createAiEvaluatedDatum($otherCriterion, 'cancelled', 0);
+        $otherCriterionDatum = $this->createAiEvaluatedDatum($otherCriterion, 'accepted', 1);
 
         [$otherReport, $otherReportCriterion] = $this->createReportAndCriterion();
-        $otherReportDatum = $this->createAiEvaluatedDatum($otherReportCriterion, 'cancelled', 0);
+        $otherReportDatum = $this->createAiEvaluatedDatum($otherReportCriterion, 'accepted', 1);
 
         $this->artisan('kpi:recheck-international-cooperation-ai-evaluations', [
             'report' => $report->id,
             '--apply' => true,
         ])
-            ->expectsOutputToContain('AI qayta tekshiruviga qo‘yildi: 2')
+            ->expectsOutputToContain('serverda qayta hisoblandi: 3')
+            ->expectsOutputToContain('AI qayta tekshiruviga qo‘yildi: 1')
             ->assertSuccessful();
 
-        foreach ([$cancelled, $accepted] as $datum) {
-            $this->assertSame('checking', $datum->fresh()->status);
-            $this->assertSame(0.0, $datum->fresh()->point);
+        $this->assertSame('accepted', $alFarabi->fresh()->status);
+        $this->assertSame(2.25, $alFarabi->fresh()->point);
+        $this->assertSame('top_300', $alFarabi->fresh()->university_tier);
+        $this->assertSame(2.0, $ranked->fresh()->point);
+        $this->assertSame('top_500', $ranked->fresh()->university_tier);
+        $this->assertSame(3.0, $manuallyReviewed->fresh()->point);
+        $this->assertSame('foreign_students', $manuallyReviewed->fresh()->university_tier);
+
+        foreach ([$alFarabi, $ranked, $manuallyReviewed] as $datum) {
             $this->assertDatabaseHas('datum_histories', [
                 'datum_id' => $datum->id,
-                'message_type' => 'ai_international_cooperation_recheck_queued',
+                'message_type' => 'criterion_2_1_6_server_recalculated',
             ]);
         }
 
-        $this->assertSame('accepted', $manuallyReviewed->fresh()->status);
-        $this->assertSame('cancelled', $otherCriterionDatum->fresh()->status);
-        $this->assertSame('cancelled', $otherReportDatum->fresh()->status);
-        Queue::assertPushed(ProcessAiDatumEvaluation::class, 2);
+        $this->assertSame('checking', $unknown->fresh()->status);
+        $this->assertSame(0.0, $unknown->fresh()->point);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $unknown->id,
+            'message_type' => 'criterion_2_1_6_percentage_recheck_queued',
+        ]);
+        $this->assertSame('accepted', $otherCriterionDatum->fresh()->status);
+        $this->assertSame('accepted', $otherReportDatum->fresh()->status);
+        Queue::assertPushed(ProcessAiDatumEvaluation::class, 1);
 
         $this->artisan('kpi:recheck-international-cooperation-ai-evaluations', [
             'report' => $report->id,
@@ -95,7 +134,7 @@ class RecheckInternationalCooperationAiEvaluationsCommandTest extends TestCase
             ->expectsOutputToContain('qayta tekshiruvga mos resurslar: 0')
             ->assertSuccessful();
 
-        Queue::assertPushed(ProcessAiDatumEvaluation::class, 2);
+        Queue::assertPushed(ProcessAiDatumEvaluation::class, 1);
         $this->assertSame($otherReport->id, $otherReportDatum->criterion->report_id);
     }
 
@@ -122,9 +161,14 @@ class RecheckInternationalCooperationAiEvaluationsCommandTest extends TestCase
         return [$report, $criterion];
     }
 
-    private function createAiEvaluatedDatum(Criterion $criterion, string $status, float $point): Datum
-    {
-        $user = User::factory()->create();
+    private function createAiEvaluatedDatum(
+        Criterion $criterion,
+        string $status,
+        float $point,
+        string $reason = 'Oldingi AI xulosasi.',
+        string $degree = 'hold_degrees',
+    ): Datum {
+        $user = User::factory()->create(['degree' => $degree]);
         $datum = Datum::query()->create([
             'name' => fake()->sentence(),
             'material' => ['type' => 'file', 'path' => fake()->uuid().'.pdf'],
@@ -132,7 +176,7 @@ class RecheckInternationalCooperationAiEvaluationsCommandTest extends TestCase
             'criterion_id' => $criterion->id,
             'status' => $status,
             'point' => $point,
-            'reason' => 'Oldingi AI xulosasi.',
+            'reason' => $reason,
         ]);
         $datum->histories()->createMany([
             [
@@ -144,7 +188,7 @@ class RecheckInternationalCooperationAiEvaluationsCommandTest extends TestCase
             [
                 'user_id' => $user->id,
                 'type' => $status === 'accepted' ? 'success' : 'error',
-                'message' => 'Oldingi AI xulosasi.',
+                'message' => $reason,
                 'message_type' => 'ai_evaluation',
             ],
         ]);

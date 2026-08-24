@@ -20,6 +20,7 @@ use App\Services\IndustryFundingScoreCalculator;
 use App\Services\InternationalCooperationScoreValidator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\PrintedEducationalLiteratureScoreCalculator;
+use App\Support\InternationalCooperationCriterionRule;
 use App\Support\ProfessionalDevelopmentCriterionRule;
 use Gemini\Data\Blob;
 use Gemini\Data\GenerationConfig;
@@ -183,6 +184,75 @@ class AiSubmissionEvaluatorPromptTest extends TestCase
 
         $this->assertSame('accepted', $result->status);
         $this->assertSame(2.25, $result->point);
+        $this->assertSame('top_300', $result->universityTier);
+    }
+
+    public function test_international_cooperation_ai_only_selects_tier_and_server_calculates_point(): void
+    {
+        Storage::fake('local');
+        $image = UploadedFile::fake()->image('cooperation.jpg', 10, 10);
+        Storage::disk('local')->put('cooperation.jpg', $image->getContent());
+        $user = User::factory()->create(['degree' => 'foreign_lang']);
+        Evaluation::query()->create([
+            'code' => 'foreign_lang',
+            'name' => ['uz' => 'Xorijiy tillar'],
+            'status' => '1',
+        ]);
+        $report = Report::query()->create([
+            'name' => ['uz' => 'KPI hisoboti'],
+            'status' => '1',
+        ]);
+        $criterion = Criterion::query()->create([
+            'code' => InternationalCooperationCriterionRule::CODE,
+            'name' => ['uz' => 'Xalqaro hamkorlik'],
+            'report_id' => $report->getKey(),
+            'upload' => '1',
+            'status' => '1',
+            'checking' => 'ai',
+            'ai_prompt' => InternationalCooperationCriterionRule::PROMPT,
+            'ai_model' => 'gemini-test',
+        ]);
+        CriterionEvaluation::query()->create([
+            'criterion_id' => $criterion->getKey(),
+            'evaluation' => 'foreign_lang',
+            'has' => '1',
+            'score' => 4,
+        ]);
+        $datum = Datum::query()->create([
+            'name' => 'cooperation.jpg',
+            'material' => [
+                'type' => 'file',
+                'disk' => 'local',
+                'path' => 'cooperation.jpg',
+                'mime' => 'image/jpeg',
+            ],
+            'user_id' => $user->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'status' => 'checking',
+        ]);
+
+        Gemini::fake([
+            GenerateContentResponse::fake([
+                'candidates' => [[
+                    'content' => [
+                        'parts' => [[
+                            'text' => json_encode([
+                                'status' => 'accepted',
+                                'point' => 0,
+                                'university_tier' => 'top_300',
+                                'resource_date' => '2026-01-10',
+                                'reason' => 'Top-101–300 oralig‘i tasdiqlandi.',
+                            ], JSON_THROW_ON_ERROR),
+                        ]],
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $result = app(AiSubmissionEvaluator::class)->evaluate($datum);
+
+        $this->assertSame('accepted', $result->status);
+        $this->assertSame(3.0, $result->point);
         $this->assertSame('top_300', $result->universityTier);
     }
 

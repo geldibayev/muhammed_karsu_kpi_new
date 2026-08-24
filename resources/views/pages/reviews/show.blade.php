@@ -481,6 +481,9 @@
                                     'top_300' => 'Top-101–300',
                                     'top_500' => 'Top-301–500',
                                     'top_1000' => 'Top-501–1000',
+                                    ...($datum->criterion?->isInternationalCooperationCriterion()
+                                        ? ['foreign_students' => 'Xorijlik talabalarni jalb qilish']
+                                        : []),
                                 ] as $universityTier => $universityTierLabel)
                                     @php
                                         $universityTierPoint = $datum->criterion?->isProfessionalDevelopmentCriterion()

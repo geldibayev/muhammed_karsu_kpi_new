@@ -95,7 +95,15 @@ class KpiCriterionSpecification
                 descriptionUz: ProfessionalDevelopmentCriterionRule::DESCRIPTION_UZ,
                 aiPrompt: ProfessionalDevelopmentCriterionRule::PROMPT,
             ),
-            '2.1.6' => self::rule(self::Maximum, 1, 'current', [3, 3, 4, 4]),
+            '2.1.6' => self::rule(
+                self::Maximum,
+                1,
+                'current',
+                [3, 3, 4, 4],
+                divideAiPointByAuthors: false,
+                descriptionUz: InternationalCooperationCriterionRule::DESCRIPTION_UZ,
+                aiPrompt: InternationalCooperationCriterionRule::PROMPT,
+            ),
 
             '3.1.1' => self::rule(
                 self::Maximum,

@@ -20,28 +20,44 @@ class InternationalCooperationAiEvaluationTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    #[DataProvider('allowedPointProvider')]
-    public function test_it_accepts_only_points_from_the_category_ladder(float $maximumPoint, float $point): void
+    #[DataProvider('rankTierProvider')]
+    public function test_ranking_boundaries_are_inclusive(int $rank, ?string $expectedTier): void
     {
-        $result = new AiEvaluationResult('accepted', $point, 'Rasmiy dalil tasdiqlandi.');
+        $this->assertSame($expectedTier, InternationalCooperationCriterionRule::tierForRank($rank));
+    }
+
+    /** @return iterable<string, array{int, string|null}> */
+    public static function rankTierProvider(): iterable
+    {
+        yield 'invalid zero' => [0, null];
+        yield 'Top-100 upper boundary' => [100, 'top_100'];
+        yield 'Top-300 lower boundary' => [101, 'top_300'];
+        yield 'Top-300 upper boundary' => [300, 'top_300'];
+        yield 'Top-500 lower boundary' => [301, 'top_500'];
+        yield 'Top-500 upper boundary' => [500, 'top_500'];
+        yield 'Top-1000 lower boundary' => [501, 'top_1000'];
+        yield 'Top-1000 upper boundary' => [1000, 'top_1000'];
+        yield 'outside Top-1000' => [1001, 'outside_top_1000'];
+    }
+
+    #[DataProvider('universityTierPointProvider')]
+    public function test_ai_only_selects_the_tier_and_server_calculates_the_point(
+        float $maximumPoint,
+        string $universityTier,
+        float $expectedPoint,
+    ): void {
+        $result = new AiEvaluationResult(
+            'accepted',
+            0,
+            'Rasmiy dalil tasdiqlandi.',
+            universityTier: $universityTier,
+        );
 
         $validated = (new InternationalCooperationScoreValidator)->handle($result, $maximumPoint);
 
         $this->assertSame('accepted', $validated->status);
-        $this->assertSame($point, $validated->point);
-    }
-
-    /** @return iterable<string, array{float, float}> */
-    public static function allowedPointProvider(): iterable
-    {
-        yield 'standard Top-1000' => [3.0, 1.5];
-        yield 'standard Top-500' => [3.0, 2.0];
-        yield 'standard Top-300' => [3.0, 2.5];
-        yield 'standard Top-100 or foreign student' => [3.0, 3.0];
-        yield 'special Top-1000' => [4.0, 1.0];
-        yield 'special Top-500' => [4.0, 3.0];
-        yield 'special Top-300' => [4.0, 3.5];
-        yield 'special Top-100 or foreign student' => [4.0, 4.0];
+        $this->assertSame($expectedPoint, $validated->point);
+        $this->assertSame($universityTier, $validated->universityTier);
     }
 
     #[DataProvider('universityTierPointProvider')]
@@ -60,19 +76,28 @@ class InternationalCooperationAiEvaluationTest extends TestCase
     public static function universityTierPointProvider(): iterable
     {
         yield 'standard Top-100' => [3.0, 'top_100', 3.0];
-        yield 'standard Top-300' => [3.0, 'top_300', 2.5];
-        yield 'standard Top-500' => [3.0, 'top_500', 2.0];
-        yield 'standard Top-1000' => [3.0, 'top_1000', 1.5];
+        yield 'standard Top-300' => [3.0, 'top_300', 2.25];
+        yield 'standard Top-500' => [3.0, 'top_500', 1.5];
+        yield 'standard Top-1000' => [3.0, 'top_1000', 0.75];
+        yield 'standard foreign students' => [3.0, 'foreign_students', 3.0];
         yield 'special Top-100' => [4.0, 'top_100', 4.0];
-        yield 'special Top-300' => [4.0, 'top_300', 3.5];
-        yield 'special Top-500' => [4.0, 'top_500', 3.0];
+        yield 'special Top-300' => [4.0, 'top_300', 3.0];
+        yield 'special Top-500' => [4.0, 'top_500', 2.0];
         yield 'special Top-1000' => [4.0, 'top_1000', 1.0];
+        yield 'special foreign students' => [4.0, 'foreign_students', 4.0];
     }
 
-    #[DataProvider('invalidPointProvider')]
-    public function test_it_sends_invalid_accepted_points_to_human_review(float $maximumPoint, float $point): void
-    {
-        $result = new AiEvaluationResult('accepted', $point, 'AI noto‘g‘ri ball qaytardi.');
+    #[DataProvider('invalidTierProvider')]
+    public function test_it_sends_invalid_accepted_tiers_to_human_review(
+        float $maximumPoint,
+        ?string $universityTier,
+    ): void {
+        $result = new AiEvaluationResult(
+            'accepted',
+            0,
+            'AI noto‘g‘ri Top darajasini qaytardi.',
+            universityTier: $universityTier,
+        );
 
         $validated = (new InternationalCooperationScoreValidator)->handle($result, $maximumPoint);
 
@@ -80,27 +105,28 @@ class InternationalCooperationAiEvaluationTest extends TestCase
         $this->assertSame(0.0, $validated->point);
     }
 
-    /** @return iterable<string, array{float, float}> */
-    public static function invalidPointProvider(): iterable
+    /** @return iterable<string, array{float, string|null}> */
+    public static function invalidTierProvider(): iterable
     {
-        yield 'arbitrary standard point' => [3.0, 2.7];
-        yield 'special point on standard ladder' => [3.0, 3.5];
-        yield 'standard Top-1000 point on special ladder' => [4.0, 1.5];
-        yield 'unsupported maximum' => [5.0, 4.0];
+        yield 'missing tier' => [3.0, null];
+        yield 'unknown tier' => [3.0, 'unknown'];
+        yield 'unsupported maximum' => [5.0, 'top_100'];
     }
 
-    public function test_prompt_is_single_file_non_article_and_contains_both_category_ladders(): void
+    public function test_prompt_requires_only_tier_classification_and_server_calculation(): void
     {
         $prompt = InternationalCooperationCriterionRule::PROMPT;
 
         $this->assertStringContainsString('Bu ilmiy maqola mezoni emas', $prompt);
         $this->assertStringContainsString('Faqat bitta yuklangan fayl baholanadi', $prompt);
         $this->assertStringContainsString('barcha hujjatlarni birgalikda talab qilmang', $prompt);
-        $this->assertStringContainsString('Maksimal ruxsat etilgan ball 3', $prompt);
-        $this->assertStringContainsString('Top-501–1000 = 1.5', $prompt);
-        $this->assertStringContainsString('Maksimal ruxsat etilgan ball 4', $prompt);
-        $this->assertStringContainsString('Top-501–1000 = 1', $prompt);
-        $this->assertStringContainsString('xorijlik talabalarni jalb qilish = 4', $prompt);
+        $this->assertStringContainsString('Top-101–300 — 75%', $prompt);
+        $this->assertStringContainsString('Top-301–500 — 50%', $prompt);
+        $this->assertStringContainsString('Top-501–1000 — 25%', $prompt);
+        $this->assertStringContainsString('xorijlik talabalarni jalb qilish — 100%', $prompt);
+        $this->assertStringContainsString('Al-Farabi Kazakh National University, KazNU', $prompt);
+        $this->assertStringContainsString('university_tier uchun top_300', $prompt);
+        $this->assertStringContainsString('point maydoniga qat\'iy 0', $prompt);
         $this->assertStringContainsString('reytingni taxmin qilmang', $prompt);
     }
 
@@ -159,12 +185,16 @@ class InternationalCooperationAiEvaluationTest extends TestCase
             'score' => 3,
         ]);
 
-        $migration = require database_path('migrations/2026_08_02_181726_fix_criterion_2_1_6_ai_configuration.php');
+        $migration = require database_path('migrations/2026_08_24_160844_update_criterion_2_1_6_percentage_scoring.php');
         $migration->up();
 
         $criterion->refresh()->load('criterionEvaluations');
 
         $this->assertSame(InternationalCooperationCriterionRule::PROMPT, $criterion->ai_prompt);
+        $this->assertSame(
+            InternationalCooperationCriterionRule::DESCRIPTION_UZ,
+            data_get($criterion->desc, 'uz'),
+        );
         $this->assertSame(1, $criterion->file_limit);
         $this->assertSame('file', $criterion->res_type);
         $this->assertFalse($criterion->divide_ai_point_by_authors);

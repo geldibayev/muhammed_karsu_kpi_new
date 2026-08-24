@@ -7,6 +7,7 @@ use App\Models\Datum;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
 use App\Support\InternationalCooperationCriterionRule;
+use App\Support\ProfessionalDevelopmentCriterionRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
@@ -58,6 +59,9 @@ class ApproveDatumRequest extends FormRequest
         $evaluationMaximum = $criterion?->criterionEvaluations
             ->firstWhere('evaluation', $evaluationCategory)?->score;
         $reviewerPointMaximum = $criterion?->aiSubmissionMaximum((float) $evaluationMaximum) ?? 0;
+        $universityTiers = $criterion?->isProfessionalDevelopmentCriterion() === true
+            ? ProfessionalDevelopmentCriterionRule::UNIVERSITY_TIERS
+            : array_keys(InternationalCooperationCriterionRule::UNIVERSITY_TIER_POINTS);
 
         return [
             'score_option_id' => [
@@ -136,7 +140,7 @@ class ApproveDatumRequest extends FormRequest
                 Rule::prohibitedIf(! $usesUniversityTierScore),
                 'nullable',
                 'string',
-                Rule::in(array_keys(InternationalCooperationCriterionRule::UNIVERSITY_TIER_POINTS)),
+                Rule::in($universityTiers),
             ],
             'received_amount' => [
                 Rule::requiredIf($isIndustryFundingCriterion),

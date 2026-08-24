@@ -142,6 +142,7 @@ class AiEvaluationResult
                     'top_300',
                     'top_500',
                     'top_1000',
+                    'foreign_students',
                     'outside_top_1000',
                     'unknown',
                 ], true))) {
@@ -152,9 +153,13 @@ class AiEvaluationResult
             throw new UnexpectedValueException('AI universitet Top oralig‘ini qaytarmadi.');
         }
 
+        if ($requiresUniversityTier && (float) $point !== 0.0) {
+            throw new UnexpectedValueException('AI universitet Top darajasi bo‘yicha ball hisoblamasligi kerak.');
+        }
+
         if ($requiresUniversityTier
             && $status === 'accepted'
-            && ! in_array($universityTier, ['top_100', 'top_300', 'top_500', 'top_1000'], true)) {
+            && ! in_array($universityTier, ['top_100', 'top_300', 'top_500', 'top_1000', 'foreign_students'], true)) {
             throw new UnexpectedValueException('Qabul qilingan resurs uchun universitet Top-1000 oralig‘i tasdiqlanmadi.');
         }
 

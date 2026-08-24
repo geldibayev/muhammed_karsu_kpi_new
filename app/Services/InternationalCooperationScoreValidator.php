@@ -13,14 +13,36 @@ class InternationalCooperationScoreValidator
             return $result;
         }
 
-        $allowedPoints = InternationalCooperationCriterionRule::allowedPoints($maximumPoint);
+        $point = $result->universityTier === null
+            ? null
+            : InternationalCooperationCriterionRule::pointForUniversityTier(
+                $maximumPoint,
+                $result->universityTier,
+            );
 
-        if ($allowedPoints === [] || ! in_array($result->point, $allowedPoints, true)) {
+        if ($point === null) {
             return AiEvaluationResult::checking(
-                'AI 2.1.6 mezoni uchun ruxsat etilmagan ball qaytardi. Inson tekshiruvi zarur.',
+                'AI 2.1.6 mezoni uchun ruxsat etilgan universitet Top darajasini qaytarmadi. Inson tekshiruvi zarur.',
             );
         }
 
-        return $result;
+        $percentage = InternationalCooperationCriterionRule::percentageForUniversityTier(
+            $result->universityTier,
+        );
+
+        return new AiEvaluationResult(
+            status: 'accepted',
+            point: $point,
+            reason: trim($result->reason).' Tizim hisob-kitobi: '
+                .number_format($maximumPoint, 2, '.', '')
+                .' × '.$percentage.'% = '.number_format($point, 2, '.', '').' ball.',
+            authorCount: $result->authorCount,
+            resourceDate: $result->resourceDate,
+            pageCount: $result->pageCount,
+            receivedAmount: $result->receivedAmount,
+            universityTier: $result->universityTier,
+            publicationTier: $result->publicationTier,
+            publicationIssue: $result->publicationIssue,
+        );
     }
 }

@@ -1546,6 +1546,7 @@ class ManualReviewWorkflowTest extends TestCase
             ->assertOk()
             ->assertSee('Universitet Top darajasi bilan tasdiqlash')
             ->assertSee('name="university_tier"', false)
+            ->assertSee('value="foreign_students"', false)
             ->assertDontSee('name="point"', false);
         $this->actingAs($reviewer)
             ->from(route('reviews.show', $standardDatum))
@@ -1567,13 +1568,13 @@ class ManualReviewWorkflowTest extends TestCase
             ->patch(route('reviews.approve', $standardDatum), ['university_tier' => 'top_300'])
             ->assertRedirect(route('ai-human-reviews.index'));
         $this->actingAs($reviewer)
-            ->patch(route('reviews.approve', $specialDatum), ['university_tier' => 'top_300'])
+            ->patch(route('reviews.approve', $specialDatum), ['university_tier' => 'foreign_students'])
             ->assertRedirect(route('ai-human-reviews.index'));
 
-        $this->assertSame(2.5, $standardDatum->fresh()->point);
+        $this->assertSame(2.25, $standardDatum->fresh()->point);
         $this->assertSame('top_300', $standardDatum->fresh()->university_tier);
-        $this->assertSame(3.5, $specialDatum->fresh()->point);
-        $this->assertSame('top_300', $specialDatum->fresh()->university_tier);
+        $this->assertSame(4.0, $specialDatum->fresh()->point);
+        $this->assertSame('foreign_students', $specialDatum->fresh()->university_tier);
         $this->assertDatabaseHas('datum_histories', [
             'datum_id' => $standardDatum->getKey(),
             'user_id' => $reviewer->getKey(),

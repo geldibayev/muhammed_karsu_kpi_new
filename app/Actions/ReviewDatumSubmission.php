@@ -300,6 +300,7 @@ class ReviewDatumSubmission
                         'top_300' => 'Universitet Top-101–300 reytingida',
                         'top_500' => 'Universitet Top-301–500 reytingida',
                         'top_1000' => 'Universitet Top-501–1000 reytingida',
+                        'foreign_students' => 'Xorijlik talabalarni jalb qilish tasdiqlangan',
                     },
                 ];
             }

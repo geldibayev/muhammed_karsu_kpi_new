@@ -63,7 +63,7 @@ class AiSubmissionEvaluator
             || str_contains((string) $criterion->ai_prompt, 'author_count');
         $requiresResourceDate = true;
         $requiresReceivedAmount = $criterion->isIndustryFundingCriterion();
-        $requiresUniversityTier = $criterion->isProfessionalDevelopmentCriterion();
+        $requiresUniversityTier = $criterion->usesUniversityTierAiHumanReviewScore();
         $requiresPublicationTier = $criterion->usesPublicationTierAiHumanReviewScore();
         $requiresPublicationIssue = $criterion->isOakArticleCriterion();
 
@@ -453,7 +453,7 @@ PROMPT;
             $requiresPublicationIssue => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"publication_issue\":3,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresPublicationTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"publication_tier\":\"q1|q2|q3|q4|conference|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresTranslationEvidence => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"is_translation\":true,\"source_language\":\"manba tili\",\"target_language\":\"uz|kaa|ru\",\"reason\":\"qisqa asos\"}",
-            $requiresUniversityTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"university_tier\":\"top_100|top_300|top_500|top_1000|outside_top_1000|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
+            $requiresUniversityTier => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"university_tier\":\"top_100|top_300|top_500|top_1000|foreign_students|outside_top_1000|unknown\",\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresPageCount => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"page_count\":160,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresReceivedAmount => "{\"status\":\"accepted|cancelled|checking\",\"received_amount\":12500000.50,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
             $requiresAuthorCount && $requiresResourceDate => "{\"status\":\"accepted|cancelled|checking\",\"point\":0,\"author_count\":1,\"resource_date\":\"{$resourceDateFormat} yoki bo'sh satr\",\"reason\":\"qisqa asos\"}",
@@ -615,6 +615,7 @@ PROMPT;
                     'top_300',
                     'top_500',
                     'top_1000',
+                    'foreign_students',
                     'outside_top_1000',
                     'unknown',
                 ],
