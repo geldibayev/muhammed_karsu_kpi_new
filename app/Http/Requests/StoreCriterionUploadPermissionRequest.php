@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Criterion;
+use App\Models\Report;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Database\Eloquent\Builder;
@@ -107,8 +108,8 @@ class StoreCriterionUploadPermissionRequest extends FormRequest
     {
         return Criterion::query()
             ->whereNotNull('parent_id')
+            ->where('report_id', Report::current()?->getKey() ?? 0)
             ->where('status', '1')
-            ->whereHas('report', fn (Builder $query): Builder => $query->where('status', '1'))
             ->where(fn (Builder $query): Builder => $query
                 ->where('upload', '1')
                 ->orWhere('code', Criterion::H_INDEX_CODE))

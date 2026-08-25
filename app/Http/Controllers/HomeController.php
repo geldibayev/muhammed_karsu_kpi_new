@@ -28,7 +28,7 @@ class HomeController extends Controller
         ResourceUploadWindow $resourceUploadWindow,
     ): View {
         $degree = $request->user()->degree;
-        $report = Report::query()->where('status', '1')->latest('id')->first();
+        $report = Report::current();
         $criteria = Criterion::query()
             ->whereNull('parent_id')
             ->where('report_id', $report?->getKey() ?? 0)

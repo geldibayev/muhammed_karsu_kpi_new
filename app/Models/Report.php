@@ -10,6 +10,14 @@ class Report extends Model
         'code', 'name', 'desc', 'starts_on', 'ends_on', 'status',
     ];
 
+    public static function current(): ?self
+    {
+        return self::query()
+            ->where('status', '1')
+            ->latest('id')
+            ->first();
+    }
+
     protected function casts(): array
     {
         return [

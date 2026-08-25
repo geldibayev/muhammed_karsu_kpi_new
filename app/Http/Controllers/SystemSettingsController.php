@@ -9,6 +9,7 @@ use App\Jobs\ProcessAiDatumEvaluation;
 use App\Models\Criterion;
 use App\Models\CriterionUploadPermission;
 use App\Models\Option;
+use App\Models\Report;
 use App\Models\User;
 use App\Support\ResourceUploadWindow;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,12 +28,13 @@ class SystemSettingsController extends Controller
         $connection = (string) config('queue.default');
         $resourceUploadsEnabled = Option::resourceUploadsEnabled();
         $resourceUploadWindowOpen = $resourceUploadWindow->isOpen();
+        $currentReport = Report::current();
         $uploadPermissionCriteria = Criterion::query()
             ->select(['id', 'code', 'name', 'parent_id'])
             ->with('parent:id,name')
             ->whereNotNull('parent_id')
+            ->where('report_id', $currentReport?->getKey() ?? 0)
             ->where('status', '1')
-            ->whereHas('report', fn (Builder $query): Builder => $query->where('status', '1'))
             ->where(fn (Builder $query): Builder => $query
                 ->where('upload', '1')
                 ->orWhere('code', Criterion::H_INDEX_CODE))

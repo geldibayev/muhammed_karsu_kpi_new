@@ -209,6 +209,59 @@ class CriterionUploadPermissionTest extends TestCase
         ]);
     }
 
+    public function test_permission_can_only_be_granted_for_the_current_report_used_by_home(): void
+    {
+        config()->set('kpi.settings_manager_hemis_id', '3172011004');
+        config()->set('kpi.resource_upload_deadline', now()->subDay()->toDateTimeString());
+        Option::setResourceUploadsEnabled(false);
+        $manager = User::factory()->superAdmin()->create(['hemis_id' => 3172011004]);
+        $teacher = User::factory()->create();
+        [$oldCriterion] = $this->createUploadableCriterion('Eski faol hisobot kriteriyasi');
+        [$currentCriterion, $currentYear] = $this->createUploadableCriterion('Joriy hisobot kriteriyasi');
+
+        $this->actingAs($manager)
+            ->get(route('settings.index'))
+            ->assertOk()
+            ->assertDontSee('Eski faol hisobot kriteriyasi')
+            ->assertSee('Joriy hisobot kriteriyasi');
+
+        $this->actingAs($manager)
+            ->from(route('settings.index'))
+            ->post(route('settings.upload-permissions.store'), $this->grantPayload($teacher, $oldCriterion))
+            ->assertRedirect(route('settings.index'))
+            ->assertSessionHasErrors('criterion_ids');
+
+        CriterionUploadPermission::query()->create([
+            'user_id' => $teacher->id,
+            'criterion_id' => $oldCriterion->id,
+            'granted_by_user_id' => $manager->id,
+            'reason' => 'Eski noto‘g‘ri ruxsat.',
+            'active_key' => true,
+        ]);
+
+        $this->actingAs($teacher)
+            ->get(route('upload.show', $oldCriterion))
+            ->assertForbidden();
+
+        $this->actingAs($manager)
+            ->post(route('settings.upload-permissions.store'), $this->grantPayload($teacher, $currentCriterion))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->actingAs($teacher)
+            ->get(route('home'))
+            ->assertOk()
+            ->assertSee(route('upload.show', $currentCriterion))
+            ->assertDontSee(route('upload.show', $oldCriterion));
+        $this->actingAs($teacher)
+            ->get(route('upload.show', $currentCriterion))
+            ->assertOk();
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $currentCriterion), $this->submissionPayload($currentYear, 1))
+            ->assertRedirect(route('upload.show', $currentCriterion))
+            ->assertSessionHasNoErrors();
+    }
+
     /** @return array<string, array<int, int>|int|string> */
     private function grantPayload(User $user, Criterion ...$criteria): array
     {
