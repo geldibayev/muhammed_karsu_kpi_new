@@ -82,9 +82,9 @@
                             @csrf
                             <div class="card-body">
                                 <div class="alert alert-info small">
-                                    Bu bir martalik ruxsat umumiy yuklash yopiq yoki muddati tugagan bo‘lsa ham faqat tanlangan
-                                    foydalanuvchi va kriteriya uchun ishlaydi. Foydalanuvchi bloki, kriteriya holati,
-                                    ilmiy daraja, yil va resurs limiti tekshiruvlari saqlanadi.
+                                    Bu ruxsat umumiy yuklash yopiq yoki muddati tugagan bo‘lsa ham tanlangan foydalanuvchi va
+                                    kriteriyalar uchun ishlaydi. Foydalanuvchi har bir kriteriyaning mavjud resurs limiti
+                                    doirasida qolgan resurslarini yuklay oladi.
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group col-md-4">
@@ -103,20 +103,32 @@
                                         @enderror
                                     </div>
                                     <div class="form-group col-md-8">
-                                        <label for="permission-criterion-id">Kriteriya</label>
-                                        <select id="permission-criterion-id" name="criterion_id" required
-                                                class="form-control @error('criterion_id') is-invalid @enderror">
-                                            <option value="">Kriteriyani tanlang</option>
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <label for="permission-criterion-ids">Kriteriyalar</label>
+                                            <div class="custom-control custom-checkbox mb-2">
+                                                <input id="permission-all-criteria" name="all_criteria" type="checkbox" value="1"
+                                                       class="custom-control-input" @checked(old('all_criteria'))>
+                                                <label class="custom-control-label font-weight-normal" for="permission-all-criteria">
+                                                    Barcha mos kriteriyalar
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <select id="permission-criterion-ids" name="criterion_ids[]" multiple
+                                                class="form-control {{ $errors->has('criterion_ids') || $errors->has('criterion_ids.*') ? 'is-invalid' : '' }}">
                                             @foreach($uploadPermissionCriteria as $criterion)
-                                                <option value="{{ $criterion->id }}" @selected(old('criterion_id') == $criterion->id)>
+                                                <option value="{{ $criterion->id }}" @selected(in_array($criterion->id, old('criterion_ids', [])))>
                                                     @if(filled($criterion->code)){{ $criterion->code }} — @endif
                                                     {{ data_get($criterion->parent?->name, 'uz', 'Bo‘limsiz') }} /
                                                     {{ data_get($criterion->name, 'uz', 'Nomsiz kriteriya') }}
                                                 </option>
                                             @endforeach
                                         </select>
-                                        @error('criterion_id')
+                                        @error('criterion_ids')
                                             <div class="invalid-feedback">{{ $message }}</div>
+                                        @else
+                                            @if($errors->has('criterion_ids.*'))
+                                                <div class="invalid-feedback">{{ $errors->first('criterion_ids.*') }}</div>
+                                            @endif
                                         @enderror
                                     </div>
                                 </div>
@@ -260,5 +272,19 @@
             placeholder: 'Foydalanuvchini ism yoki HEMIS ID bo‘yicha izlang',
             width: '100%'
         });
+
+        const permissionCriteria = $('#permission-criterion-ids').select2({
+            theme: 'bootstrap4',
+            placeholder: 'Bir yoki bir nechta kriteriyani tanlang',
+            width: '100%'
+        });
+
+        const allCriteria = $('#permission-all-criteria');
+        const toggleCriterionSelection = function () {
+            permissionCriteria.prop('disabled', allCriteria.is(':checked')).trigger('change');
+        };
+
+        allCriteria.on('change', toggleCriterionSelection);
+        toggleCriterionSelection();
     </script>
 @endsection

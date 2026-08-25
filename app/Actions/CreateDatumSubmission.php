@@ -125,14 +125,13 @@ class CreateDatumSubmission
 
                 if ($uploadPermission !== null) {
                     $uploadPermission->update([
-                        'active_key' => null,
                         'used_at' => now(),
                         'datum_id' => $datum->getKey(),
                     ]);
                     $datum->histories()->create([
                         'user_id' => $user->getKey(),
                         'type' => 'info',
-                        'message' => "Bir martalik maxsus yuklash ruxsati #{$uploadPermission->getKey()} ishlatildi.",
+                        'message' => "Maxsus yuklash ruxsati #{$uploadPermission->getKey()} asosida resurs yuborildi.",
                         'message_type' => 'criterion_upload_permission_used',
                     ]);
                 }

@@ -3,10 +3,11 @@
 namespace App\Http\Requests;
 
 use App\Models\Criterion;
-use App\Models\CriterionUploadPermission;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Validator;
 
 class StoreCriterionUploadPermissionRequest extends FormRequest
@@ -28,7 +29,9 @@ class StoreCriterionUploadPermissionRequest extends FormRequest
     {
         return [
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            'criterion_id' => ['required', 'integer', 'exists:criteria,id'],
+            'all_criteria' => ['nullable', 'boolean'],
+            'criterion_ids' => ['required_unless:all_criteria,1', 'array', 'min:1'],
+            'criterion_ids.*' => ['required', 'integer', 'distinct', 'exists:criteria,id'],
             'reason' => ['required', 'string', 'max:5000'],
         ];
     }
@@ -43,8 +46,6 @@ class StoreCriterionUploadPermissionRequest extends FormRequest
                 }
 
                 $user = User::query()->find($this->integer('user_id'));
-                $criterion = Criterion::query()->find($this->integer('criterion_id'));
-
                 if ($user === null || ! $user->isActive() || $user->isUploadBlocked()
                     || (! $user->hasRole('teacher') && ! $user->hasRole('user'))) {
                     $validator->errors()->add('user_id', 'Tanlangan foydalanuvchiga resurs yuklash ruxsatini berib bo‘lmaydi.');
@@ -52,25 +53,15 @@ class StoreCriterionUploadPermissionRequest extends FormRequest
                     return;
                 }
 
-                if ($criterion === null
-                    || ($criterion->upload !== '1' && ! $criterion->isHIndexCriterion())
-                    || $criterion->status !== '1'
-                    || ! $criterion->report()->where('status', '1')->exists()
-                    || ! $criterion->criterionEvaluations()
-                        ->where('evaluation', $user->degree)
-                        ->where('has', '1')
-                        ->exists()) {
-                    $validator->errors()->add('criterion_id', 'Tanlangan kriteriya ushbu foydalanuvchi uchun yuklashga mos emas.');
+                $criterionIds = collect($this->input('criterion_ids', []))
+                    ->map(static fn (mixed $criterionId): int => (int) $criterionId);
+                $eligibleCriterionCount = $this->eligibleCriteriaQuery($user)
+                    ->when(! $this->boolean('all_criteria'), fn (Builder $query): Builder => $query->whereKey($criterionIds))
+                    ->count();
 
-                    return;
-                }
-
-                if (CriterionUploadPermission::query()
-                    ->available()
-                    ->whereBelongsTo($user)
-                    ->whereBelongsTo($criterion)
-                    ->exists()) {
-                    $validator->errors()->add('criterion_id', 'Bu foydalanuvchi uchun ushbu kriteriyaga ruxsat allaqachon berilgan.');
+                if ($eligibleCriterionCount === 0
+                    || (! $this->boolean('all_criteria') && $eligibleCriterionCount !== $criterionIds->count())) {
+                    $validator->errors()->add('criterion_ids', 'Tanlangan kriteriyalardan biri ushbu foydalanuvchi uchun yuklashga mos emas.');
                 }
             },
         ];
@@ -82,8 +73,13 @@ class StoreCriterionUploadPermissionRequest extends FormRequest
         return [
             'user_id.required' => 'Foydalanuvchini tanlang.',
             'user_id.exists' => 'Tanlangan foydalanuvchi topilmadi.',
-            'criterion_id.required' => 'Kriteriyani tanlang.',
-            'criterion_id.exists' => 'Tanlangan kriteriya topilmadi.',
+            'all_criteria.boolean' => 'Barcha kriteriyalar tanlovi noto‘g‘ri.',
+            'criterion_ids.required_unless' => 'Kamida bitta kriteriyani tanlang yoki barcha mos kriteriyalarga ruxsat bering.',
+            'criterion_ids.required' => 'Kamida bitta kriteriyani tanlang.',
+            'criterion_ids.array' => 'Kriteriyalar ro‘yxatini to‘g‘ri tanlang.',
+            'criterion_ids.min' => 'Kamida bitta kriteriyani tanlang.',
+            'criterion_ids.*.distinct' => 'Bir kriteriya takroran tanlangan.',
+            'criterion_ids.*.exists' => 'Tanlangan kriteriyalardan biri topilmadi.',
             'reason.required' => 'Maxsus ruxsat sababini yozing.',
             'reason.max' => 'Ruxsat sababi 5000 belgidan oshmasligi kerak.',
         ];
@@ -94,5 +90,30 @@ class StoreCriterionUploadPermissionRequest extends FormRequest
         if (is_string($this->input('reason'))) {
             $this->merge(['reason' => trim($this->input('reason'))]);
         }
+    }
+
+    /** @return Collection<int, int> */
+    public function criterionIdsForGrant(User $user): Collection
+    {
+        return $this->eligibleCriteriaQuery($user)
+            ->when(
+                ! $this->boolean('all_criteria'),
+                fn (Builder $query): Builder => $query->whereKey($this->validated('criterion_ids')),
+            )
+            ->pluck('id');
+    }
+
+    private function eligibleCriteriaQuery(User $user): Builder
+    {
+        return Criterion::query()
+            ->whereNotNull('parent_id')
+            ->where('status', '1')
+            ->whereHas('report', fn (Builder $query): Builder => $query->where('status', '1'))
+            ->where(fn (Builder $query): Builder => $query
+                ->where('upload', '1')
+                ->orWhere('code', Criterion::H_INDEX_CODE))
+            ->whereHas('criterionEvaluations', fn (Builder $query): Builder => $query
+                ->where('evaluation', $user->degree)
+                ->where('has', '1'));
     }
 }

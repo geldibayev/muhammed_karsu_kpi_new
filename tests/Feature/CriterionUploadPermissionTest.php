@@ -36,7 +36,7 @@ class CriterionUploadPermissionTest extends TestCase
         ));
     }
 
-    public function test_manager_can_grant_one_late_upload_to_one_user_and_criterion(): void
+    public function test_manager_can_grant_late_upload_access_for_multiple_criteria(): void
     {
         config()->set('kpi.settings_manager_hemis_id', '3172011004');
         config()->set('kpi.resource_upload_deadline', now()->subDay()->toDateTimeString());
@@ -57,57 +57,78 @@ class CriterionUploadPermissionTest extends TestCase
             ->assertSee('Maxsus yuklash ruxsati')
             ->assertSee('Maxsus Scopus kriteriyasi')
             ->assertSee('name="user_id"', false)
+            ->assertSee('name="criterion_ids[]"', false)
+            ->assertSee('name="all_criteria"', false)
+            ->assertSee('Barcha mos kriteriyalar')
             ->assertDontSee('name="hemis_id"', false)
             ->assertSee($teacher->full)
             ->assertSee('plugins/select2/js/select2.full.min.js');
 
         $this->actingAs($manager)
-            ->post(route('settings.upload-permissions.store'), $this->grantPayload($teacher, $criterion))
+            ->post(route('settings.upload-permissions.store'), $this->grantPayload($teacher, $criterion, $otherCriterion))
             ->assertRedirect()
-            ->assertSessionHas('success', 'Foydalanuvchiga tanlangan kriteriya uchun yuklash ruxsati berildi.');
+            ->assertSessionHas('success', 'Foydalanuvchiga 2 ta kriteriya uchun yuklash ruxsati berildi.');
 
-        $permission = CriterionUploadPermission::query()->sole();
-        $this->assertSame($teacher->id, $permission->user_id);
-        $this->assertSame($criterion->id, $permission->criterion_id);
-        $this->assertSame($manager->id, $permission->granted_by_user_id);
-        $this->assertSame('Scopus indeksatsiyasi kech tasdiqlandi.', $permission->reason);
+        $permissions = CriterionUploadPermission::query()->orderBy('criterion_id')->get();
+        $this->assertCount(2, $permissions);
+        $this->assertEqualsCanonicalizing(
+            [$criterion->id, $otherCriterion->id],
+            $permissions->pluck('criterion_id')->all(),
+        );
+        $this->assertTrue($permissions->every(fn (CriterionUploadPermission $permission): bool => $permission->user_id === $teacher->id
+            && $permission->granted_by_user_id === $manager->id
+            && $permission->reason === 'Scopus indeksatsiyasi kech tasdiqlandi.'));
 
         $this->actingAs($teacher)
             ->get(route('home'))
             ->assertOk()
             ->assertSee('Sizga maxsus ruxsat berilgan kriteriyalarda yuklash tugmasi faol.')
             ->assertSee(route('upload.show', $criterion))
-            ->assertDontSee(route('upload.show', $otherCriterion));
+            ->assertSee(route('upload.show', $otherCriterion));
         $this->actingAs($teacher)->get(route('upload.show', $criterion))->assertOk();
-        $this->actingAs($teacher)->get(route('upload.show', $otherCriterion))->assertForbidden();
+        $this->actingAs($teacher)->get(route('upload.show', $otherCriterion))->assertOk();
         $this->actingAs($otherTeacher)->get(route('upload.show', $criterion))->assertForbidden();
+    }
+
+    public function test_permission_allows_only_the_remaining_criterion_file_limit(): void
+    {
+        config()->set('kpi.settings_manager_hemis_id', '3172011004');
+        config()->set('kpi.resource_upload_deadline', now()->addDay()->toDateTimeString());
+        Option::setResourceUploadsEnabled(true);
+        $manager = User::factory()->superAdmin()->create(['hemis_id' => 3172011004]);
+        $teacher = User::factory()->create();
+        [$criterion, $year] = $this->createUploadableCriterion('Uchta resursli kriteriya', fileLimit: 3);
 
         $this->actingAs($teacher)
-            ->post(route('upload.store', $criterion), [
-                'uploadResourceType' => 'url',
-                'uploadResourceUrl' => 'https://example.com/new-scopus-article',
-                'year' => $year->id,
-            ])
+            ->post(route('upload.store', $criterion), $this->submissionPayload($year, 1))
             ->assertRedirect(route('upload.show', $criterion));
 
-        $permission->refresh();
-        $this->assertNull($permission->active_key);
+        config()->set('kpi.resource_upload_deadline', now()->subDay()->toDateTimeString());
+        Option::setResourceUploadsEnabled(false);
+        $this->actingAs($manager)
+            ->post(route('settings.upload-permissions.store'), $this->grantPayload($teacher, $criterion))
+            ->assertRedirect();
+
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), $this->submissionPayload($year, 2))
+            ->assertRedirect(route('upload.show', $criterion));
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), $this->submissionPayload($year, 3))
+            ->assertRedirect(route('upload.show', $criterion));
+
+        $permission = CriterionUploadPermission::query()->sole();
+        $this->assertTrue($permission->active_key);
         $this->assertNotNull($permission->used_at);
         $this->assertNotNull($permission->datum_id);
-        $this->assertDatabaseHas('datum_histories', [
-            'datum_id' => $permission->datum_id,
-            'message_type' => 'criterion_upload_permission_used',
-        ]);
-        $this->actingAs($teacher)->get(route('upload.show', $criterion))->assertForbidden();
-        $this->actingAs($teacher)
-            ->post(route('upload.store', $criterion), [
-                'uploadResourceType' => 'url',
-                'uploadResourceUrl' => 'https://example.com/second-article',
-                'year' => $year->id,
-            ])
-            ->assertForbidden();
+        $this->assertSame(2, DB::table('datum_histories')
+            ->where('message_type', 'criterion_upload_permission_used')
+            ->count());
 
-        $this->assertDatabaseCount('data', 1);
+        $this->actingAs($teacher)
+            ->post(route('upload.store', $criterion), $this->submissionPayload($year, 4))
+            ->assertSessionHasErrors('uploadResourceFile');
+
+        $this->assertDatabaseCount('data', 3);
     }
 
     public function test_manager_can_revoke_unused_permission_and_invalid_grants_are_rejected(): void
@@ -131,36 +152,91 @@ class CriterionUploadPermissionTest extends TestCase
         $this->assertNotNull($permission->revoked_at);
         $this->assertSame($manager->id, $permission->revoked_by_user_id);
 
+        [$otherCriterion] = $this->createUploadableCriterion('Ikkinchi mos kriteriya', $criterion->report);
         $criterion->criterionEvaluations()->update(['has' => '0']);
         $this->actingAs($manager)
             ->from(route('settings.index'))
-            ->post(route('settings.upload-permissions.store'), $this->grantPayload($teacher, $criterion))
+            ->post(route('settings.upload-permissions.store'), $this->grantPayload($teacher, $otherCriterion, $criterion))
             ->assertRedirect(route('settings.index'))
-            ->assertSessionHasErrors('criterion_id');
+            ->assertSessionHasErrors('criterion_ids');
+        $this->assertDatabaseMissing('criterion_upload_permissions', [
+            'user_id' => $teacher->id,
+            'criterion_id' => $otherCriterion->id,
+            'active_key' => true,
+        ]);
         $this->actingAs($manager)
             ->from(route('settings.index'))
             ->post(route('settings.upload-permissions.store'), [
                 'user_id' => 9999999999,
-                'criterion_id' => $criterion->id,
+                'criterion_ids' => [$criterion->id],
                 'reason' => 'Noto‘g‘ri foydalanuvchi.',
             ])
             ->assertRedirect(route('settings.index'))
             ->assertSessionHasErrors('user_id');
     }
 
-    /** @return array<string, int|string> */
-    private function grantPayload(User $user, Criterion $criterion): array
+    public function test_manager_can_grant_all_eligible_criteria_without_duplicate_permissions(): void
+    {
+        config()->set('kpi.settings_manager_hemis_id', '3172011004');
+        $manager = User::factory()->superAdmin()->create(['hemis_id' => 3172011004]);
+        $teacher = User::factory()->create();
+        [$firstCriterion] = $this->createUploadableCriterion('Birinchi kriteriya');
+        [$secondCriterion] = $this->createUploadableCriterion('Ikkinchi kriteriya', $firstCriterion->report);
+        [$ineligibleCriterion] = $this->createUploadableCriterion('Mos bo‘lmagan kriteriya', $firstCriterion->report);
+        $ineligibleCriterion->criterionEvaluations()->update(['has' => '0']);
+
+        $this->actingAs($manager)
+            ->post(route('settings.upload-permissions.store'), $this->grantPayload($teacher, $firstCriterion))
+            ->assertRedirect();
+
+        $this->actingAs($manager)
+            ->post(route('settings.upload-permissions.store'), [
+                'user_id' => $teacher->id,
+                'all_criteria' => '1',
+                'reason' => 'Barcha mos kriteriyalar uchun ruxsat.',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Foydalanuvchiga 1 ta kriteriya uchun yuklash ruxsati berildi.');
+
+        $this->assertEqualsCanonicalizing(
+            [$firstCriterion->id, $secondCriterion->id],
+            CriterionUploadPermission::query()->pluck('criterion_id')->all(),
+        );
+        $this->assertDatabaseMissing('criterion_upload_permissions', [
+            'user_id' => $teacher->id,
+            'criterion_id' => $ineligibleCriterion->id,
+            'active_key' => true,
+        ]);
+    }
+
+    /** @return array<string, array<int, int>|int|string> */
+    private function grantPayload(User $user, Criterion ...$criteria): array
     {
         return [
             'user_id' => $user->id,
-            'criterion_id' => $criterion->id,
+            'criterion_ids' => collect($criteria)
+                ->map(static fn (Criterion $criterion): int => $criterion->id)
+                ->all(),
             'reason' => 'Scopus indeksatsiyasi kech tasdiqlandi.',
         ];
     }
 
-    /** @return array{Criterion, Year} */
-    private function createUploadableCriterion(string $name, ?Report $report = null): array
+    /** @return array<string, int|string> */
+    private function submissionPayload(Year $year, int $sequence): array
     {
+        return [
+            'uploadResourceType' => 'url',
+            'uploadResourceUrl' => "https://example.com/resource-{$sequence}",
+            'year' => $year->id,
+        ];
+    }
+
+    /** @return array{Criterion, Year} */
+    private function createUploadableCriterion(
+        string $name,
+        ?Report $report = null,
+        int $fileLimit = 0,
+    ): array {
         Evaluation::query()->firstOrCreate(
             ['code' => 'no_degrees'],
             ['name' => ['uz' => 'Ilmiy darajasiz'], 'status' => '1'],
@@ -183,6 +259,7 @@ class CriterionUploadPermissionTest extends TestCase
             'res_type' => 'url',
             'checking' => 'manual',
             'template' => '0',
+            'file_limit' => $fileLimit,
         ]);
         CriterionEvaluation::query()->create([
             'criterion_id' => $criterion->id,
