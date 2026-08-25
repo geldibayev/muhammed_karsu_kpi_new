@@ -77,7 +77,7 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
         }
     }
 
-    public function test_university_project_human_approval_uses_fixed_category_point(): void
+    public function test_university_project_human_approvals_only_confirm_participation_and_use_fixed_category_point(): void
     {
         $reviewer = User::factory()->create(['hemis_id' => 3462011188]);
         $report = Report::query()->create([
@@ -140,6 +140,39 @@ class IndustryFundingAndUniversityProjectReviewTest extends TestCase
                 ->assertRedirect(route('ai-human-reviews.index'));
 
             $this->assertSame($expectedPoint, $datum->fresh()->point);
+
+            $cancelledDatum = Datum::query()->create([
+                'name' => $evaluationCategory.' rad etilgan loyiha hujjati',
+                'user_id' => $owner->getKey(),
+                'criterion_id' => $criterion->getKey(),
+                'status' => 'cancelled',
+                'point' => 0,
+            ]);
+            $cancelledDatum->histories()->create([
+                'user_id' => $owner->getKey(),
+                'type' => 'error',
+                'message' => 'AI ishtirokni tasdiqlamadi.',
+                'message_type' => 'ai_evaluation',
+            ]);
+
+            $this->actingAs($reviewer)
+                ->get(route('upload.details', $cancelledDatum))
+                ->assertOk()
+                ->assertSee("Mas'ul faqat professor-o'qituvchining universitet loyihasidagi ishtirokini tasdiqlaydi.", false)
+                ->assertDontSee('name="point"', false);
+            $this->actingAs($reviewer)
+                ->patch(route('ai-human-reviews.approve-cancelled', $cancelledDatum), ['point' => 1])
+                ->assertSessionHasErrors('point');
+            $this->actingAs($reviewer)
+                ->patch(route('ai-human-reviews.approve-cancelled', $cancelledDatum))
+                ->assertRedirect(route('upload.details', $cancelledDatum));
+
+            $this->assertSame($expectedPoint, $cancelledDatum->fresh()->point);
+            $this->assertDatabaseHas('datum_histories', [
+                'datum_id' => $cancelledDatum->getKey(),
+                'user_id' => $reviewer->getKey(),
+                'message_type' => 'human_override_ai_approved',
+            ]);
         }
     }
 

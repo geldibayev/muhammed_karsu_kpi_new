@@ -45,7 +45,10 @@ class ApproveCancelledAiDatumRequest extends FormRequest
         $usesDegreeBasedArticleScore = $criterion?->usesDegreeBasedAuthorDividedArticleScore() === true;
         $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesScoreOption = $isEducationalContentCriterion || $isForeignLanguageCertificateCriterion;
-        $usesAutomaticPoint = $usesScoreOption || $usesPublicationTierScore || $usesDegreeBasedArticleScore;
+        $usesAutomaticPoint = $usesScoreOption
+            || $usesPublicationTierScore
+            || $usesDegreeBasedArticleScore
+            || $criterion?->usesAutomaticAiHumanReviewScore() === true;
 
         return [
             'point' => [

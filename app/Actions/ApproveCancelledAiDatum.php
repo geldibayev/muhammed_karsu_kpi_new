@@ -9,6 +9,7 @@ use App\Services\DatumResourceFingerprintGenerator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use App\Support\EducationalContentCriterionRule;
+use App\Support\FixedPerResourceHumanReviewCriterionRule;
 use App\Support\ForeignLanguageCertificateCriterionRule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -124,6 +125,13 @@ class ApproveCancelledAiDatum
                 );
             }
 
+            if ($lockedDatum->criterion->usesAutomaticAiHumanReviewScore()) {
+                $point = FixedPerResourceHumanReviewCriterionRule::pointFor(
+                    (string) $lockedDatum->criterion->code,
+                    (string) $lockedDatum->user->degree,
+                ) ?? $maximumPoint;
+            }
+
             if ($maximumPoint === null
                 || $point === null
                 || ! is_finite($point)
@@ -137,6 +145,7 @@ class ApproveCancelledAiDatum
             $point = round($point, 4);
             $aiDecision = $this->latestDecisionWasAi($lockedDatum);
             $scoreDescription = match (true) {
+                $lockedDatum->criterion->usesAutomaticAiHumanReviewScore() => 'Serverda avtomatik hisoblangan ball: ',
                 $lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore() => 'Bazaviy ball: '
                     .number_format(
                         $this->oakArticleScoreCalculator->basePoint((string) $lockedDatum->user->degree),

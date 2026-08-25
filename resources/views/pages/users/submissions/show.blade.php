@@ -712,6 +712,16 @@
                                     @error('publication_tier')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                @elseif($datum->criterion?->usesAutomaticAiHumanReviewScore())
+                                    <div class="alert alert-info py-2 mb-0">
+                                        @if($datum->criterion?->code === '3.1.14')
+                                            Mas'ul faqat professor-o'qituvchining universitet loyihasidagi ishtirokini tasdiqlaydi.
+                                        @else
+                                            Mas'ul faqat resurs mezonga mosligini tasdiqlaydi.
+                                        @endif
+                                        Ball kiritilmaydi,
+                                        serverda foydalanuvchi toifasi bo'yicha avtomatik hisoblanadi.
+                                    </div>
                                 @elseif($datum->criterion?->usesDegreeBasedAuthorDividedArticleScore())
                                     <div class="alert alert-info py-2">
                                         {{ $datum->criterion->desc['uz'] ?? \App\Support\OakArticleCriterionRule::DESCRIPTION_UZ }}
