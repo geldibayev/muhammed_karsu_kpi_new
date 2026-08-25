@@ -25,6 +25,8 @@ use UnexpectedValueException;
 
 class RecalculateReportPoints
 {
+    private const UPSERT_CHUNK_SIZE = 500;
+
     public function __construct(
         private OakArticleScoreCalculator $oakArticleScoreCalculator,
         private PrintedEducationalLiteratureScoreCalculator $printedLiteratureScoreCalculator,
@@ -402,11 +404,13 @@ class RecalculateReportPoints
         ])->all();
 
         if ($rows !== []) {
-            CriterionPoint::query()->upsert(
-                $rows,
-                ['report_id', 'user_id', 'criterion_id'],
-                ['point', 'files', 'updated_at'],
-            );
+            foreach (array_chunk($rows, self::UPSERT_CHUNK_SIZE) as $chunk) {
+                CriterionPoint::query()->upsert(
+                    $chunk,
+                    ['report_id', 'user_id', 'criterion_id'],
+                    ['point', 'files', 'updated_at'],
+                );
+            }
         }
     }
 
@@ -431,11 +435,13 @@ class RecalculateReportPoints
         $rows = $criteria->flatMap(fn (Criterion $criterion): Collection => $this->pointRows($report, $criterion))->all();
 
         if ($rows !== []) {
-            Point::query()->upsert(
-                $rows,
-                ['report_id', 'user_id', 'criterion_id'],
-                ['point', 'updated_at'],
-            );
+            foreach (array_chunk($rows, self::UPSERT_CHUNK_SIZE) as $chunk) {
+                Point::query()->upsert(
+                    $chunk,
+                    ['report_id', 'user_id', 'criterion_id'],
+                    ['point', 'updated_at'],
+                );
+            }
         }
     }
 

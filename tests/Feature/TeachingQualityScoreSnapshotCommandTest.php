@@ -12,7 +12,10 @@ use App\Models\Point;
 use App\Models\Report;
 use App\Models\User;
 use App\Support\TeachingQualityScoreSnapshot;
+use Illuminate\Database\Eloquent\Factories\Sequence;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class TeachingQualityScoreSnapshotCommandTest extends TestCase
@@ -75,6 +78,36 @@ class TeachingQualityScoreSnapshotCommandTest extends TestCase
         $this->assertDatabaseCount('data', 2);
         $this->assertSame($historyCount, $this->datum($perfectScore, $criterion)->histories()->count());
         $this->assertSame(2, Datum::query()->where('system_key', ApplyTeachingQualityScoreSnapshot::SYSTEM_KEY)->count());
+    }
+
+    public function test_large_import_chunks_both_projection_upserts(): void
+    {
+        [$report] = $this->criterion();
+        $snapshotRows = collect(TeachingQualityScoreSnapshot::rows())->take(501)->values();
+        User::factory()
+            ->count($snapshotRows->count())
+            ->sequence(fn (Sequence $sequence): array => [
+                'hemis_id' => (int) $snapshotRows[$sequence->index]['hemis_id'],
+            ])
+            ->create();
+        $queries = collect();
+        DB::listen(function (QueryExecuted $query) use ($queries): void {
+            $queries->push($query->sql);
+        });
+
+        $this->artisan('kpi:criteria:apply-teaching-quality-snapshot', [
+            'report' => $report->getKey(),
+            '--apply' => true,
+        ])->assertSuccessful();
+
+        $this->assertCount(2, $queries->filter(
+            fn (string $sql): bool => str_contains($sql, 'insert into "criterion_points"')
+                || str_contains($sql, 'insert into `criterion_points`'),
+        ));
+        $this->assertCount(2, $queries->filter(
+            fn (string $sql): bool => str_contains($sql, 'insert into "points"')
+                || str_contains($sql, 'insert into `points`'),
+        ));
     }
 
     public function test_command_rejects_wrong_report_or_criterion_configuration(): void
