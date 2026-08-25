@@ -461,6 +461,26 @@
                                             <small class="form-text text-muted">Ball tanlangan kvartil bo‘yicha serverda hisoblanadi.</small>
                                             @error('publication_tier')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                         </div>
+                                    @elseif($datum->criterion?->isIndustryFundingCriterion())
+                                    <div class="form-group">
+                                        <label for="updated-received-amount">Universitet hisobiga tushgan summa (so'm)</label>
+                                        <input id="updated-received-amount" name="received_amount" type="number"
+                                               min="0.01" max="9999999999999999.99" step="0.01" required
+                                               value="{{ old('received_amount', $datum->received_amount) }}"
+                                               class="form-control @error('received_amount') is-invalid @enderror">
+                                        @error('received_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="updated-industry-author-count">Jami hammualliflar soni</label>
+                                        <input id="updated-industry-author-count" name="author_count" type="number"
+                                               min="1" max="1000" step="1" required
+                                               value="{{ old('author_count', $datum->author_count) }}"
+                                               class="form-control @error('author_count') is-invalid @enderror">
+                                        @error('author_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        <small class="form-text text-muted">
+                                            Ball serverda: tushgan summa / 1 000 000 / hammualliflar soni.
+                                        </small>
+                                    </div>
                                     @elseif($datum->criterion?->usesDegreeBasedAuthorDividedArticleScore())
                                     <div class="form-group">
                                         <label for="updated-author-count">Maqoladagi jami mualliflar soni</label>
@@ -712,6 +732,26 @@
                                     @error('publication_tier')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                @elseif($datum->criterion?->isIndustryFundingCriterion())
+                                    <div class="form-group">
+                                        <label for="cancelled-received-amount">Universitet hisobiga tushgan summa (so'm)</label>
+                                        <input id="cancelled-received-amount" name="received_amount" type="number"
+                                               min="0.01" max="9999999999999999.99" step="0.01" required
+                                               value="{{ old('received_amount', $datum->received_amount) }}"
+                                               class="form-control @error('received_amount') is-invalid @enderror">
+                                        @error('received_amount')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label for="cancelled-industry-author-count">Jami hammualliflar soni</label>
+                                        <input id="cancelled-industry-author-count" name="author_count" type="number"
+                                               min="1" max="1000" step="1" required
+                                               value="{{ old('author_count', $datum->author_count) }}"
+                                               class="form-control @error('author_count') is-invalid @enderror">
+                                        @error('author_count')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                        <small class="form-text text-muted">
+                                            Ball serverda: tushgan summa / 1 000 000 / hammualliflar soni.
+                                        </small>
+                                    </div>
                                 @elseif($datum->criterion?->usesAutomaticAiHumanReviewScore())
                                     <div class="alert alert-info py-2 mb-0">
                                         @if($datum->criterion?->code === '3.1.14')
@@ -763,7 +803,7 @@
 @endsection
 
 @section('script')
-    @if(($errors->has('point') || $errors->has('author_count') || $errors->has('publication_tier') || $errors->has('score_change_reason'))
+    @if(($errors->has('point') || $errors->has('author_count') || $errors->has('received_amount') || $errors->has('publication_tier') || $errors->has('score_change_reason'))
         && $status === \App\Enums\DatumStatus::Accepted
         && auth()->user()?->can('updateAcceptedScore', $datum))
         <script>$('#update-accepted-score-modal').modal('show');</script>
@@ -771,7 +811,7 @@
         <script>$('#change-educational-content-type-modal').modal('show');</script>
     @elseif($errors->has('criterion_id'))
         <script>$('#transfer-criterion-modal').modal('show');</script>
-    @elseif($errors->has('point') || $errors->has('author_count') || $errors->has('publication_tier') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
+    @elseif($errors->has('point') || $errors->has('author_count') || $errors->has('received_amount') || $errors->has('publication_tier') || ($errors->has('score_option_id') && $status === \App\Enums\DatumStatus::Cancelled))
         <script>$('#approve-cancelled-ai-modal').modal('show');</script>
     @elseif($errors->has('reason'))
         <script>$('#reject-accepted-ai-modal').modal('show');</script>

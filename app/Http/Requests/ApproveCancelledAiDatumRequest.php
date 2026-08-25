@@ -44,10 +44,12 @@ class ApproveCancelledAiDatumRequest extends FormRequest
         $isForeignLanguageCertificateCriterion = $criterion?->code === ForeignLanguageCertificateCriterionRule::CODE;
         $usesDegreeBasedArticleScore = $criterion?->usesDegreeBasedAuthorDividedArticleScore() === true;
         $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
+        $isIndustryFundingCriterion = $criterion?->isIndustryFundingCriterion() === true;
         $usesScoreOption = $isEducationalContentCriterion || $isForeignLanguageCertificateCriterion;
         $usesAutomaticPoint = $usesScoreOption
             || $usesPublicationTierScore
             || $usesDegreeBasedArticleScore
+            || $isIndustryFundingCriterion
             || $criterion?->usesAutomaticAiHumanReviewScore() === true;
 
         return [
@@ -60,8 +62,8 @@ class ApproveCancelledAiDatumRequest extends FormRequest
                 'max:'.($maximumPoint ?? 0),
             ],
             'author_count' => [
-                Rule::requiredIf($usesDegreeBasedArticleScore),
-                Rule::prohibitedIf(! $usesDegreeBasedArticleScore),
+                Rule::requiredIf($usesDegreeBasedArticleScore || $isIndustryFundingCriterion),
+                Rule::prohibitedIf(! $usesDegreeBasedArticleScore && ! $isIndustryFundingCriterion),
                 'nullable',
                 'integer',
                 'min:1',
@@ -84,6 +86,15 @@ class ApproveCancelledAiDatumRequest extends FormRequest
                 'string',
                 Rule::in(array_keys(ScientificPublicationHumanReviewScoreCalculator::PUBLICATION_TIER_POINTS)),
             ],
+            'received_amount' => [
+                Rule::requiredIf($isIndustryFundingCriterion),
+                Rule::prohibitedIf(! $isIndustryFundingCriterion),
+                'nullable',
+                'numeric',
+                'min:0.01',
+                'max:9999999999999999.99',
+                'decimal:0,2',
+            ],
         ];
     }
 
@@ -91,6 +102,9 @@ class ApproveCancelledAiDatumRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'received_amount.required' => 'Tasdiqlash uchun universitet hisobiga tushgan summani kiriting.',
+            'received_amount.prohibited' => 'Bu mezon uchun tushgan summa yuborilmaydi.',
+            'received_amount.decimal' => 'Summa ko\'pi bilan 2 ta kasr xonasiga ega bo\'lishi kerak.',
             'point.required' => 'Tasdiqlash uchun ballni kiriting.',
             'point.numeric' => 'Ball raqam bo‘lishi kerak.',
             'point.min' => 'Ball 0 dan kam bo‘lishi mumkin emas.',

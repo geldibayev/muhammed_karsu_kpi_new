@@ -116,7 +116,7 @@ class IndustryFundingAiEvaluationTest extends TestCase
 
     public function test_human_fallback_also_calculates_amount_divided_by_coauthors_on_server(): void
     {
-        $reviewer = User::factory()->create();
+        $reviewer = User::factory()->create(['hemis_id' => 3462011188]);
         $owner = User::factory()->create(['degree' => 'hold_degrees']);
         AiHumanReviewAssignment::query()->create([
             'hemis_id' => $reviewer->hemis_id,
@@ -182,5 +182,70 @@ class IndustryFundingAiEvaluationTest extends TestCase
         $this->assertSame(3.0, $datum->point);
         $this->assertSame(3, $datum->author_count);
         $this->assertSame('9000000.00', $datum->received_amount);
+
+        $superAdmin = User::factory()->create(['rol' => ['super_admin']]);
+
+        $this->actingAs($superAdmin)
+            ->get(route('upload.details', $datum))
+            ->assertOk()
+            ->assertSee('id="updated-received-amount"', false)
+            ->assertSee('id="updated-industry-author-count"', false)
+            ->assertDontSee('name="point"', false);
+        $this->actingAs($superAdmin)
+            ->patch(route('submissions.accepted-score.update', $datum), [
+                'received_amount' => 12_000_000,
+                'author_count' => 4,
+                'point' => 5,
+                'score_change_reason' => 'Summa va hammualliflar qayta tekshirildi.',
+            ])
+            ->assertSessionHasErrors('point');
+        $this->actingAs($superAdmin)
+            ->patch(route('submissions.accepted-score.update', $datum), [
+                'received_amount' => 12_000_000,
+                'author_count' => 4,
+                'score_change_reason' => 'Summa va hammualliflar qayta tekshirildi.',
+            ])
+            ->assertRedirect(route('upload.details', $datum));
+
+        $datum->refresh();
+        $this->assertSame(3.0, $datum->point);
+        $this->assertSame(4, $datum->author_count);
+        $this->assertSame('12000000.00', $datum->received_amount);
+
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.reject-accepted', $datum), [
+                'reason' => 'Qayta tekshiruv talab qilindi.',
+            ])
+            ->assertRedirect(route('upload.details', $datum));
+        $this->actingAs($reviewer)
+            ->get(route('upload.details', $datum))
+            ->assertOk()
+            ->assertSee('id="cancelled-received-amount"', false)
+            ->assertSee('id="cancelled-industry-author-count"', false)
+            ->assertDontSee('name="point"', false);
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.approve-cancelled', $datum), [
+                'received_amount' => 15_000_000,
+                'author_count' => 5,
+                'point' => 5,
+            ])
+            ->assertSessionHasErrors('point');
+        $this->actingAs($reviewer)
+            ->patch(route('ai-human-reviews.approve-cancelled', $datum), [
+                'received_amount' => 15_000_000,
+                'author_count' => 5,
+            ])
+            ->assertRedirect(route('upload.details', $datum));
+
+        $datum->refresh();
+        $this->assertSame('accepted', $datum->status);
+        $this->assertSame(3.0, $datum->point);
+        $this->assertSame(5, $datum->author_count);
+        $this->assertSame('15000000.00', $datum->received_amount);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $datum->getKey(),
+            'user_id' => $reviewer->getKey(),
+            'message_type' => 'human_override_approved',
+        ]);
     }
 }

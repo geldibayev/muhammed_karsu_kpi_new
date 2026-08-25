@@ -34,11 +34,16 @@ class UpdateAcceptedDatumScoreRequest extends FormRequest
         $criterion = $datum instanceof Datum ? $datum->load('criterion')->criterion : null;
         $usesPublicationTierScore = $criterion?->usesPublicationTierAiHumanReviewScore() === true;
         $usesDegreeBasedArticleScore = $criterion?->usesDegreeBasedAuthorDividedArticleScore() === true;
+        $isIndustryFundingCriterion = $criterion?->isIndustryFundingCriterion() === true;
 
         return [
             'point' => [
-                Rule::requiredIf(! $usesPublicationTierScore && ! $usesDegreeBasedArticleScore),
-                Rule::prohibitedIf($usesPublicationTierScore || $usesDegreeBasedArticleScore),
+                Rule::requiredIf(! $usesPublicationTierScore
+                    && ! $usesDegreeBasedArticleScore
+                    && ! $isIndustryFundingCriterion),
+                Rule::prohibitedIf($usesPublicationTierScore
+                    || $usesDegreeBasedArticleScore
+                    || $isIndustryFundingCriterion),
                 'nullable',
                 'numeric',
                 'min:0',
@@ -52,12 +57,21 @@ class UpdateAcceptedDatumScoreRequest extends FormRequest
                 Rule::in(array_keys(ScientificPublicationHumanReviewScoreCalculator::PUBLICATION_TIER_POINTS)),
             ],
             'author_count' => [
-                Rule::requiredIf($usesDegreeBasedArticleScore),
-                Rule::prohibitedIf(! $usesDegreeBasedArticleScore),
+                Rule::requiredIf($usesDegreeBasedArticleScore || $isIndustryFundingCriterion),
+                Rule::prohibitedIf(! $usesDegreeBasedArticleScore && ! $isIndustryFundingCriterion),
                 'nullable',
                 'integer',
                 'min:1',
                 'max:1000',
+            ],
+            'received_amount' => [
+                Rule::requiredIf($isIndustryFundingCriterion),
+                Rule::prohibitedIf(! $isIndustryFundingCriterion),
+                'nullable',
+                'numeric',
+                'min:0.01',
+                'max:9999999999999999.99',
+                'decimal:0,2',
             ],
             'score_change_reason' => ['required', 'string', 'max:5000'],
         ];
@@ -74,6 +88,9 @@ class UpdateAcceptedDatumScoreRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'received_amount.required' => 'Universitet hisobiga tushgan summani kiriting.',
+            'received_amount.prohibited' => 'Bu mezon uchun tushgan summa yuborilmaydi.',
+            'received_amount.decimal' => 'Summa ko\'pi bilan 2 ta kasr xonasiga ega bo\'lishi kerak.',
             'point.required' => 'Yangi ballni kiriting.',
             'point.numeric' => 'Ball raqam bo‘lishi kerak.',
             'point.min' => 'Ball 0 dan kam bo‘lishi mumkin emas.',

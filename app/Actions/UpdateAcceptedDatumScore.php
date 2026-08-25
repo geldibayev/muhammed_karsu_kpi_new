@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Datum;
 use App\Models\User;
+use App\Services\IndustryFundingScoreCalculator;
 use App\Services\OakArticleScoreCalculator;
 use App\Services\ScientificPublicationHumanReviewScoreCalculator;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ class UpdateAcceptedDatumScore
         private RecalculateReportPoints $recalculateReportPoints,
         private ScientificPublicationHumanReviewScoreCalculator $scientificPublicationScoreCalculator,
         private OakArticleScoreCalculator $oakArticleScoreCalculator,
+        private IndustryFundingScoreCalculator $industryFundingScoreCalculator,
     ) {}
 
     public function handle(
@@ -26,8 +28,9 @@ class UpdateAcceptedDatumScore
         string $reason,
         ?string $publicationTier = null,
         ?int $authorCount = null,
+        ?float $receivedAmount = null,
     ): Datum {
-        $updatedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $reason, $publicationTier, $authorCount): Datum {
+        $updatedDatum = DB::transaction(function () use ($reviewer, $datum, $point, $reason, $publicationTier, $authorCount, $receivedAmount): Datum {
             $lockedDatum = Datum::query()
                 ->with(['criterion.report', 'criterion.criterionEvaluations', 'criterion.formula', 'user'])
                 ->lockForUpdate()
@@ -62,6 +65,22 @@ class UpdateAcceptedDatumScore
                 );
             }
 
+            if ($lockedDatum->criterion->isIndustryFundingCriterion()) {
+                if ($receivedAmount === null || $receivedAmount <= 0) {
+                    throw ValidationException::withMessages([
+                        'received_amount' => 'Universitet hisobiga tushgan summa musbat bo\'lishi kerak.',
+                    ]);
+                }
+
+                if ($authorCount === null || $authorCount < 1 || $authorCount > 1000) {
+                    throw ValidationException::withMessages([
+                        'author_count' => 'Hammualliflar soni 1 dan 1000 gacha bo\'lishi kerak.',
+                    ]);
+                }
+
+                $point = $this->industryFundingScoreCalculator->calculate($receivedAmount, $authorCount);
+            }
+
             if ($maximumPoint === null || $point === null || ! is_finite($point) || $point < 0 || $point > $maximumPoint) {
                 throw ValidationException::withMessages([
                     'point' => 'Kiritilgan ball foydalanuvchi uchun belgilangan chegaraga mos emas.',
@@ -80,12 +99,16 @@ class UpdateAcceptedDatumScore
                 'publication_tier' => $lockedDatum->criterion->usesPublicationTierAiHumanReviewScore()
                     ? $publicationTier
                     : $lockedDatum->publication_tier,
-                'author_count' => $lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore()
+                'author_count' => ($lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore()
+                    || $lockedDatum->criterion->isIndustryFundingCriterion())
                     ? $authorCount
                     : $lockedDatum->author_count,
                 'impact_factor' => $lockedDatum->criterion->usesDegreeBasedAuthorDividedArticleScore()
                     ? null
                     : $lockedDatum->impact_factor,
+                'received_amount' => $lockedDatum->criterion->isIndustryFundingCriterion()
+                    ? $receivedAmount
+                    : $lockedDatum->received_amount,
                 'reason' => $auditMessage,
             ]);
             $lockedDatum->histories()->create([
