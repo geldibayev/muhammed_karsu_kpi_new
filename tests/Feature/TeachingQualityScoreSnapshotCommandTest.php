@@ -22,14 +22,23 @@ class TeachingQualityScoreSnapshotCommandTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
-    public function test_snapshot_matches_the_validated_workbook(): void
+    public function test_snapshot_matches_the_validated_data(): void
     {
         $rows = TeachingQualityScoreSnapshot::rows();
 
-        $this->assertCount(1365, $rows);
-        $this->assertCount(1365, array_unique(array_column($rows, 'hemis_id')));
+        $this->assertCount(1366, $rows);
+        $this->assertCount(1366, array_unique(array_column($rows, 'hemis_id')));
         $this->assertSame(['hemis_id' => '3461811014', 'point' => '10.00'], $rows[0]);
         $this->assertSame(['hemis_id' => '3522111008', 'point' => '9.61'], $rows[1364]);
+        $this->assertSame(['hemis_id' => '3862012025', 'point' => '9.46'], $rows[1365]);
+        $this->assertSame(
+            'built-in:teaching-quality-correction-2026-08-27',
+            TeachingQualityScoreSnapshot::provenance('3862012025')['source'],
+        );
+        $this->assertSame(
+            '044556ad1eaee2c19567b552ec048ce10a963460761ee74191607398b198a334',
+            TeachingQualityScoreSnapshot::provenance('3461811014')['data_sha256'],
+        );
         $this->assertSame(
             'e24a1b3a9610fa9770f8c16277b92a57525291000e39572835e230aee7cd10db',
             TeachingQualityScoreSnapshot::SOURCE_SHA256,
@@ -48,6 +57,7 @@ class TeachingQualityScoreSnapshotCommandTest extends TestCase
         [$report, $criterion] = $this->criterion();
         $perfectScore = User::factory()->create(['hemis_id' => 3461811014]);
         $otherScore = User::factory()->create(['hemis_id' => 3462011201]);
+        $correctedScore = User::factory()->create(['hemis_id' => 3862012025]);
 
         $this->artisan('kpi:criteria:apply-teaching-quality-snapshot', [
             'report' => $report->getKey(),
@@ -65,9 +75,15 @@ class TeachingQualityScoreSnapshotCommandTest extends TestCase
 
         $this->assertSame(10.0, $this->datum($perfectScore, $criterion)->point);
         $this->assertSame(9.54, $this->datum($otherScore, $criterion)->point);
+        $this->assertSame(9.46, $this->datum($correctedScore, $criterion)->point);
+        $this->assertSame(
+            'built-in:teaching-quality-correction-2026-08-27',
+            $this->datum($correctedScore, $criterion)->material['source'],
+        );
         $this->assertSame(10.0, $this->point($perfectScore, $criterion));
         $this->assertSame(9.54, $this->point($otherScore, $criterion));
-        $this->assertDatabaseCount('datum_histories', 2);
+        $this->assertSame(9.46, $this->point($correctedScore, $criterion));
+        $this->assertDatabaseCount('datum_histories', 3);
         $historyCount = $this->datum($perfectScore, $criterion)->histories()->count();
 
         $this->artisan('kpi:criteria:apply-teaching-quality-snapshot', [
@@ -75,9 +91,9 @@ class TeachingQualityScoreSnapshotCommandTest extends TestCase
             '--apply' => true,
         ])->assertSuccessful();
 
-        $this->assertDatabaseCount('data', 2);
+        $this->assertDatabaseCount('data', 3);
         $this->assertSame($historyCount, $this->datum($perfectScore, $criterion)->histories()->count());
-        $this->assertSame(2, Datum::query()->where('system_key', ApplyTeachingQualityScoreSnapshot::SYSTEM_KEY)->count());
+        $this->assertSame(3, Datum::query()->where('system_key', ApplyTeachingQualityScoreSnapshot::SYSTEM_KEY)->count());
     }
 
     public function test_large_import_chunks_both_projection_upserts(): void

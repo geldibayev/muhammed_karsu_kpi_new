@@ -10,7 +10,15 @@ final class TeachingQualityScoreSnapshot
 
     public const SOURCE_SHA256 = 'e24a1b3a9610fa9770f8c16277b92a57525291000e39572835e230aee7cd10db';
 
-    public const DATA_SHA256 = '044556ad1eaee2c19567b552ec048ce10a963460761ee74191607398b198a334';
+    public const DATA_SHA256 = '5d3ea2928b38c70331f5a78d9b85aa3e26df92173e0d7440a4853fac1975dc6f';
+
+    private const ORIGINAL_DATA_SHA256 = '044556ad1eaee2c19567b552ec048ce10a963460761ee74191607398b198a334';
+
+    private const CORRECTION_HEMIS_ID = '3862012025';
+
+    private const CORRECTION_SOURCE = 'built-in:teaching-quality-correction-2026-08-27';
+
+    private const CORRECTION_SHA256 = 'c8101a0973980a567bae31f2b494dfd5cae1be78fdd0d8686c90a05f3e2751cd';
 
     /** @return list<array{hemis_id: string, point: string}> */
     public static function rows(): array
@@ -1381,6 +1389,25 @@ final class TeachingQualityScoreSnapshot
             ['hemis_id' => '3462311094', 'point' => '9.84'],
             ['hemis_id' => '3462511045', 'point' => '9.94'],
             ['hemis_id' => '3522111008', 'point' => '9.61'],
+            ['hemis_id' => '3862012025', 'point' => '9.46'],
+        ];
+    }
+
+    /** @return array{source: string, source_sha256: string, data_sha256: string} */
+    public static function provenance(string $hemisId): array
+    {
+        if ($hemisId === self::CORRECTION_HEMIS_ID) {
+            return [
+                'source' => self::CORRECTION_SOURCE,
+                'source_sha256' => self::CORRECTION_SHA256,
+                'data_sha256' => self::CORRECTION_SHA256,
+            ];
+        }
+
+        return [
+            'source' => self::SOURCE,
+            'source_sha256' => self::SOURCE_SHA256,
+            'data_sha256' => self::ORIGINAL_DATA_SHA256,
         ];
     }
 }

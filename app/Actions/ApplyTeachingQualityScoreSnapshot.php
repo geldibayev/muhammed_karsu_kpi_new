@@ -146,7 +146,7 @@ class ApplyTeachingQualityScoreSnapshot
             $datum->histories()->create([
                 'user_id' => $user->getKey(),
                 'type' => 'success',
-                'message' => $this->historyMessage($point, $oldPoint, $oldStatus),
+                'message' => $this->historyMessage($hemisId, $point, $oldPoint, $oldStatus),
                 'message_type' => 'teaching_quality_score_assigned',
             ]);
         }
@@ -255,13 +255,13 @@ class ApplyTeachingQualityScoreSnapshot
     /** @return array<string, array<string, string>|float|null|string> */
     private function datumAttributes(string $hemisId, string $point): array
     {
+        $provenance = TeachingQualityScoreSnapshot::provenance($hemisId);
+
         return [
             'name' => '1.5 — o‘qitish sifati bo‘yicha anketa bahosi',
             'material' => [
                 'type' => 'system',
-                'source' => TeachingQualityScoreSnapshot::SOURCE,
-                'source_sha256' => TeachingQualityScoreSnapshot::SOURCE_SHA256,
-                'data_sha256' => TeachingQualityScoreSnapshot::DATA_SHA256,
+                ...$provenance,
                 'hemis_id' => $hemisId,
                 'survey_point' => $point,
             ],
@@ -283,16 +283,18 @@ class ApplyTeachingQualityScoreSnapshot
             && $datum->reviewer_hemis_id === null;
     }
 
-    private function historyMessage(string $point, ?float $oldPoint, ?string $oldStatus): string
+    private function historyMessage(string $hemisId, string $point, ?float $oldPoint, ?string $oldStatus): string
     {
+        $sourceSha256 = TeachingQualityScoreSnapshot::provenance($hemisId)['source_sha256'];
+
         if ($oldPoint === null) {
             return "O‘qitish sifati anketasi bo‘yicha {$point} ball berildi."
-                .' Manba SHA-256: '.TeachingQualityScoreSnapshot::SOURCE_SHA256.'.';
+                .' Manba SHA-256: '.$sourceSha256.'.';
         }
 
         return 'O‘qitish sifati anketasi balli yangilandi. Oldingi holat/ball: '
             .($oldStatus ?? 'yo‘q').'/'.number_format($oldPoint, 2, '.', '')
             .". Yangi holat/ball: accepted/{$point}."
-            .' Manba SHA-256: '.TeachingQualityScoreSnapshot::SOURCE_SHA256.'.';
+            .' Manba SHA-256: '.$sourceSha256.'.';
     }
 }
