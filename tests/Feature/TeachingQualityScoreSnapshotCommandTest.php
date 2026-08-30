@@ -3,14 +3,23 @@
 namespace Tests\Feature;
 
 use App\Actions\ApplyTeachingQualityScoreSnapshot;
+use App\Models\AcademicDegree;
+use App\Models\AcademicRank;
 use App\Models\Criterion;
 use App\Models\CriterionEvaluation;
 use App\Models\Datum;
+use App\Models\Department;
+use App\Models\EmployeeStatus;
+use App\Models\EmployeeType;
+use App\Models\EmploymentForm;
+use App\Models\EmploymentStaff;
 use App\Models\Evaluation;
 use App\Models\Formula;
 use App\Models\Point;
 use App\Models\Report;
+use App\Models\StaffPosition;
 use App\Models\User;
+use App\Models\Workplace;
 use App\Support\TeachingQualityScoreSnapshot;
 use Illuminate\Database\Eloquent\Factories\Sequence;
 use Illuminate\Database\Events\QueryExecuted;
@@ -204,6 +213,92 @@ class TeachingQualityScoreSnapshotCommandTest extends TestCase
         ]);
     }
 
+    public function test_command_fills_missing_scores_from_each_department_average(): void
+    {
+        [$report, $criterion] = $this->criterion();
+        $faculty = $this->department(9_100, 'Fakultet');
+        $firstDepartment = $this->department(9_101, 'Birinchi kafedra', $faculty);
+        $secondDepartment = $this->department(9_102, 'Ikkinchi kafedra', $faculty);
+        $departmentWithoutScores = $this->department(9_103, 'Ballsiz kafedra', $faculty);
+        $firstSource = User::factory()->create(['hemis_id' => 3461811014]);
+        $secondSource = User::factory()->create(['hemis_id' => 3462011201]);
+        $thirdSource = User::factory()->create(['hemis_id' => 3932312002]);
+        $firstMissing = User::factory()->create(['hemis_id' => 9000000001]);
+        $secondMissing = User::factory()->create(['hemis_id' => 9000000002]);
+        $alreadyScored = User::factory()->create(['hemis_id' => 9000000003]);
+        $withoutDepartmentAverage = User::factory()->create(['hemis_id' => 9000000004]);
+        $inactive = User::factory()->create(['hemis_id' => 9000000005, 'status' => '0']);
+
+        foreach ([$firstSource, $secondSource, $firstMissing, $alreadyScored] as $user) {
+            $this->workplace($user, $firstDepartment);
+        }
+
+        foreach ([$thirdSource, $secondMissing] as $user) {
+            $this->workplace($user, $secondDepartment);
+        }
+
+        $this->workplace($withoutDepartmentAverage, $departmentWithoutScores);
+        $this->workplace($inactive, $firstDepartment);
+        Datum::query()->create([
+            'name' => 'Oldindan berilgan ball',
+            'user_id' => $alreadyScored->getKey(),
+            'criterion_id' => $criterion->getKey(),
+            'system_key' => 'existing-teaching-quality-score',
+            'status' => 'accepted',
+            'point' => 8,
+        ]);
+
+        $arguments = [
+            'report' => $report->getKey(),
+            '--fill-department-averages' => true,
+        ];
+
+        $this->artisan('kpi:criteria:apply-teaching-quality-snapshot', $arguments)
+            ->expectsOutputToContain('DRY RUN')
+            ->assertSuccessful();
+        $this->assertDatabaseMissing('data', [
+            'system_key' => ApplyTeachingQualityScoreSnapshot::DEPARTMENT_AVERAGE_SYSTEM_KEY,
+        ]);
+
+        $this->artisan('kpi:criteria:apply-teaching-quality-snapshot', [
+            ...$arguments,
+            '--apply' => true,
+        ])->assertSuccessful();
+
+        $firstAverageDatum = $this->departmentAverageDatum($firstMissing, $criterion);
+        $secondAverageDatum = $this->departmentAverageDatum($secondMissing, $criterion);
+        $this->assertSame(9.77, $firstAverageDatum->point);
+        $this->assertSame(9.04, $secondAverageDatum->point);
+        $this->assertSame(2, $firstAverageDatum->material['source_count']);
+        $this->assertSame($firstDepartment->getKey(), $firstAverageDatum->material['department_id']);
+        $this->assertSame(9.77, $this->point($firstMissing, $criterion));
+        $this->assertSame(9.04, $this->point($secondMissing, $criterion));
+        $this->assertSame(8.0, $this->point($alreadyScored, $criterion));
+        $this->assertDatabaseMissing('data', [
+            'user_id' => $withoutDepartmentAverage->getKey(),
+            'system_key' => ApplyTeachingQualityScoreSnapshot::DEPARTMENT_AVERAGE_SYSTEM_KEY,
+        ]);
+        $this->assertDatabaseMissing('data', [
+            'user_id' => $inactive->getKey(),
+            'system_key' => ApplyTeachingQualityScoreSnapshot::DEPARTMENT_AVERAGE_SYSTEM_KEY,
+        ]);
+        $this->assertDatabaseHas('datum_histories', [
+            'datum_id' => $firstAverageDatum->getKey(),
+            'message_type' => 'teaching_quality_department_average_assigned',
+        ]);
+        $historyCount = $firstAverageDatum->histories()->count();
+
+        $this->artisan('kpi:criteria:apply-teaching-quality-snapshot', [
+            ...$arguments,
+            '--apply' => true,
+        ])->assertSuccessful();
+
+        $this->assertSame(2, Datum::query()
+            ->where('system_key', ApplyTeachingQualityScoreSnapshot::DEPARTMENT_AVERAGE_SYSTEM_KEY)
+            ->count());
+        $this->assertSame($historyCount, $firstAverageDatum->histories()->count());
+    }
+
     /** @return array{Report, Criterion} */
     private function criterion(): array
     {
@@ -267,5 +362,49 @@ class TeachingQualityScoreSnapshotCommandTest extends TestCase
             ->whereBelongsTo($criterion)
             ->where('report_id', $criterion->report_id)
             ->value('point');
+    }
+
+    private function department(int $id, string $name, ?Department $parent = null): Department
+    {
+        return Department::query()->create([
+            'id' => $id,
+            'name' => ['uz' => $name, 'kaa' => $name, 'ru' => $name, 'en' => $name],
+            'parent_id' => $parent?->getKey(),
+            'status' => '1',
+        ]);
+    }
+
+    private function workplace(User $user, Department $department): Workplace
+    {
+        $academicDegree = AcademicDegree::query()->firstOrCreate(['id' => 9_201], ['name' => 'PhD']);
+        $academicRank = AcademicRank::query()->firstOrCreate(['id' => 9_202], ['name' => 'Dotsent']);
+        $form = EmploymentForm::query()->firstOrCreate([
+            'id' => EmploymentForm::PRIMARY_WORKPLACE_ID,
+        ], ['name' => 'Asosiy ish joyi']);
+        $staff = EmploymentStaff::query()->firstOrCreate(['id' => 9_203], ['name' => '1 stavka']);
+        $position = StaffPosition::query()->firstOrCreate(['id' => 9_204], ['name' => 'O‘qituvchi']);
+        $status = EmployeeStatus::query()->firstOrCreate(['id' => 9_205], ['name' => 'Ishlamoqda']);
+        $type = EmployeeType::query()->firstOrCreate(['id' => 9_206], ['name' => 'Xodim']);
+
+        return Workplace::query()->create([
+            'user_id' => $user->getKey(),
+            'department_id' => $department->getKey(),
+            'academic_degree_id' => $academicDegree->getKey(),
+            'academic_rank_id' => $academicRank->getKey(),
+            'form_id' => $form->getKey(),
+            'staff_id' => $staff->getKey(),
+            'staff_position_id' => $position->getKey(),
+            'status_id' => $status->getKey(),
+            'type_id' => $type->getKey(),
+        ]);
+    }
+
+    private function departmentAverageDatum(User $user, Criterion $criterion): Datum
+    {
+        return Datum::query()
+            ->whereBelongsTo($user)
+            ->whereBelongsTo($criterion)
+            ->where('system_key', ApplyTeachingQualityScoreSnapshot::DEPARTMENT_AVERAGE_SYSTEM_KEY)
+            ->firstOrFail();
     }
 }

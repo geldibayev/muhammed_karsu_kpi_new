@@ -19,6 +19,8 @@ class ApplyTeachingQualityScoreSnapshot
 
     public const SYSTEM_KEY = 'teaching-quality-survey';
 
+    public const DEPARTMENT_AVERAGE_SYSTEM_KEY = 'teaching-quality-department-average';
+
     public function __construct(private RecalculateReportPoints $recalculateReportPoints) {}
 
     /**
@@ -31,29 +33,182 @@ class ApplyTeachingQualityScoreSnapshot
      *     unchanged: int,
      *     removed: int,
      *     conflicts: int,
-     *     missing_hemis_ids: list<string>
+     *     missing_hemis_ids: list<string>,
+     *     average_sources: int,
+     *     average_departments: int,
+     *     average_candidates: int,
+     *     average_created: int,
+     *     average_updated: int,
+     *     average_unchanged: int,
+     *     average_without_source: int,
+     *     average_without_evaluation: int
      * }
      */
-    public function handle(Report $report, bool $apply): array
+    public function handle(Report $report, bool $apply, bool $fillDepartmentAverages = false): array
     {
         $scores = $this->validatedScores();
         $criterion = $this->criterion($report);
 
         if (! $apply) {
-            return $this->process($criterion, $scores, false);
+            return [
+                ...$this->process($criterion, $scores, false),
+                ...$this->departmentAverages($criterion, $scores, false, $fillDepartmentAverages),
+            ];
         }
 
-        return DB::transaction(function () use ($report, $criterion, $scores): array {
+        return DB::transaction(function () use ($report, $criterion, $scores, $fillDepartmentAverages): array {
             Report::query()->whereKey($report->getKey())->lockForUpdate()->firstOrFail();
             $lockedCriterion = Criterion::query()->lockForUpdate()->findOrFail($criterion->getKey());
             $result = $this->process($lockedCriterion, $scores, true);
+            $averageResult = $this->departmentAverages(
+                $lockedCriterion->loadMissing('criterionEvaluations'),
+                $scores,
+                true,
+                $fillDepartmentAverages,
+            );
 
-            if ($result['created'] + $result['updated'] + $result['removed'] > 0) {
+            if ($result['created'] + $result['updated'] + $result['removed']
+                + $averageResult['average_created'] + $averageResult['average_updated'] > 0) {
                 $this->recalculateReportPoints->handle($report);
             }
 
-            return $result;
+            return [...$result, ...$averageResult];
         }, attempts: 3);
+    }
+
+    /**
+     * @param  array<string, string>  $scores
+     * @return array{
+     *     average_sources: int,
+     *     average_departments: int,
+     *     average_candidates: int,
+     *     average_created: int,
+     *     average_updated: int,
+     *     average_unchanged: int,
+     *     average_without_source: int,
+     *     average_without_evaluation: int
+     * }
+     */
+    private function departmentAverages(
+        Criterion $criterion,
+        array $scores,
+        bool $apply,
+        bool $enabled,
+    ): array {
+        $result = [
+            'average_sources' => 0,
+            'average_departments' => 0,
+            'average_candidates' => 0,
+            'average_created' => 0,
+            'average_updated' => 0,
+            'average_unchanged' => 0,
+            'average_without_source' => 0,
+            'average_without_evaluation' => 0,
+        ];
+
+        if (! $enabled) {
+            return $result;
+        }
+
+        $sources = Datum::query()
+            ->whereBelongsTo($criterion)
+            ->where('system_key', self::SYSTEM_KEY)
+            ->where('status', DatumStatus::Accepted->value)
+            ->whereHas('user', fn (Builder $query): Builder => $query
+                ->active()
+                ->academicRatingParticipants())
+            ->with('user.ratingWorkplace')
+            ->when($apply, fn (Builder $query): Builder => $query->lockForUpdate())
+            ->get()
+            ->filter(fn (Datum $datum): bool => $datum->user?->ratingWorkplace !== null);
+        $averages = $sources
+            ->groupBy(fn (Datum $datum): int => $datum->user->ratingWorkplace->department_id)
+            ->map(fn ($rows): array => [
+                'point' => round((float) $rows->avg('point'), 2),
+                'sources' => $rows->count(),
+            ]);
+        $candidates = User::query()
+            ->select(['id', 'hemis_id', 'degree'])
+            ->active()
+            ->academicRatingParticipants()
+            ->whereNotIn('hemis_id', array_keys($scores))
+            ->whereDoesntHave('submissions', fn (Builder $query): Builder => $query
+                ->whereBelongsTo($criterion)
+                ->where('status', '!=', DatumStatus::Deleted->value))
+            ->with('ratingWorkplace')
+            ->orderBy('id')
+            ->when($apply, fn (Builder $query): Builder => $query->lockForUpdate())
+            ->get();
+        $existingByUserId = Datum::query()
+            ->whereBelongsTo($criterion)
+            ->where('system_key', self::DEPARTMENT_AVERAGE_SYSTEM_KEY)
+            ->whereIn('user_id', $candidates->modelKeys())
+            ->when($apply, fn (Builder $query): Builder => $query->lockForUpdate())
+            ->get()
+            ->keyBy('user_id');
+
+        $result['average_sources'] = $sources->count();
+        $result['average_departments'] = $averages->count();
+        $result['average_candidates'] = $candidates->count();
+
+        foreach ($candidates as $user) {
+            $departmentId = $user->ratingWorkplace?->department_id;
+            $average = $departmentId === null ? null : $averages->get($departmentId);
+
+            if ($average === null) {
+                $result['average_without_source']++;
+
+                continue;
+            }
+
+            $evaluation = $criterion->criterionEvaluations->firstWhere('evaluation', $user->degree);
+
+            if ($evaluation?->has !== '1' || (float) $evaluation->score <= 0) {
+                $result['average_without_evaluation']++;
+
+                continue;
+            }
+
+            $point = min($average['point'], (float) $evaluation->score);
+            $attributes = $this->departmentAverageDatumAttributes(
+                $departmentId,
+                $average['point'],
+                $point,
+                $average['sources'],
+            );
+            $datum = $existingByUserId->get($user->getKey()) ?? new Datum([
+                'user_id' => $user->getKey(),
+                'criterion_id' => $criterion->getKey(),
+                'system_key' => self::DEPARTMENT_AVERAGE_SYSTEM_KEY,
+            ]);
+
+            if (! $datum->exists) {
+                $result['average_created']++;
+            } elseif ($this->matches($datum, $attributes)) {
+                $result['average_unchanged']++;
+
+                continue;
+            } else {
+                $result['average_updated']++;
+            }
+
+            if (! $apply) {
+                continue;
+            }
+
+            $datum->fill($attributes);
+            $datum->save();
+            $datum->histories()->create([
+                'user_id' => $user->getKey(),
+                'type' => 'success',
+                'message' => "{$departmentId}-kafedraning {$average['sources']} ta anketa ballidan "
+                    .number_format($average['point'], 2, '.', '').' o‘rtacha hisoblandi. Berilgan ball: '
+                    .number_format($point, 2, '.', '').'.',
+                'message_type' => 'teaching_quality_department_average_assigned',
+            ]);
+        }
+
+        return $result;
     }
 
     /**
@@ -198,7 +353,7 @@ class ApplyTeachingQualityScoreSnapshot
             ->whereBelongsTo($report)
             ->where('code', self::CRITERION_CODE)
             ->whereNotNull('parent_id')
-            ->with('formula:id,code')
+            ->with(['formula:id,code', 'criterionEvaluations'])
             ->first();
 
         if ($criterion === null
@@ -272,7 +427,32 @@ class ApplyTeachingQualityScoreSnapshot
         ];
     }
 
-    /** @param  array<string, array<string, string>|float|null|string>  $attributes */
+    /** @return array<string, array<string, float|int|string>|float|null|string> */
+    private function departmentAverageDatumAttributes(
+        int $departmentId,
+        float $departmentAverage,
+        float $point,
+        int $sourceCount,
+    ): array {
+        return [
+            'name' => '1.5 — kafedraning o‘rtacha o‘qitish sifati bahosi',
+            'material' => [
+                'type' => 'system',
+                'source' => self::DEPARTMENT_AVERAGE_SYSTEM_KEY,
+                'source_system_key' => self::SYSTEM_KEY,
+                'department_id' => $departmentId,
+                'source_count' => $sourceCount,
+                'department_average' => $departmentAverage,
+            ],
+            'status' => DatumStatus::Accepted->value,
+            'point' => $point,
+            'reason' => "{$departmentId}-kafedraning o‘qitish sifati bo‘yicha o‘rtacha balli: "
+                .number_format($departmentAverage, 2, '.', '').'.',
+            'reviewer_hemis_id' => null,
+        ];
+    }
+
+    /** @param  array<string, array<string, float|int|string>|float|null|string>  $attributes */
     private function matches(Datum $datum, array $attributes): bool
     {
         return $datum->name === $attributes['name']
