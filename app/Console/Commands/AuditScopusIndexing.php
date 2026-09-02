@@ -50,6 +50,7 @@ class AuditScopusIndexing extends Command
         $indexedCount = 0;
         $notIndexedCount = 0;
         $unsearchableCount = 0;
+        $unsearchableIds = [];
         $rejectedCount = 0;
 
         foreach ($this->candidateQuery($report, array_keys($referenceCorpora))
@@ -59,6 +60,7 @@ class AuditScopusIndexing extends Command
 
             if ($searchableValues === []) {
                 $unsearchableCount++;
+                $unsearchableIds[] = $datum->getKey();
 
                 continue;
             }
@@ -81,6 +83,10 @@ class AuditScopusIndexing extends Command
         $this->info("Scopus PDFda topildi: {$indexedCount}");
         $this->info("Scopus PDFda topilmadi: {$notIndexedCount}");
         $this->info("Sarlavha yoki DOI yo‘qligi sabab tekshirib bo‘lmadi: {$unsearchableCount}");
+
+        if ($unsearchableIds !== []) {
+            $this->warn('Tekshirib bo‘lmagan resurs IDlari: '.implode(', ', $unsearchableIds));
+        }
 
         if (! (bool) $this->option('apply')) {
             $this->warn('Dry-run: bazaga o‘zgarish kiritilmadi. Rad etish uchun --apply qo‘shing.');

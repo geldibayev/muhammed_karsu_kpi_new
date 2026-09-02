@@ -40,6 +40,7 @@ class AuditScopusIndexingCommandTest extends TestCase
         $indexed = $this->datum($criterion, $user, 2026, 'Eco-friendly polymer formulations for wind erosion suppression in arid areas');
         $notIndexed = $this->datum($criterion, $user, 2026, 'Article absent from the Scopus list');
         $unsearchable = $this->datum($criterion, $user, 2026, null);
+        $secondUnsearchable = $this->datum($criterion, $user, 2025, null);
         $cancelled = $this->datum($criterion, $user, 2026, 'Another absent article', 'cancelled');
         $outsideYears = $this->datum($criterion, $user, 2027, 'Article absent from the Scopus list');
         $otherReport = Report::query()->create(['name' => ['uz' => 'Boshqa hisobot'], 'status' => '1']);
@@ -50,13 +51,17 @@ class AuditScopusIndexingCommandTest extends TestCase
         $this->artisan('kpi:criteria:audit-3-1-3-indexing', [
             'report' => $report->getKey(),
             '--apply' => true,
-        ])->expectsOutputToContain('Rad etildi: 1')->assertSuccessful();
+        ])
+            ->expectsOutputToContain('Tekshirib bo‘lmagan resurs IDlari: '.$unsearchable->getKey().', '.$secondUnsearchable->getKey())
+            ->expectsOutputToContain('Rad etildi: 1')
+            ->assertSuccessful();
 
         $this->assertSame('accepted', $indexed->fresh()->status);
         $this->assertSame('cancelled', $notIndexed->fresh()->status);
         $this->assertSame(0.0, $notIndexed->fresh()->point);
         $this->assertSame('Maqola Scopus bazasida indekslanmagan', $notIndexed->fresh()->reason);
         $this->assertSame('accepted', $unsearchable->fresh()->status);
+        $this->assertSame('accepted', $secondUnsearchable->fresh()->status);
         $this->assertSame('cancelled', $cancelled->fresh()->status);
         $this->assertSame('accepted', $outsideYears->fresh()->status);
         $this->assertSame('accepted', $outsideReport->fresh()->status);
