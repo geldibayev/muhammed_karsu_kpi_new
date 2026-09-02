@@ -9,7 +9,6 @@ use App\Support\ScopusCriterionRule;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -17,11 +16,9 @@ class AuditScopusIndexing extends Command
 {
     private const MAXIMUM_PDF_SIZE = 50 * 1024 * 1024;
 
-    private const REFERENCE_DIRECTORY = 'imports/criterion-3.1.3';
+    private const REFERENCE_DIRECTORY = 'criterion-3.1.3';
 
     private const REJECTION_REASON = 'Maqola Scopus bazasida indekslanmagan';
-
-    private const PYTHON_EXTRACTOR = "import fitz,sys; d=fitz.open(sys.argv[1]); sys.stdout.buffer.write('\\n'.join(p.get_text() for p in d).encode('utf-8','replace'))";
 
     protected $signature = 'kpi:criteria:audit-3-1-3-indexing
                             {report : Tekshiriladigan hisobot ID raqami}
@@ -115,7 +112,7 @@ class AuditScopusIndexing extends Command
     /** @return array<int, string>|null */
     private function referenceCorpora(): ?array
     {
-        $disk = Storage::disk('local');
+        $disk = Storage::disk('scopus-references');
         $pdfPaths = collect($disk->allFiles(self::REFERENCE_DIRECTORY))
             ->filter(fn (string $path): bool => Str::endsWith(Str::lower($path), '.pdf'))
             ->values();
@@ -139,13 +136,8 @@ class AuditScopusIndexing extends Command
                 return null;
             }
 
-            $result = Process::timeout(120)->run([
-                'python',
-                '-c',
-                self::PYTHON_EXTRACTOR,
-                $disk->path($pdfPath),
-            ]);
-            $text = $result->successful() ? $this->normalize($result->output()) : null;
+            $textPath = Str::beforeLast($pdfPath, '.').'.txt';
+            $text = $disk->exists($textPath) ? $this->normalize($disk->get($textPath)) : null;
 
             if ($text === null || Str::length($text) < 100) {
                 $this->error("PDF matnini o‘qib bo‘lmadi: {$pdfPath}");

@@ -9,7 +9,6 @@ use App\Models\Report;
 use App\Models\User;
 use App\Models\Year;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -79,11 +78,8 @@ class AuditScopusIndexingCommandTest extends TestCase
     {
         [$report, $criterion, $user] = $this->fixture();
         $datum = $this->datum($criterion, $user, 2025, 'Article absent from the Scopus list');
-        Storage::fake('local');
-        Storage::disk('local')->put('imports/criterion-3.1.3/2025/scopus.pdf', "%PDF-1.4\n");
-        Process::fake([
-            '*' => Process::result(errorOutput: 'Unreadable PDF', exitCode: 1),
-        ]);
+        Storage::fake('scopus-references');
+        Storage::disk('scopus-references')->put('criterion-3.1.3/2025/scopus.pdf', "%PDF-1.4\n");
 
         $this->artisan('kpi:criteria:audit-3-1-3-indexing', [
             'report' => $report->getKey(),
@@ -157,14 +153,22 @@ class AuditScopusIndexingCommandTest extends TestCase
 
     private function fakeReferences(): void
     {
-        Storage::fake('local');
-        Storage::disk('local')->put('imports/criterion-3.1.3/2025/scopus-1.pdf', "%PDF-1.4\n");
-        Storage::disk('local')->put('imports/criterion-3.1.3/2025/scopus-2.pdf', "%PDF-1.4\n");
-        Storage::disk('local')->put('imports/criterion-3.1.3/2026/scopus-1.pdf', "%PDF-1.4\n");
-        Process::fake([
-            '*2025*2.pdf*' => str_repeat('Scopus reference text ', 10)
+        Storage::fake('scopus-references');
+        Storage::disk('scopus-references')->put('criterion-3.1.3/2025/scopus-1.pdf', "%PDF-1.4\n");
+        Storage::disk('scopus-references')->put('criterion-3.1.3/2025/scopus-2.pdf', "%PDF-1.4\n");
+        Storage::disk('scopus-references')->put('criterion-3.1.3/2026/scopus-1.pdf', "%PDF-1.4\n");
+        Storage::disk('scopus-references')->put(
+            'criterion-3.1.3/2025/scopus-1.txt',
+            str_repeat('Different indexed publications ', 10),
+        );
+        Storage::disk('scopus-references')->put(
+            'criterion-3.1.3/2025/scopus-2.txt',
+            str_repeat('Scopus reference text ', 10)
                 ."ECO-FRIENDLY polymer formulations\nfor wind erosion suppression in arid areas",
-            '*' => str_repeat('Different indexed publications ', 10),
-        ]);
+        );
+        Storage::disk('scopus-references')->put(
+            'criterion-3.1.3/2026/scopus-1.txt',
+            str_repeat('Different indexed publications ', 10),
+        );
     }
 }
