@@ -29,7 +29,12 @@ class AiHumanReviewFilterRequest extends FormRequest
         $selectedStatus = $this->string('status')->toString() ?: 'pending';
 
         return [
-            'status' => ['nullable', Rule::in(['pending', DatumStatus::Accepted->value, DatumStatus::Cancelled->value])],
+            'status' => ['nullable', Rule::in([
+                'pending',
+                DatumStatus::Accepted->value,
+                DatumStatus::Cancelled->value,
+                'scopus_audit',
+            ])],
             'criterion' => [
                 'bail',
                 'nullable',
@@ -42,7 +47,17 @@ class AiHumanReviewFilterRequest extends FormRequest
                                 : $query->pendingAiHumanReviewFor((int) $user->hemis_id);
                         }, function (Builder $query) use ($selectedStatus, $user): Builder {
                             return $query
-                                ->where('status', $selectedStatus)
+                                ->where('status', $selectedStatus === 'scopus_audit'
+                                    ? DatumStatus::Cancelled->value
+                                    : $selectedStatus)
+                                ->when(
+                                    $selectedStatus === 'scopus_audit',
+                                    fn (Builder $query): Builder => $query->whereHas(
+                                        'histories',
+                                        fn (Builder $query): Builder => $query
+                                            ->where('message_type', 'scopus_index_reference_rejected'),
+                                    ),
+                                )
                                 ->whereHas('criterion', function (Builder $query) use ($user): void {
                                     $query->where('checking', 'ai');
 

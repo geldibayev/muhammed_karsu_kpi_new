@@ -71,6 +71,17 @@ class AuditScopusIndexingCommandTest extends TestCase
             'message_type' => 'scopus_index_reference_rejected',
         ]);
 
+        $superAdmin = User::factory()->create([
+            'hemis_id' => 9999999999,
+            'rol' => ['super_admin'],
+        ]);
+        $this->actingAs($superAdmin)
+            ->get(route('ai-human-reviews.index', ['status' => 'scopus_audit']))
+            ->assertOk()
+            ->assertSee('Scopus PDF auditida rad etilgan')
+            ->assertSee($notIndexed->name)
+            ->assertDontSee($cancelled->name);
+
         $this->artisan('kpi:criteria:audit-3-1-3-indexing', [
             'report' => $report->getKey(),
             '--apply' => true,

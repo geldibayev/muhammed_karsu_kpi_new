@@ -26,6 +26,7 @@
                                     <option value="pending" @selected($selectedStatus === 'pending')>Tekshiruv kutilmoqda</option>
                                     <option value="accepted" @selected($selectedStatus === 'accepted')>Tasdiqlangan</option>
                                     <option value="cancelled" @selected($selectedStatus === 'cancelled')>Rad etilgan</option>
+                                    <option value="scopus_audit" @selected($selectedStatus === 'scopus_audit')>Scopus PDF auditida rad etilgan</option>
                                 </select>
                             </div>
                             <div class="form-group col-lg-5 col-md-6 mb-md-0">

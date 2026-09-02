@@ -32,7 +32,15 @@ class AiHumanReviewController extends Controller
             }
 
             return $query
-                ->where('status', $selectedStatus)
+                ->where('status', $selectedStatus === 'scopus_audit' ? 'cancelled' : $selectedStatus)
+                ->when(
+                    $selectedStatus === 'scopus_audit',
+                    fn (Builder $query): Builder => $query->whereHas(
+                        'histories',
+                        fn (Builder $query): Builder => $query
+                            ->where('message_type', 'scopus_index_reference_rejected'),
+                    ),
+                )
                 ->whereHas('criterion', function (Builder $query) use ($assignedCriterionCodes, $isSuperAdmin): void {
                     $query->where('checking', 'ai');
 
